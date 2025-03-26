@@ -1,6 +1,8 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { ChevronLeft } from 'lucide-react';
+import { useIsMobile } from '../hooks/use-mobile';
 
 // Types for categories and subcategories
 type SubCategory = {
@@ -112,6 +114,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
 }) => {
   const [activeView, setActiveView] = useState<'categories' | 'subcategories'>('categories');
   const [currentCategory, setCurrentCategory] = useState<Category | null>(null);
+  const isMobile = useIsMobile();
   
   const handleCategoryClick = (category: Category) => {
     setCurrentCategory(category);
@@ -136,7 +139,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
   };
   
   return (
-    <div className="overflow-hidden relative">
+    <div className="relative overflow-hidden w-full">
       <motion.div 
         className="flex w-[200%]"
         animate={activeView}
@@ -145,44 +148,43 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
       >
         {/* Vue principale des catégories */}
         <div className="w-1/2 flex-shrink-0">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {categories.map((category) => (
               <div
                 key={category.id}
                 onClick={() => handleCategoryClick(category)}
                 className={`
-                  flex flex-col items-center justify-center p-4 rounded-lg cursor-pointer
+                  flex flex-col items-center justify-center p-3 rounded-lg cursor-pointer
                   border-2 transition-all hover:border-wouli-blue hover:shadow-md
                   ${selectedCategory === category.id ? 'border-wouli-blue bg-blue-50' : 'border-gray-200'}
+                  ${isMobile ? 'h-24' : ''}
                 `}
               >
-                <span className="text-4xl mb-2">{category.emoji}</span>
-                <span className="text-center font-medium">{category.name}</span>
+                <span className={`${isMobile ? 'text-3xl' : 'text-4xl'} mb-1`}>{category.emoji}</span>
+                <span className={`text-center font-medium ${isMobile ? 'text-xs' : 'text-sm'} line-clamp-2`}>{category.name}</span>
               </div>
             ))}
           </div>
         </div>
         
         {/* Vue des sous-catégories */}
-        <div className="w-1/2 flex-shrink-0">
+        <div className="w-1/2 flex-shrink-0 px-1">
           {currentCategory && (
             <>
               <button 
                 onClick={handleBackToCategories}
-                className="mb-4 text-sm flex items-center text-gray-600 hover:text-wouli-blue transition-colors"
+                className="mb-3 text-sm flex items-center text-gray-600 hover:text-wouli-blue transition-colors"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
+                <ChevronLeft className="h-4 w-4 mr-1" />
                 Retour aux catégories
               </button>
               
-              <h3 className="text-lg font-medium mb-4 flex items-center">
+              <h3 className="text-lg font-medium mb-3 flex items-center">
                 <span className="mr-2">{currentCategory.emoji}</span>
                 {currentCategory.name}
               </h3>
               
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {currentCategory.subCategories.map((subCategory) => (
                   <div
                     key={subCategory.id}
@@ -193,8 +195,8 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
                       ${selectedSubCategory === subCategory.id ? 'border-wouli-blue bg-blue-50' : 'border-gray-200 hover:border-gray-300'}
                     `}
                   >
-                    <span className="text-2xl mr-3">{subCategory.emoji}</span>
-                    <span className="text-sm">{subCategory.name}</span>
+                    <span className="text-2xl mr-3 flex-shrink-0">{subCategory.emoji}</span>
+                    <span className={`${isMobile ? 'text-xs' : 'text-sm'} line-clamp-2`}>{subCategory.name}</span>
                   </div>
                 ))}
               </div>

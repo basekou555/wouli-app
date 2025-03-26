@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useNavigate } from 'react-router-dom';
@@ -19,7 +18,8 @@ import {
   Search,
   Plus,
   Check,
-  ChevronRight
+  ChevronRight,
+  ChevronLeft
 } from 'lucide-react';
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -28,6 +28,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import CategorySelector from '../components/CategorySelector';
+import { useIsMobile } from '../hooks/use-mobile';
 
 // Type pour les étapes de création (réduit à 2 étapes selon les nouvelles spécifications)
 type Step = 'infos' | 'location';
@@ -35,6 +36,7 @@ type Step = 'infos' | 'location';
 const EventCreate = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>('infos');
+  const isMobile = useIsMobile();
   
   // États pour les différentes informations de l'événement
   const [title, setTitle] = useState('');
@@ -121,11 +123,11 @@ const EventCreate = () => {
 
   return (
     <AppLayout>
-      <div className="max-w-3xl mx-auto py-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Créer un événement</h1>
+      <div className="max-w-3xl mx-auto py-4 px-2 sm:px-4 sm:py-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Créer un événement</h1>
         
         {/* Indicateur d'étapes (réduit à 2 points) */}
-        <div className="flex justify-center mb-8">
+        <div className="flex justify-center mb-6">
           <div className="flex items-center space-x-2">
             <div className={`w-3 h-3 rounded-full ${
               step === 'infos' ? 'bg-wouli-blue' : 'bg-gray-300'
@@ -141,20 +143,20 @@ const EventCreate = () => {
             step === 'infos' ? 'translate-x-0' : '-translate-x-full'
           }`} style={{ width: '200%' }}>
             {/* Étape 1: Informations essentielles */}
-            <div className="w-full px-4">
+            <div className="w-full px-2 sm:px-4">
               <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>Informations essentielles</CardTitle>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">Informations essentielles</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-6">
+                  <div className="space-y-5">
                     <div>
                       <Input
                         id="title"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         placeholder="Nommer votre événement"
-                        className="text-xl font-medium placeholder:text-gray-400 focus:border-wouli-blue transition-colors"
+                        className="text-lg sm:text-xl font-medium placeholder:text-gray-400 focus:border-wouli-blue transition-colors"
                         required
                       />
                     </div>
@@ -220,8 +222,8 @@ const EventCreate = () => {
               </Card>
               
               <Card>
-                <CardHeader>
-                  <CardTitle>Catégorie</CardTitle>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">Catégorie</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <CategorySelector 
@@ -233,7 +235,7 @@ const EventCreate = () => {
                 </CardContent>
               </Card>
               
-              <div className="mt-8 flex justify-end">
+              <div className="mt-6 flex justify-end">
                 <Button 
                   type="button" 
                   onClick={handleNextStep}
@@ -246,13 +248,13 @@ const EventCreate = () => {
             </div>
             
             {/* Étape 2: Lieu et Invitations */}
-            <div className="w-full px-4">
+            <div className="w-full px-2 sm:px-4">
               <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>Lieu</CardTitle>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">Lieu</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-6">
+                  <div className="space-y-5">
                     <div>
                       <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
                         Rechercher un lieu
@@ -308,11 +310,11 @@ const EventCreate = () => {
               </Card>
               
               <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>Paramètres</CardTitle>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">Paramètres</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-6">
+                  <div className="space-y-5">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-3">
                         Confidentialité
@@ -322,19 +324,19 @@ const EventCreate = () => {
                         onValueChange={setPrivacy}
                         className="flex space-x-2"
                       >
-                        <div className={`flex flex-col items-center p-3 border rounded-lg cursor-pointer transition-colors ${privacy === 'private' ? 'border-wouli-blue bg-blue-50' : 'border-gray-200'}`}>
-                          <Lock className={`h-6 w-6 mb-1 ${privacy === 'private' ? 'text-wouli-blue' : 'text-gray-400'}`} />
-                          <span className={`text-sm ${privacy === 'private' ? 'text-wouli-blue font-medium' : 'text-gray-600'}`}>Privé</span>
+                        <div className={`flex flex-col items-center p-2 sm:p-3 border rounded-lg cursor-pointer transition-colors ${privacy === 'private' ? 'border-wouli-blue bg-blue-50' : 'border-gray-200'}`}>
+                          <Lock className={`h-5 sm:h-6 w-5 sm:w-6 mb-1 ${privacy === 'private' ? 'text-wouli-blue' : 'text-gray-400'}`} />
+                          <span className={`text-xs sm:text-sm ${privacy === 'private' ? 'text-wouli-blue font-medium' : 'text-gray-600'}`}>Privé</span>
                           <RadioGroupItem value="private" id="privacy-private" className="sr-only" />
                         </div>
-                        <div className={`flex flex-col items-center p-3 border rounded-lg cursor-pointer transition-colors ${privacy === 'friends' ? 'border-wouli-blue bg-blue-50' : 'border-gray-200'}`}>
-                          <Users className={`h-6 w-6 mb-1 ${privacy === 'friends' ? 'text-wouli-blue' : 'text-gray-400'}`} />
-                          <span className={`text-sm ${privacy === 'friends' ? 'text-wouli-blue font-medium' : 'text-gray-600'}`}>Amis</span>
+                        <div className={`flex flex-col items-center p-2 sm:p-3 border rounded-lg cursor-pointer transition-colors ${privacy === 'friends' ? 'border-wouli-blue bg-blue-50' : 'border-gray-200'}`}>
+                          <Users className={`h-5 sm:h-6 w-5 sm:w-6 mb-1 ${privacy === 'friends' ? 'text-wouli-blue' : 'text-gray-400'}`} />
+                          <span className={`text-xs sm:text-sm ${privacy === 'friends' ? 'text-wouli-blue font-medium' : 'text-gray-600'}`}>Amis</span>
                           <RadioGroupItem value="friends" id="privacy-friends" className="sr-only" />
                         </div>
-                        <div className={`flex flex-col items-center p-3 border rounded-lg cursor-pointer transition-colors ${privacy === 'public' ? 'border-wouli-blue bg-blue-50' : 'border-gray-200'}`}>
-                          <Globe className={`h-6 w-6 mb-1 ${privacy === 'public' ? 'text-wouli-blue' : 'text-gray-400'}`} />
-                          <span className={`text-sm ${privacy === 'public' ? 'text-wouli-blue font-medium' : 'text-gray-600'}`}>Public</span>
+                        <div className={`flex flex-col items-center p-2 sm:p-3 border rounded-lg cursor-pointer transition-colors ${privacy === 'public' ? 'border-wouli-blue bg-blue-50' : 'border-gray-200'}`}>
+                          <Globe className={`h-5 sm:h-6 w-5 sm:w-6 mb-1 ${privacy === 'public' ? 'text-wouli-blue' : 'text-gray-400'}`} />
+                          <span className={`text-xs sm:text-sm ${privacy === 'public' ? 'text-wouli-blue font-medium' : 'text-gray-600'}`}>Public</span>
                           <RadioGroupItem value="public" id="privacy-public" className="sr-only" />
                         </div>
                       </RadioGroup>
@@ -386,8 +388,8 @@ const EventCreate = () => {
               </Card>
               
               <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>Invitations</CardTitle>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">Invitations</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -406,7 +408,7 @@ const EventCreate = () => {
                         <div 
                           key={friend.id} 
                           onClick={() => toggleFriend(friend.id)}
-                          className={`flex-shrink-0 flex flex-col items-center w-20 p-2 rounded-lg cursor-pointer transition-all ${
+                          className={`flex-shrink-0 flex flex-col items-center w-16 sm:w-20 p-2 rounded-lg cursor-pointer transition-all ${
                             friends.includes(friend.id) ? 'bg-blue-50 border border-wouli-blue' : 'hover:bg-gray-50'
                           }`}
                         >
@@ -414,7 +416,7 @@ const EventCreate = () => {
                             <img 
                               src={friend.avatar} 
                               alt={friend.name} 
-                              className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
+                              className="w-10 sm:w-12 h-10 sm:h-12 rounded-full object-cover border-2 border-white shadow-sm"
                             />
                             {friends.includes(friend.id) && (
                               <div className="absolute -bottom-1 -right-1 bg-wouli-blue text-white rounded-full w-5 h-5 flex items-center justify-center">
@@ -436,24 +438,25 @@ const EventCreate = () => {
                 </CardContent>
               </Card>
               
-              <div className="mt-8 flex justify-between">
+              <div className="mt-6 flex justify-between">
                 <Button 
                   type="button" 
                   variant="outline" 
                   onClick={handlePrevStep}
                 >
+                  <ChevronLeft className="mr-1 h-4 w-4" />
                   Précédent
                 </Button>
                 
                 <Button 
                   type="button" 
                   onClick={handleCreateEvent}
-                  className="bg-wouli-blue hover:bg-blue-600 text-white min-w-32 relative"
+                  className="bg-wouli-blue hover:bg-blue-600 text-white min-w-24 sm:min-w-32 relative"
                   disabled={isCreating}
                 >
                   {isCreating ? (
                     <div className="flex items-center">
-                      <div className="animate-spin h-5 w-5 border-2 border-white border-r-transparent rounded-full mr-2"></div>
+                      <div className="animate-spin h-4 w-4 sm:h-5 sm:w-5 border-2 border-white border-r-transparent rounded-full mr-2"></div>
                       <span>Création...</span>
                     </div>
                   ) : (
