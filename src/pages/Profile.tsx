@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Calendar, Clock, Edit2, MapPin, Image, Users, Settings, LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
