@@ -1,41 +1,22 @@
 
 import React, { useEffect } from 'react';
-import Layout from '../components/Layout';
-import Hero from '../components/Hero';
-import Features from '../components/Features';
-import EventCreation from '../components/EventCreation';
-import Memories from '../components/Memories';
-import Footer from '../components/Footer';
+import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
+  const navigate = useNavigate();
+
   useEffect(() => {
-    // Animate elements when they enter the viewport
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('animate-fade-up');
-          observer.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.1 });
-    
-    document.querySelectorAll('.feature-card').forEach((el) => {
-      observer.observe(el);
-    });
-    
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
+    // Rediriger vers le dashboard
+    navigate('/dashboard');
+  }, [navigate]);
   
   return (
-    <Layout>
-      <Hero />
-      <Features />
-      <EventCreation />
-      <Memories />
-      <Footer />
-    </Layout>
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="text-center">
+        <div className="text-3xl font-bold text-wouli-blue mb-4">Wouli</div>
+        <p className="text-gray-600">Chargement de l'application...</p>
+      </div>
+    </div>
   );
 };
 
