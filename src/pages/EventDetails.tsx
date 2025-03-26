@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
@@ -15,7 +14,7 @@ const eventData = {
   date: '2024-05-15T18:00:00',
   location: 'Café des Artistes',
   address: '12 Rue des Beaux-Arts, 75006 Paris',
-  description: 'Retrouvons-nous pour discuter de nos projets créatifs autour d'un verre ! Le lieu est idéal pour échanger dans une ambiance détendue et inspirante.',
+  description: "Retrouvons-nous pour discuter de nos projets créatifs autour d'un verre ! Le lieu est idéal pour échanger dans une ambiance détendue et inspirante.",
   organizer: {
     name: 'Marie Dupont',
     avatar: 'https://picsum.photos/200?random=org'
