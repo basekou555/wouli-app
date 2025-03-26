@@ -1,22 +1,19 @@
 
 import React from 'react';
+import { Link } from 'react-router-dom';
+import { Button } from "@/components/ui/button";
 
 const steps = [
   {
     number: 1,
-    title: "Infos essentielles",
-    description: "Entrez le nom, la date et l'heure de votre sortie en quelques clics.",
+    title: "Informations & Catégorie",
+    description: "Entrez le titre, la date, l'heure et choisissez la catégorie de votre événement.",
   },
   {
     number: 2,
-    title: "Lieu & Paramètres",
-    description: "Choisissez le lieu et définissez les paramètres de confidentialité.",
-  },
-  {
-    number: 3,
-    title: "Invitations",
-    description: "Invitez vos amis via l'app ou par un lien de partage.",
-  },
+    title: "Lieu & Invitations",
+    description: "Définissez le lieu, les paramètres et invitez vos amis.",
+  }
 ];
 
 const EventCreation = () => {
@@ -65,20 +62,23 @@ const EventCreation = () => {
               Créez un événement en moins de 30 secondes
             </h2>
             <p className="text-lg text-wouli-gray-700 mb-6">
-              Nous avons conçu Wouli pour éliminer toute friction dans l'organisation de vos sorties. Trois étapes simples et vous êtes prêt à inviter vos amis.
+              Nous avons conçu Wouli pour éliminer toute friction dans l'organisation de vos sorties. Deux étapes simples et vous êtes prêt à inviter vos amis.
             </p>
             <p className="text-wouli-gray-700 mb-8">
               Plus besoin de jongler entre différentes applications. Wouli centralise tout le processus et vous permet de vous concentrer sur l'essentiel : passer du bon temps avec vos amis.
             </p>
-            <a
-              href="#get-started"
-              className="px-7 py-3 bg-wouli-blue text-white rounded-full font-medium transition-all hover:bg-blue-600 active:scale-95 inline-flex items-center"
+            <Button
+              asChild
+              size="lg"
+              className="px-7 py-3 bg-wouli-blue text-white rounded-full font-medium transition-all hover:bg-blue-600 active:scale-95"
             >
-              <span>Essayer maintenant</span>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </a>
+              <Link to="/events/create" className="inline-flex items-center">
+                <span>Créer un événement</span>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </Link>
+            </Button>
           </div>
         </div>
       </div>
