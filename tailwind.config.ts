@@ -67,8 +67,19 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
+				// Instagram inspired colors
+				instagram: {
+					purple: '#8a3ab9',
+					pink: '#e95950',
+					orange: '#fcaf45',
+					blue: '#5851db',
+					yellow: '#fbad50',
+					red: '#cd486b',
+				},
 				wouli: {
 					'blue': '#0070F3',
+					'purple': '#8A3AB9',
+					'pink': '#E95950',
 					'gray-50': '#F9FAFB',
 					'gray-100': '#F3F4F6',
 					'gray-200': '#E5E7EB',

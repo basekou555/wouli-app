@@ -146,7 +146,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
         variants={containerVariants}
         transition={{ duration: 0.4, ease: "easeInOut" }}
       >
-        {/* Vue principale des catégories */}
+        {/* Main categories view */}
         <div className="w-1/2 flex-shrink-0">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {categories.map((category) => (
@@ -154,26 +154,30 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
                 key={category.id}
                 onClick={() => handleCategoryClick(category)}
                 className={`
-                  flex flex-col items-center justify-center p-3 rounded-lg cursor-pointer
-                  border-2 transition-all hover:border-wouli-blue hover:shadow-md
-                  ${selectedCategory === category.id ? 'border-wouli-blue bg-blue-50' : 'border-gray-200'}
+                  flex flex-col items-center justify-center p-3 rounded-xl cursor-pointer
+                  transition-all duration-200
+                  ${selectedCategory === category.id 
+                    ? 'bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-md' 
+                    : 'bg-white border border-gray-200 hover:border-gray-300 shadow-sm'}
                   ${isMobile ? 'h-24' : ''}
                 `}
               >
                 <span className={`${isMobile ? 'text-3xl' : 'text-4xl'} mb-1`}>{category.emoji}</span>
-                <span className={`text-center font-medium ${isMobile ? 'text-xs' : 'text-sm'} line-clamp-2`}>{category.name}</span>
+                <span className={`text-center font-medium ${isMobile ? 'text-xs' : 'text-sm'} line-clamp-2`}>
+                  {category.name}
+                </span>
               </div>
             ))}
           </div>
         </div>
         
-        {/* Vue des sous-catégories */}
+        {/* Subcategories view */}
         <div className="w-1/2 flex-shrink-0 px-1">
           {currentCategory && (
             <>
               <button 
                 onClick={handleBackToCategories}
-                className="mb-3 text-sm flex items-center text-gray-600 hover:text-wouli-blue transition-colors"
+                className="mb-3 text-sm flex items-center text-gray-600 hover:text-purple-500 transition-colors"
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Retour aux catégories
@@ -191,8 +195,11 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
                     onClick={() => handleSubCategoryClick(subCategory)}
                     className={`
                       flex items-center p-3 rounded-lg cursor-pointer
-                      border transition-all
-                      ${selectedSubCategory === subCategory.id ? 'border-wouli-blue bg-blue-50' : 'border-gray-200 hover:border-gray-300'}
+                      transition-all duration-200
+                      ${selectedSubCategory === subCategory.id 
+                        ? 'bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-purple-300' 
+                        : 'bg-white border-gray-200 hover:border-gray-300'}
+                      border
                     `}
                   >
                     <span className="text-2xl mr-3 flex-shrink-0">{subCategory.emoji}</span>

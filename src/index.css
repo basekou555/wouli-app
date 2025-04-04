@@ -14,7 +14,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 210 100% 50%;
+    /* Instagram-inspired color palette */
+    --primary: 271 91% 65%; /* Purple */
     --primary-foreground: 210 40% 98%;
 
     --secondary: 210 40% 96.1%;
@@ -23,7 +24,7 @@
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 210 40% 96.1%;
+    --accent: 329 100% 56%; /* Pink */
     --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
@@ -31,7 +32,7 @@
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --ring: 271 91% 65%;
 
     --radius: 0.8rem;
 
@@ -54,12 +55,12 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-gray-50 text-foreground antialiased;
     font-feature-settings: "ss01", "ss02", "cv01", "cv02";
   }
 
   ::selection {
-    @apply bg-wouli-blue/20 text-wouli-blue;
+    @apply bg-purple-500/20 text-purple-800;
   }
 }
 
@@ -68,25 +69,44 @@
     text-wrap: balance;
   }
 
+  /* Instagram-inspired styles */
   .glass {
     @apply bg-white/80 backdrop-blur-lg border border-white/20 shadow-sm;
   }
   
   .glass-dark {
-    @apply bg-wouli-gray-900/80 backdrop-blur-lg border border-white/10 shadow-md;
+    @apply bg-gray-900/80 backdrop-blur-lg border border-white/10 shadow-md;
   }
   
   .glass-card {
     @apply bg-gradient-to-b from-white/90 to-white/70 backdrop-blur-md border border-white/20 shadow-sm;
   }
   
+  .instagram-gradient {
+    @apply bg-gradient-to-tr from-purple-600 via-pink-500 to-orange-400;
+  }
+  
+  .instagram-card {
+    @apply bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden;
+  }
+  
+  .instagram-button {
+    @apply bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium rounded-lg px-4 py-2 
+           hover:from-purple-600 hover:to-pink-600 active:scale-95 transition-all duration-200;
+  }
+  
+  .instagram-input {
+    @apply border border-gray-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400 
+           focus:border-transparent transition-all duration-200;
+  }
+
   .button-glow {
     @apply relative overflow-hidden;
   }
   
   .button-glow::after {
     content: '';
-    @apply absolute inset-0 bg-gradient-to-r from-wouli-blue/0 via-wouli-blue/30 to-wouli-blue/0;
+    @apply absolute inset-0 bg-gradient-to-r from-purple-500/0 via-purple-500/30 to-purple-500/0;
     @apply animate-pulse-soft;
   }
   
@@ -95,14 +115,14 @@
   }
   
   .feature-card {
-    @apply relative overflow-hidden rounded-2xl bg-gradient-to-b from-white to-wouli-gray-50 p-6 shadow-sm transition-all duration-300;
+    @apply relative overflow-hidden rounded-2xl bg-gradient-to-b from-white to-gray-50 p-6 shadow-sm transition-all duration-300;
     @apply hover:shadow-md hover:translate-y-[-2px];
-    @apply border border-wouli-gray-200/50;
+    @apply border border-gray-200/50;
   }
   
   .feature-card::before {
     content: '';
-    @apply absolute inset-0 bg-gradient-to-br from-wouli-blue/5 to-transparent opacity-0 transition-opacity duration-300;
+    @apply absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 transition-opacity duration-300;
   }
   
   .feature-card:hover::before {
@@ -110,13 +130,13 @@
   }
   
   .nav-link {
-    @apply relative px-3 py-2 text-wouli-gray-800 transition-colors duration-200;
-    @apply hover:text-wouli-blue;
+    @apply relative px-3 py-2 text-gray-800 transition-colors duration-200;
+    @apply hover:text-purple-500;
   }
   
   .nav-link::after {
     content: '';
-    @apply absolute left-0 bottom-0 w-0 h-0.5 bg-wouli-blue transition-all duration-300 ease-out;
+    @apply absolute left-0 bottom-0 w-0 h-0.5 bg-purple-500 transition-all duration-300 ease-out;
   }
   
   .nav-link:hover::after {
@@ -124,7 +144,7 @@
   }
 
   .text-gradient {
-    @apply bg-gradient-to-r from-wouli-blue to-blue-600 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent;
   }
 
   .section {
