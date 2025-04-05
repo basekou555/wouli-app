@@ -132,47 +132,47 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
     setActiveView('categories');
   };
   
-  // Animation variants
-  const containerVariants = {
-    categories: { x: 0 },
-    subcategories: { x: '-100%' }
-  };
+  // Find current category from selectedCategory
+  React.useEffect(() => {
+    if (selectedCategory) {
+      const category = categories.find(cat => cat.id === selectedCategory);
+      if (category) {
+        setCurrentCategory(category);
+        if (activeView === 'categories') {
+          setActiveView('subcategories');
+        }
+      }
+    }
+  }, [selectedCategory]);
   
   return (
-    <div className="relative overflow-hidden w-full">
-      <motion.div 
-        className="flex w-[200%]"
-        animate={activeView}
-        variants={containerVariants}
-        transition={{ duration: 0.4, ease: "easeInOut" }}
-      >
-        {/* Main categories view */}
-        <div className="w-1/2 flex-shrink-0">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {categories.map((category) => (
-              <div
-                key={category.id}
-                onClick={() => handleCategoryClick(category)}
-                className={`
-                  flex flex-col items-center justify-center p-3 rounded-xl cursor-pointer
-                  transition-all duration-200
-                  ${selectedCategory === category.id 
-                    ? 'bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-md' 
-                    : 'bg-white border border-gray-200 hover:border-gray-300 shadow-sm'}
-                  ${isMobile ? 'h-24' : ''}
-                `}
-              >
-                <span className={`${isMobile ? 'text-3xl' : 'text-4xl'} mb-1`}>{category.emoji}</span>
-                <span className={`text-center font-medium ${isMobile ? 'text-xs' : 'text-sm'} line-clamp-2`}>
-                  {category.name}
-                </span>
-              </div>
-            ))}
-          </div>
+    <div className="w-full">
+      {activeView === 'categories' ? (
+        // Main categories view
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {categories.map((category) => (
+            <div
+              key={category.id}
+              onClick={() => handleCategoryClick(category)}
+              className={`
+                flex flex-col items-center justify-center p-3 rounded-xl cursor-pointer
+                transition-all duration-200
+                ${selectedCategory === category.id 
+                  ? 'bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-md' 
+                  : 'bg-white border border-gray-200 hover:border-gray-300 shadow-sm'}
+                ${isMobile ? 'h-24' : ''}
+              `}
+            >
+              <span className={`${isMobile ? 'text-3xl' : 'text-4xl'} mb-1`}>{category.emoji}</span>
+              <span className={`text-center font-medium ${isMobile ? 'text-xs' : 'text-sm'} line-clamp-2`}>
+                {category.name}
+              </span>
+            </div>
+          ))}
         </div>
-        
-        {/* Subcategories view */}
-        <div className="w-1/2 flex-shrink-0 px-1">
+      ) : (
+        // Subcategories view
+        <div className="px-1">
           {currentCategory && (
             <>
               <button 
@@ -210,7 +210,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
             </>
           )}
         </div>
-      </motion.div>
+      )}
     </div>
   );
 };
