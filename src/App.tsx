@@ -11,6 +11,7 @@ import EventCreate from "./pages/EventCreate";
 import EventDetails from "./pages/EventDetails";
 import Profile from "./pages/Profile";
 import Explore from "./pages/Explore";
+import Messages from "./pages/Messages";
 
 const queryClient = new QueryClient();
 
@@ -27,7 +28,7 @@ const App = () => (
           <Route path="/events/:id" element={<EventDetails />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/explore" element={<Explore />} />
-          {/* La route notifications a été retirée */}
+          <Route path="/messages" element={<Messages />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
