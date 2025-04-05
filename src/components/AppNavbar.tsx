@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Calendar, Compass, Home, PlusCircle, User, Search, Heart, MessageSquare } from 'lucide-react';
+import { Calendar, Compass, Home, PlusCircle, User, Search, MessageSquare } from 'lucide-react';
 
 const AppNavbar = () => {
   const location = useLocation();
@@ -11,7 +11,6 @@ const AppNavbar = () => {
     { name: 'Accueil', path: '/dashboard', icon: Home },
     { name: 'Explorer', path: '/explore', icon: Compass },
     { name: 'Créer', path: '/events/create', icon: PlusCircle },
-    { name: 'Activités', path: '/notifications', icon: Heart },
     { name: 'Messages', path: '/messages', icon: MessageSquare },
     { name: 'Profil', path: '/profile', icon: User },
   ];
@@ -26,10 +25,6 @@ const AppNavbar = () => {
         <div className="flex items-center space-x-4">
           <button className="text-gray-800">
             <Search className="h-5 w-5" />
-          </button>
-          <button className="text-gray-800 relative">
-            <Heart className="h-5 w-5" />
-            <span className="absolute -top-1 -right-1 bg-instagram-pink text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">3</span>
           </button>
           <button className="text-gray-800 relative">
             <MessageSquare className="h-5 w-5" />
