@@ -8,12 +8,12 @@ interface AppLayoutProps {
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-white">
       <AppNavbar />
       
       {/* Content area - adjusted for desktop sidebar and mobile top/bottom nav */}
-      <main className="flex-1 md:ml-64 pt-16 pb-16 md:py-6 px-4 md:px-8">
-        <div className="max-w-5xl mx-auto">
+      <main className="flex-1 md:ml-64 pt-14 pb-20 md:py-5 px-3 md:px-6">
+        <div className="max-w-2xl mx-auto">
           {children}
         </div>
       </main>
