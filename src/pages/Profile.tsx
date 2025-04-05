@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { Calendar, Clock, Edit2, MapPin, Image, Users, Settings, LogOut, Lock, E
 import { Link } from 'react-router-dom';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
+import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 
 // Données d'exemple pour le profil
@@ -112,20 +112,36 @@ const formatDate = (dateString: string) => {
   }).format(date);
 };
 
+type PrivacyFormValues = {
+  profileVisibility: "public" | "private";
+  eventVisibility: "public" | "friends" | "participants";
+};
+
 const Profile = () => {
   const [activeTab, setActiveTab] = useState('upcoming');
   const [privacyTab, setPrivacyTab] = useState(false);
-  const [profileVisibility, setProfileVisibility] = useState(userProfile.isPublic ? "public" : "private");
-  const [eventVisibility, setEventVisibility] = useState("friends");
+  const [profileVisibility, setProfileVisibility] = useState<"public" | "private">(userProfile.isPublic ? "public" : "private");
+  const [eventVisibility, setEventVisibility] = useState<"public" | "friends" | "participants">("friends");
+
+  const form = useForm<PrivacyFormValues>({
+    defaultValues: {
+      profileVisibility: userProfile.isPublic ? "public" : "private",
+      eventVisibility: "friends",
+    },
+  });
 
   const togglePrivacySettings = () => {
     setPrivacyTab(!privacyTab);
   };
 
+  const onSubmit = (data: PrivacyFormValues) => {
+    setProfileVisibility(data.profileVisibility);
+    setEventVisibility(data.eventVisibility);
+  };
+
   return (
     <AppLayout>
       <div className="py-6 space-y-8">
-        {/* En-tête du profil avec statut de confidentialité */}
         <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
           <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
             <div className="relative">
@@ -189,7 +205,6 @@ const Profile = () => {
           </div>
         </div>
         
-        {/* Section des paramètres de confidentialité */}
         {privacyTab && (
           <Card className="animate-fade-down">
             <CardHeader>
@@ -199,78 +214,93 @@ const Profile = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div>
-                <h3 className="text-sm font-medium mb-3">Statut du profil</h3>
-                <RadioGroup 
-                  value={profileVisibility} 
-                  onValueChange={setProfileVisibility}
-                  className="flex gap-4"
-                >
-                  <div className="flex items-start space-x-2">
-                    <RadioGroupItem value="public" id="public-profile" />
-                    <div className="grid gap-1.5">
-                      <FormLabel htmlFor="public-profile" className="font-medium">Public</FormLabel>
-                      <p className="text-sm text-muted-foreground">
-                        Votre profil est visible par tous
-                      </p>
-                    </div>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  <div>
+                    <h3 className="text-sm font-medium mb-3">Statut du profil</h3>
+                    <FormField
+                      control={form.control}
+                      name="profileVisibility"
+                      render={({ field }) => (
+                        <RadioGroup
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          className="flex gap-4"
+                        >
+                          <div className="flex items-start space-x-2">
+                            <RadioGroupItem value="public" id="public-profile" />
+                            <div className="grid gap-1.5">
+                              <FormLabel htmlFor="public-profile" className="font-medium">Public</FormLabel>
+                              <p className="text-sm text-muted-foreground">
+                                Votre profil est visible par tous
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-start space-x-2">
+                            <RadioGroupItem value="private" id="private-profile" />
+                            <div className="grid gap-1.5">
+                              <FormLabel htmlFor="private-profile" className="font-medium">Privé</FormLabel>
+                              <p className="text-sm text-muted-foreground">
+                                Seuls vos amis peuvent voir votre profil
+                              </p>
+                            </div>
+                          </div>
+                        </RadioGroup>
+                      )}
+                    />
                   </div>
-                  <div className="flex items-start space-x-2">
-                    <RadioGroupItem value="private" id="private-profile" />
-                    <div className="grid gap-1.5">
-                      <FormLabel htmlFor="private-profile" className="font-medium">Privé</FormLabel>
-                      <p className="text-sm text-muted-foreground">
-                        Seuls vos amis peuvent voir votre profil
-                      </p>
-                    </div>
+                  
+                  <div>
+                    <h3 className="text-sm font-medium mb-3">Visibilité des événements passés</h3>
+                    <FormField
+                      control={form.control}
+                      name="eventVisibility"
+                      render={({ field }) => (
+                        <RadioGroup 
+                          value={field.value} 
+                          onValueChange={field.onChange}
+                          className="space-y-3"
+                        >
+                          <div className="flex items-start space-x-2">
+                            <RadioGroupItem value="public" id="public-events" />
+                            <div className="grid gap-1.5">
+                              <FormLabel htmlFor="public-events" className="font-medium">Public</FormLabel>
+                              <p className="text-sm text-muted-foreground">
+                                Visibles par tous les utilisateurs
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-start space-x-2">
+                            <RadioGroupItem value="friends" id="friends-events" />
+                            <div className="grid gap-1.5">
+                              <FormLabel htmlFor="friends-events" className="font-medium">Amis</FormLabel>
+                              <p className="text-sm text-muted-foreground">
+                                Visibles uniquement par vos amis
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-start space-x-2">
+                            <RadioGroupItem value="participants" id="participants-events" />
+                            <div className="grid gap-1.5">
+                              <FormLabel htmlFor="participants-events" className="font-medium">Participants</FormLabel>
+                              <p className="text-sm text-muted-foreground">
+                                Visibles uniquement par les participants de l'événement
+                              </p>
+                            </div>
+                          </div>
+                        </RadioGroup>
+                      )}
+                    />
                   </div>
-                </RadioGroup>
-              </div>
-              
-              <div>
-                <h3 className="text-sm font-medium mb-3">Visibilité des événements passés</h3>
-                <RadioGroup 
-                  value={eventVisibility} 
-                  onValueChange={setEventVisibility}
-                  className="space-y-3"
-                >
-                  <div className="flex items-start space-x-2">
-                    <RadioGroupItem value="public" id="public-events" />
-                    <div className="grid gap-1.5">
-                      <FormLabel htmlFor="public-events" className="font-medium">Public</FormLabel>
-                      <p className="text-sm text-muted-foreground">
-                        Visibles par tous les utilisateurs
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <RadioGroupItem value="friends" id="friends-events" />
-                    <div className="grid gap-1.5">
-                      <FormLabel htmlFor="friends-events" className="font-medium">Amis</FormLabel>
-                      <p className="text-sm text-muted-foreground">
-                        Visibles uniquement par vos amis
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <RadioGroupItem value="participants" id="participants-events" />
-                    <div className="grid gap-1.5">
-                      <FormLabel htmlFor="participants-events" className="font-medium">Participants</FormLabel>
-                      <p className="text-sm text-muted-foreground">
-                        Visibles uniquement par les participants de l'événement
-                      </p>
-                    </div>
-                  </div>
-                </RadioGroup>
-              </div>
+                  <CardFooter className="px-0">
+                    <Button type="submit" size="sm" className="ml-auto">Enregistrer</Button>
+                  </CardFooter>
+                </form>
+              </Form>
             </CardContent>
-            <CardFooter>
-              <Button size="sm" className="ml-auto">Enregistrer</Button>
-            </CardFooter>
           </Card>
         )}
         
-        {/* Onglets pour les différents types d'événements */}
         {!privacyTab && (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="animate-fade-in">
             <TabsList className="grid grid-cols-2">
@@ -278,7 +308,6 @@ const Profile = () => {
               <TabsTrigger value="past">Passés</TabsTrigger>
             </TabsList>
             
-            {/* Événements à venir */}
             <TabsContent value="upcoming" className="mt-6">
               <div className="space-y-4">
                 {upcomingEvents.length > 0 ? (
@@ -334,7 +363,6 @@ const Profile = () => {
               </div>
             </TabsContent>
             
-            {/* Événements passés */}
             <TabsContent value="past" className="mt-6">
               <div className="space-y-4">
                 {pastEvents.length > 0 ? (
