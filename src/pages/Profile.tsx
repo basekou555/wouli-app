@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,21 +11,23 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { useAuth } from '../context/AuthContext';
+import { db } from '../firebase.config';
+import { doc, getDoc } from 'firebase/firestore';
 
-// Données d'exemple pour le profil
-const userProfile = {
-  name: 'Marie Dupont',
-  username: '@mariedupont',
-  avatar: 'https://picsum.photos/200?random=profile',
-  bio: 'Passionnée de sorties culturelles et gastronomiques. Toujours à la recherche de nouvelles expériences à Paris !',
-  isPublic: true,
+interface UserProfile {
+  name: string;
+  username: string;
+  avatar: string;
+  bio: string;
+  isPublic: boolean;
   stats: {
-    events: 12,
-    friends: 86,
-    photos: 124,
-    organized: 5,
-    participated: 18
-  }
+    events: number;
+    friends: number;
+    photos: number;
+    organized: number;
+    participated: number;
+  };
 };
 
 // Événements organisés
@@ -108,6 +110,7 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState('upcoming');
   const [privacyTab, setPrivacyTab] = useState(false);
   const [profileVisibility, setProfileVisibility] = useState<"public" | "private">(userProfile.isPublic ? "public" : "private");
+<<<<<<< HEAD
   const [eventVisibility, setEventVisibility] = useState<"public" | "friends" | "participants">("friends");
   const form = useForm<PrivacyFormValues>({
     defaultValues: {
@@ -115,12 +118,84 @@ const Profile = () => {
       eventVisibility: "friends"
     }
   });
+=======
+  const [eventVisibility, setEventVisibility] = useState<"public" | "friends" | "participants">("friends");+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const { signOutUser, user } = useAuth();
+
+  const form = useForm<PrivacyFormValues>({
+    defaultValues: {
+      profileVisibility: userProfile.isPublic ? "public" : "private",
+      eventVisibility: "friends",
+    },
+  });+
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (user) {
+        setLoadingProfile(true);
+        try {
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDocSnap = await getDoc(userDocRef);
+          if (userDocSnap.exists()) {
+            setUserProfile({
+              ...userDocSnap.data(),
+              // Provide default values if fields are missing in Firestore
+              name: userDocSnap.data().name || 'Unknown User',
+              username: userDocSnap.data().username || '@unknown',
+              avatar: userDocSnap.data().avatar || 'https://picsum.photos/200?random=profile',
+              bio: userDocSnap.data().bio || 'No bio available.',
+              isPublic: userDocSnap.data().isPublic !== undefined ? userDocSnap.data().isPublic : true,
+              stats: userDocSnap.data().stats || {
+                events: 0,
+                friends: 0,
+                photos: 0,
+                organized: 0,
+                participated: 0,
+              },
+            } as UserProfile);
+          } else {
+            console.log('No user data found in Firestore.');
+            setUserProfile(null);
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          setUserProfile(null);
+        } finally {
+          setLoadingProfile(false);
+        }
+      } else {
+        setUserProfile(null);
+        setLoadingProfile(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [user]);
+
+>>>>>>> 59ea0b0 (Add chat and discussion features)
   const togglePrivacySettings = () => {
     setPrivacyTab(!privacyTab);
   };
   const onSubmit = (data: PrivacyFormValues) => {
     setProfileVisibility(data.profileVisibility);
     setEventVisibility(data.eventVisibility);
+  };+
+
+  if (loadingProfile) {
+    return (
+      <AppLayout>
+        <div>Loading profile...</div>
+      </AppLayout>
+    );
+  }
+
+  if (!userProfile) {
+    return (
+      <AppLayout>
+        <div>No profile data found.</div>
+      </AppLayout>
+    );
   };
   return <AppLayout>
       <div className="py-6 space-y-8">
@@ -146,7 +221,7 @@ const Profile = () => {
               <p className="mt-2 text-gray-700">{userProfile.bio}</p>
               
               <div className="mt-4 flex flex-wrap justify-center md:justify-start gap-4">
-                <Badge variant="outline" className="flex items-center p-2 bg-purple-50 text-purple-700 border-purple-200">
+               <Badge variant="outline" className="flex items-center p-2 bg-purple-50 text-purple-700 border-purple-200">
                   <Calendar className="h-3 w-3 mr-1.5" />
                   <span className="font-bold">{userProfile.stats.organized}</span>
                   <span className="ml-1">organisés</span>
@@ -168,12 +243,21 @@ const Profile = () => {
             
             <div className="flex flex-col space-y-2">
               <Button variant="outline" className="flex items-center">
+              <Button variant="outline" className="flex items-center">
                 <Edit2 className="h-4 w-4 mr-2" />
                 Éditer le profil
               </Button>
               <Button variant={privacyTab ? "secondary" : "ghost"} className="flex items-center" onClick={togglePrivacySettings}>
                 <Settings className="h-4 w-4 mr-2" />
                 Paramètres
+              </Button>+                <LogOut className="h-4 w-4 mr-2" />
+                Déconnexion
+              </Button>
+              <Button // Add Sign Out button
+                variant="outline"
+                className="flex items-center"
+                onClick={() => signOutUser()}
+              >
               </Button>
             </div>
           </div>
