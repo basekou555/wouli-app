@@ -29,79 +29,68 @@ const userProfile = {
 };
 
 // Événements organisés
-const organizedEvents = [
-  {
-    id: '1',
-    title: 'Afterwork au Café des Artistes',
-    date: '2024-05-15T18:00:00',
-    location: 'Café des Artistes, Paris',
-    participants: 8,
-    image: 'https://picsum.photos/400/200?random=1'
-  },
-  {
-    id: '11',
-    title: 'Dîner d\'anniversaire',
-    date: '2024-04-20T19:30:00',
-    location: 'Restaurant Le Gourmet, Paris',
-    participants: 10,
-    image: 'https://picsum.photos/400/200?random=16'
-  }
-];
+const organizedEvents = [{
+  id: '1',
+  title: 'Afterwork au Café des Artistes',
+  date: '2024-05-15T18:00:00',
+  location: 'Café des Artistes, Paris',
+  participants: 8,
+  image: 'https://picsum.photos/400/200?random=1'
+}, {
+  id: '11',
+  title: 'Dîner d\'anniversaire',
+  date: '2024-04-20T19:30:00',
+  location: 'Restaurant Le Gourmet, Paris',
+  participants: 10,
+  image: 'https://picsum.photos/400/200?random=16'
+}];
 
 // Événements futurs
-const upcomingEvents = [
-  {
-    id: '2',
-    title: 'Concert au Zénith',
-    date: '2024-05-25T20:00:00',
-    location: 'Zénith, Paris',
-    participants: 12,
-    image: 'https://picsum.photos/400/200?random=2'
-  },
-  {
-    id: '3',
-    title: 'Festival d\'été',
-    date: '2024-06-15T14:00:00',
-    location: 'Parc de la Villette, Paris',
-    participants: 25,
-    image: 'https://picsum.photos/400/200?random=3'
-  }
-];
+const upcomingEvents = [{
+  id: '2',
+  title: 'Concert au Zénith',
+  date: '2024-05-25T20:00:00',
+  location: 'Zénith, Paris',
+  participants: 12,
+  image: 'https://picsum.photos/400/200?random=2'
+}, {
+  id: '3',
+  title: 'Festival d\'été',
+  date: '2024-06-15T14:00:00',
+  location: 'Parc de la Villette, Paris',
+  participants: 25,
+  image: 'https://picsum.photos/400/200?random=3'
+}];
 
 // Événements passés
-const pastEvents = [
-  {
-    id: '12',
-    title: 'Exposition Van Gogh',
-    date: '2024-03-12T14:00:00',
-    location: 'Musée d\'Orsay, Paris',
-    participants: 5,
-    image: 'https://picsum.photos/400/200?random=17',
-    hasPhotos: true,
-    hasVideo: true
-  },
-  {
-    id: '13',
-    title: 'Concert Jazz',
-    date: '2024-02-28T20:00:00',
-    location: 'Jazz Club, Paris',
-    participants: 8,
-    image: 'https://picsum.photos/400/200?random=18',
-    hasPhotos: true,
-    hasVideo: false
-  },
-  {
-    id: '14',
-    title: 'Dégustation de vins',
-    date: '2024-01-15T19:00:00',
-    location: 'Cave à vins, Paris',
-    participants: 6,
-    image: 'https://picsum.photos/400/200?random=19',
-    hasPhotos: true,
-    hasVideo: true
-  }
-];
-
+const pastEvents = [{
+  id: '12',
+  title: 'Exposition Van Gogh',
+  date: '2024-03-12T14:00:00',
+  location: 'Musée d\'Orsay, Paris',
+  participants: 5,
+  image: 'https://picsum.photos/400/200?random=17',
+  hasPhotos: true,
+  hasVideo: true
+}, {
+  id: '13',
+  title: 'Concert Jazz',
+  date: '2024-02-28T20:00:00',
+  location: 'Jazz Club, Paris',
+  participants: 8,
+  image: 'https://picsum.photos/400/200?random=18',
+  hasPhotos: true,
+  hasVideo: false
+}, {
+  id: '14',
+  title: 'Dégustation de vins',
+  date: '2024-01-15T19:00:00',
+  location: 'Cave à vins, Paris',
+  participants: 6,
+  image: 'https://picsum.photos/400/200?random=19',
+  hasPhotos: true,
+  hasVideo: true
+}];
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
   return new Intl.DateTimeFormat('fr-FR', {
@@ -111,36 +100,29 @@ const formatDate = (dateString: string) => {
     minute: '2-digit'
   }).format(date);
 };
-
 type PrivacyFormValues = {
   profileVisibility: "public" | "private";
   eventVisibility: "public" | "friends" | "participants";
 };
-
 const Profile = () => {
   const [activeTab, setActiveTab] = useState('upcoming');
   const [privacyTab, setPrivacyTab] = useState(false);
   const [profileVisibility, setProfileVisibility] = useState<"public" | "private">(userProfile.isPublic ? "public" : "private");
   const [eventVisibility, setEventVisibility] = useState<"public" | "friends" | "participants">("friends");
-
   const form = useForm<PrivacyFormValues>({
     defaultValues: {
       profileVisibility: userProfile.isPublic ? "public" : "private",
-      eventVisibility: "friends",
-    },
+      eventVisibility: "friends"
+    }
   });
-
   const togglePrivacySettings = () => {
     setPrivacyTab(!privacyTab);
   };
-
   const onSubmit = (data: PrivacyFormValues) => {
     setProfileVisibility(data.profileVisibility);
     setEventVisibility(data.eventVisibility);
   };
-
-  return (
-    <AppLayout>
+  return <AppLayout>
       <div className="py-6 space-y-8">
         <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
           <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
@@ -149,15 +131,11 @@ const Profile = () => {
                 <img src={userProfile.avatar} alt={userProfile.name} />
               </Avatar>
               <div className="absolute -bottom-2 -right-2 flex items-center bg-white rounded-full p-1 shadow-sm">
-                {userProfile.isPublic ? (
-                  <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">
+                {userProfile.isPublic ? <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">
                     <Eye className="h-3 w-3 mr-1" /> Public
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">
+                  </Badge> : <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">
                     <EyeOff className="h-3 w-3 mr-1" /> Privé
-                  </Badge>
-                )}
+                  </Badge>}
               </div>
             </div>
             
@@ -193,11 +171,7 @@ const Profile = () => {
                 <Edit2 className="h-4 w-4 mr-2" />
                 Éditer le profil
               </Button>
-              <Button 
-                variant={privacyTab ? "secondary" : "ghost"} 
-                className="flex items-center"
-                onClick={togglePrivacySettings}
-              >
+              <Button variant={privacyTab ? "secondary" : "ghost"} className="flex items-center" onClick={togglePrivacySettings}>
                 <Settings className="h-4 w-4 mr-2" />
                 Paramètres
               </Button>
@@ -205,8 +179,7 @@ const Profile = () => {
           </div>
         </div>
         
-        {privacyTab && (
-          <Card className="animate-fade-down">
+        {privacyTab && <Card className="animate-fade-down">
             <CardHeader>
               <CardTitle className="text-lg flex items-center">
                 <Lock className="h-4 w-4 mr-2" />
@@ -218,15 +191,9 @@ const Profile = () => {
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   <div>
                     <h3 className="text-sm font-medium mb-3">Statut du profil</h3>
-                    <FormField
-                      control={form.control}
-                      name="profileVisibility"
-                      render={({ field }) => (
-                        <RadioGroup
-                          value={field.value}
-                          onValueChange={field.onChange}
-                          className="flex gap-4"
-                        >
+                    <FormField control={form.control} name="profileVisibility" render={({
+                  field
+                }) => <RadioGroup value={field.value} onValueChange={field.onChange} className="flex gap-4">
                           <div className="flex items-start space-x-2">
                             <RadioGroupItem value="public" id="public-profile" />
                             <div className="grid gap-1.5">
@@ -245,22 +212,14 @@ const Profile = () => {
                               </p>
                             </div>
                           </div>
-                        </RadioGroup>
-                      )}
-                    />
+                        </RadioGroup>} />
                   </div>
                   
                   <div>
                     <h3 className="text-sm font-medium mb-3">Visibilité des événements passés</h3>
-                    <FormField
-                      control={form.control}
-                      name="eventVisibility"
-                      render={({ field }) => (
-                        <RadioGroup 
-                          value={field.value} 
-                          onValueChange={field.onChange}
-                          className="space-y-3"
-                        >
+                    <FormField control={form.control} name="eventVisibility" render={({
+                  field
+                }) => <RadioGroup value={field.value} onValueChange={field.onChange} className="space-y-3">
                           <div className="flex items-start space-x-2">
                             <RadioGroupItem value="public" id="public-events" />
                             <div className="grid gap-1.5">
@@ -288,9 +247,7 @@ const Profile = () => {
                               </p>
                             </div>
                           </div>
-                        </RadioGroup>
-                      )}
-                    />
+                        </RadioGroup>} />
                   </div>
                   <CardFooter className="px-0">
                     <Button type="submit" size="sm" className="ml-auto">Enregistrer</Button>
@@ -298,29 +255,18 @@ const Profile = () => {
                 </form>
               </Form>
             </CardContent>
-          </Card>
-        )}
+          </Card>}
         
-        {!privacyTab && (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="animate-fade-in">
-            <TabsList className="grid grid-cols-2">
-              <TabsTrigger value="upcoming">À venir</TabsTrigger>
-              <TabsTrigger value="past">Passés</TabsTrigger>
-            </TabsList>
+        {!privacyTab && <Tabs value={activeTab} onValueChange={setActiveTab} className="animate-fade-in">
+            
             
             <TabsContent value="upcoming" className="mt-6">
               <div className="space-y-4">
-                {upcomingEvents.length > 0 ? (
-                  upcomingEvents.map((event) => (
-                    <Link to={`/events/${event.id}`} key={event.id} className="block group">
+                {upcomingEvents.length > 0 ? upcomingEvents.map(event => <Link to={`/events/${event.id}`} key={event.id} className="block group">
                       <Card className="overflow-hidden transition-all duration-200 hover:shadow-md">
                         <div className="flex flex-col md:flex-row">
                           <div className="md:w-1/3 h-40 overflow-hidden">
-                            <img 
-                              src={event.image} 
-                              alt={event.title} 
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
+                            <img src={event.image} alt={event.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                           </div>
                           <div className="p-4 flex-1 flex flex-col justify-between">
                             <div>
@@ -346,10 +292,7 @@ const Profile = () => {
                           </div>
                         </div>
                       </Card>
-                    </Link>
-                  ))
-                ) : (
-                  <div className="text-center py-12">
+                    </Link>) : <div className="text-center py-12">
                     <div className="text-gray-400 mb-4">
                       <Calendar className="h-12 w-12 mx-auto" />
                     </div>
@@ -358,37 +301,26 @@ const Profile = () => {
                     <Button className="mt-4" asChild>
                       <Link to="/explore">Explorer les événements</Link>
                     </Button>
-                  </div>
-                )}
+                  </div>}
               </div>
             </TabsContent>
             
             <TabsContent value="past" className="mt-6">
               <div className="space-y-4">
-                {pastEvents.length > 0 ? (
-                  pastEvents.map((event) => (
-                    <Link to={`/events/${event.id}`} key={event.id} className="block group">
+                {pastEvents.length > 0 ? pastEvents.map(event => <Link to={`/events/${event.id}`} key={event.id} className="block group">
                       <Card className="overflow-hidden transition-all duration-200 hover:shadow-md">
                         <div className="flex flex-col md:flex-row">
                           <div className="md:w-1/3 h-40 overflow-hidden relative">
-                            <img 
-                              src={event.image} 
-                              alt={event.title} 
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
+                            <img src={event.image} alt={event.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                             <div className="absolute top-2 right-2 flex gap-1">
-                              {event.hasPhotos && (
-                                <Badge variant="secondary" className="bg-white/80 backdrop-blur-sm">
+                              {event.hasPhotos && <Badge variant="secondary" className="bg-white/80 backdrop-blur-sm">
                                   <Image className="h-3 w-3 mr-1" />
                                   Photos
-                                </Badge>
-                              )}
-                              {event.hasVideo && (
-                                <Badge variant="secondary" className="bg-white/80 backdrop-blur-sm">
+                                </Badge>}
+                              {event.hasVideo && <Badge variant="secondary" className="bg-white/80 backdrop-blur-sm">
                                   <Film className="h-3 w-3 mr-1" />
                                   Vidéo
-                                </Badge>
-                              )}
+                                </Badge>}
                             </div>
                           </div>
                           <div className="p-4 flex-1 flex flex-col justify-between">
@@ -415,24 +347,17 @@ const Profile = () => {
                           </div>
                         </div>
                       </Card>
-                    </Link>
-                  ))
-                ) : (
-                  <div className="text-center py-12">
+                    </Link>) : <div className="text-center py-12">
                     <div className="text-gray-400 mb-4">
                       <Image className="h-12 w-12 mx-auto" />
                     </div>
                     <h3 className="text-lg font-medium text-gray-900">Aucun événement passé</h3>
                     <p className="text-gray-500 mt-1">Vos événements passés apparaîtront ici</p>
-                  </div>
-                )}
+                  </div>}
               </div>
             </TabsContent>
-          </Tabs>
-        )}
+          </Tabs>}
       </div>
-    </AppLayout>
-  );
+    </AppLayout>;
 };
-
 export default Profile;
