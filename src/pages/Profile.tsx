@@ -5,15 +5,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, Edit2, MapPin, Image, Users, Settings, LogOut, Lock, Eye, EyeOff, ChevronRight, Film } from 'lucide-react';
+import { Calendar, Edit2, MapPin, Image, Users, Settings, LogOut, Lock, Eye, EyeOff, ChevronRight, Film } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { useAuth } from '../context/AuthContext';
-import { db } from '../firebase.config';
-import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../firebase.config';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 interface UserProfile {
   name: string;
@@ -109,6 +109,7 @@ type PrivacyFormValues = {
 const Profile = () => {
   const [activeTab, setActiveTab] = useState('upcoming');
   const [privacyTab, setPrivacyTab] = useState(false);
+<<<<<<< HEAD
   const [profileVisibility, setProfileVisibility] = useState<"public" | "private">(userProfile.isPublic ? "public" : "private");
 <<<<<<< HEAD
   const [eventVisibility, setEventVisibility] = useState<"public" | "friends" | "participants">("friends");
@@ -120,15 +121,20 @@ const Profile = () => {
   });
 =======
   const [eventVisibility, setEventVisibility] = useState<"public" | "friends" | "participants">("friends");+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+=======
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+>>>>>>> c58c14a (Votre message de commit ici, décrivant les changements effectués)
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [savingSettings, setSavingSettings] = useState(false);
   const { signOutUser, user } = useAuth();
 
+  // Forme avec les valeurs par défaut qui seront mises à jour après chargement du profil
   const form = useForm<PrivacyFormValues>({
     defaultValues: {
-      profileVisibility: userProfile.isPublic ? "public" : "private",
+      profileVisibility: "public",
       eventVisibility: "friends",
     },
-  });+
+  });
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -138,7 +144,7 @@ const Profile = () => {
           const userDocRef = doc(db, 'users', user.uid);
           const userDocSnap = await getDoc(userDocRef);
           if (userDocSnap.exists()) {
-            setUserProfile({
+            const userData = {
               ...userDocSnap.data(),
               // Provide default values if fields are missing in Firestore
               name: userDocSnap.data().name || 'Unknown User',
@@ -153,7 +159,15 @@ const Profile = () => {
                 organized: 0,
                 participated: 0,
               },
-            } as UserProfile);
+            } as UserProfile;
+            
+            setUserProfile(userData);
+            
+            // Mise à jour des valeurs du formulaire après chargement des données
+            form.reset({
+              profileVisibility: userData.isPublic ? "public" : "private",
+              eventVisibility: userDocSnap.data().eventVisibility || "friends",
+            });
           } else {
             console.log('No user data found in Firestore.');
             setUserProfile(null);
@@ -171,21 +185,58 @@ const Profile = () => {
     };
 
     fetchUserProfile();
-  }, [user]);
+  }, [user, form]);
 
 >>>>>>> 59ea0b0 (Add chat and discussion features)
   const togglePrivacySettings = () => {
     setPrivacyTab(!privacyTab);
   };
+<<<<<<< HEAD
   const onSubmit = (data: PrivacyFormValues) => {
     setProfileVisibility(data.profileVisibility);
     setEventVisibility(data.eventVisibility);
   };+
+=======
+
+  const onSubmit = async (data: PrivacyFormValues) => {
+    if (!user) return;
+    
+    setSavingSettings(true);
+    try {
+      const userDocRef = doc(db, 'users', user.uid);
+      await updateDoc(userDocRef, {
+        isPublic: data.profileVisibility === "public",
+        eventVisibility: data.eventVisibility
+      });
+      
+      // Mise à jour de l'état local après succès
+      setUserProfile(prev => prev ? {
+        ...prev,
+        isPublic: data.profileVisibility === "public"
+      } : null);
+      
+      // Afficher un message de succès (à implémenter)
+      console.log('Settings saved successfully');
+    } catch (error) {
+      console.error('Error saving privacy settings:', error);
+      // Afficher un message d'erreur (à implémenter)
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const handleEditProfile = () => {
+    // Implémentation future - redirection vers page d'édition ou ouverture de modal
+    console.log('Edit profile clicked');
+  };
+>>>>>>> c58c14a (Votre message de commit ici, décrivant les changements effectués)
 
   if (loadingProfile) {
     return (
       <AppLayout>
-        <div>Loading profile...</div>
+        <div className="flex justify-center items-center h-64">
+          <div className="text-gray-500">Chargement du profil...</div>
+        </div>
       </AppLayout>
     );
   }
@@ -193,11 +244,20 @@ const Profile = () => {
   if (!userProfile) {
     return (
       <AppLayout>
-        <div>No profile data found.</div>
+        <div className="flex justify-center items-center h-64">
+          <div className="text-gray-500">Aucune donnée de profil trouvée.</div>
+        </div>
       </AppLayout>
     );
+<<<<<<< HEAD
   };
   return <AppLayout>
+=======
+  }
+
+  return (
+    <AppLayout>
+>>>>>>> c58c14a (Votre message de commit ici, décrivant les changements effectués)
       <div className="py-6 space-y-8">
         <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
           <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
@@ -221,7 +281,7 @@ const Profile = () => {
               <p className="mt-2 text-gray-700">{userProfile.bio}</p>
               
               <div className="mt-4 flex flex-wrap justify-center md:justify-start gap-4">
-               <Badge variant="outline" className="flex items-center p-2 bg-purple-50 text-purple-700 border-purple-200">
+                <Badge variant="outline" className="flex items-center p-2 bg-purple-50 text-purple-700 border-purple-200">
                   <Calendar className="h-3 w-3 mr-1.5" />
                   <span className="font-bold">{userProfile.stats.organized}</span>
                   <span className="ml-1">organisés</span>
@@ -242,22 +302,35 @@ const Profile = () => {
             </div>
             
             <div className="flex flex-col space-y-2">
-              <Button variant="outline" className="flex items-center">
-              <Button variant="outline" className="flex items-center">
+              <Button 
+                variant="outline" 
+                className="flex items-center"
+                onClick={handleEditProfile}
+              >
                 <Edit2 className="h-4 w-4 mr-2" />
                 Éditer le profil
               </Button>
+<<<<<<< HEAD
               <Button variant={privacyTab ? "secondary" : "ghost"} className="flex items-center" onClick={togglePrivacySettings}>
+=======
+              
+              <Button 
+                variant={privacyTab ? "secondary" : "ghost"} 
+                className="flex items-center"
+                onClick={togglePrivacySettings}
+              >
+>>>>>>> c58c14a (Votre message de commit ici, décrivant les changements effectués)
                 <Settings className="h-4 w-4 mr-2" />
                 Paramètres
-              </Button>+                <LogOut className="h-4 w-4 mr-2" />
-                Déconnexion
               </Button>
-              <Button // Add Sign Out button
+              
+              <Button
                 variant="outline"
                 className="flex items-center"
                 onClick={() => signOutUser()}
               >
+                <LogOut className="h-4 w-4 mr-2" />
+                Déconnexion
               </Button>
             </div>
           </div>
@@ -334,7 +407,14 @@ const Profile = () => {
                         </RadioGroup>} />
                   </div>
                   <CardFooter className="px-0">
-                    <Button type="submit" size="sm" className="ml-auto">Enregistrer</Button>
+                    <Button 
+                      type="submit" 
+                      size="sm" 
+                      className="ml-auto"
+                      disabled={savingSettings}
+                    >
+                      {savingSettings ? 'Enregistrement...' : 'Enregistrer'}
+                    </Button>
                   </CardFooter>
                 </form>
               </Form>
@@ -444,4 +524,8 @@ const Profile = () => {
       </div>
     </AppLayout>;
 };
+<<<<<<< HEAD
+=======
+
+>>>>>>> c58c14a (Votre message de commit ici, décrivant les changements effectués)
 export default Profile;

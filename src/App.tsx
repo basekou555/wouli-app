@@ -22,6 +22,7 @@ import EventDetails from "./pages/EventDetails"; // Changed
 import Profile from "./pages/Profile"; // Changed
 import Explore from "./pages/Explore"; // Changed
 import Messages from "./pages/Messages"; // Changed
+import CreateProfile from "./pages/CreateProfile";
 import { AuthProvider, useAuth } from "./context/AuthContext"; // Added
 >>>>>>> 59ea0b0 (Add chat and discussion features)
 
@@ -78,6 +79,10 @@ const App = () => (
               <Route
                 path="/messages"
                 element={<ProtectedRoute element={<Messages />} />}
+              />
+              <Route
+                path="/create-profile"
+                element={<ProtectedRoute element={<CreateProfile />} />}
               />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

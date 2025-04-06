@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,7 @@ const SignUp = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const { signUp } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -17,6 +19,7 @@ const SignUp = () => {
     try {
       await signUp(email, password);
       // On success, the user will be redirected (see App.tsx)
+      navigate('/create-profile');
     } catch (error: any) {
       // Handle specific Firebase errors if needed
       setError(error.message || 'Sign-up failed. Please try again.');

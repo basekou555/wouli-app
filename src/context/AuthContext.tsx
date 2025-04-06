@@ -1,9 +1,7 @@
-import { createContext, useContext} from 'react';
-import { auth, db } from '../firebase.config'; // Import db
+import { createContext, useContext } from 'react';
+import { auth } from '../../firebase.config.js';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User } from 'firebase/auth';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { doc, setDoc } from 'firebase/firestore'; // Import Firestore functions
-
 interface AuthContextType {
   user: User | null;
   signUp: (email: string, password: string) => Promise<void>;
@@ -19,12 +17,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string) => {
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      // Create user document in Firestore
-      if (userCredential.user) {
-        const userDocRef = doc(db, 'users', userCredential.user.uid);
-        await setDoc(userDocRef, { email }); // Add email to the document
-      }
+      await createUserWithEmailAndPassword(auth, email, password);
     } catch (error: any) {
       console.error('Signup error:', error);
       throw error;
