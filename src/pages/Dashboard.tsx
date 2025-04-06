@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,86 +9,72 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 
 // Exemples d'événements futurs
-const upcomingEvents = [
-  {
-    id: '1',
-    title: 'Afterwork au Café des Artistes',
-    date: '2024-05-15T18:00:00',
-    location: 'Café des Artistes, Paris',
-    participants: 8,
-    image: 'https://picsum.photos/400/200?random=1'
-  },
-  {
-    id: '2',
-    title: 'Brunch dimanche',
-    date: '2024-05-12T11:00:00',
-    location: 'Chez Paul, Lyon',
-    participants: 4,
-    image: 'https://picsum.photos/400/200?random=2'
-  }
-];
+const upcomingEvents = [{
+  id: '1',
+  title: 'Afterwork au Café des Artistes',
+  date: '2024-05-15T18:00:00',
+  location: 'Café des Artistes, Paris',
+  participants: 8,
+  image: 'https://picsum.photos/400/200?random=1'
+}, {
+  id: '2',
+  title: 'Brunch dimanche',
+  date: '2024-05-12T11:00:00',
+  location: 'Chez Paul, Lyon',
+  participants: 4,
+  image: 'https://picsum.photos/400/200?random=2'
+}];
 
 // Exemples d'événements passés
-const pastEvents = [
-  {
-    id: '5',
-    title: 'Randonnée en montagne',
-    date: '2024-04-10T09:00:00',
-    location: 'Mont Blanc, Chamonix',
-    participants: 5,
-    image: 'https://picsum.photos/400/200?random=5',
-    memories: 12
-  },
-  {
-    id: '6',
-    title: 'Soirée jeux de société',
-    date: '2024-04-05T19:00:00',
-    location: 'Chez Marc, Bordeaux',
-    participants: 10,
-    image: 'https://picsum.photos/400/200?random=6',
-    memories: 8
-  }
-];
-
-const friendsEvents = [
-  {
-    id: '3',
-    title: 'Concert Jazz',
-    date: '2024-05-20T20:00:00',
-    location: 'Jazz Club, Marseille',
-    organizer: 'Sophie L.',
-    participants: 12,
-    image: 'https://picsum.photos/400/200?random=3'
-  },
-  {
-    id: '4',
-    title: 'Dégustation de vins',
-    date: '2024-05-25T19:00:00',
-    location: 'Cave à vins, Bordeaux',
-    organizer: 'Thomas M.',
-    participants: 6,
-    image: 'https://picsum.photos/400/200?random=4'
-  }
-];
+const pastEvents = [{
+  id: '5',
+  title: 'Randonnée en montagne',
+  date: '2024-04-10T09:00:00',
+  location: 'Mont Blanc, Chamonix',
+  participants: 5,
+  image: 'https://picsum.photos/400/200?random=5',
+  memories: 12
+}, {
+  id: '6',
+  title: 'Soirée jeux de société',
+  date: '2024-04-05T19:00:00',
+  location: 'Chez Marc, Bordeaux',
+  participants: 10,
+  image: 'https://picsum.photos/400/200?random=6',
+  memories: 8
+}];
+const friendsEvents = [{
+  id: '3',
+  title: 'Concert Jazz',
+  date: '2024-05-20T20:00:00',
+  location: 'Jazz Club, Marseille',
+  organizer: 'Sophie L.',
+  participants: 12,
+  image: 'https://picsum.photos/400/200?random=3'
+}, {
+  id: '4',
+  title: 'Dégustation de vins',
+  date: '2024-05-25T19:00:00',
+  location: 'Cave à vins, Bordeaux',
+  organizer: 'Thomas M.',
+  participants: 6,
+  image: 'https://picsum.photos/400/200?random=4'
+}];
 
 // Souvenirs et rappels
-const memories = [
-  {
-    id: 'm1',
-    title: 'Il y a un an - Voyage à Rome',
-    description: 'Ce jour-là, vous avez visité le Colisée avec vos amis!',
-    date: '2023-05-05T14:00:00',
-    image: 'https://picsum.photos/400/200?random=7'
-  },
-  {
-    id: 'm2',
-    title: 'Il y a 2 ans - Anniversaire de Julie',
-    description: 'Une soirée mémorable pour les 30 ans de Julie',
-    date: '2022-05-04T20:00:00',
-    image: 'https://picsum.photos/400/200?random=8'
-  }
-];
-
+const memories = [{
+  id: 'm1',
+  title: 'Il y a un an - Voyage à Rome',
+  description: 'Ce jour-là, vous avez visité le Colisée avec vos amis!',
+  date: '2023-05-05T14:00:00',
+  image: 'https://picsum.photos/400/200?random=7'
+}, {
+  id: 'm2',
+  title: 'Il y a 2 ans - Anniversaire de Julie',
+  description: 'Une soirée mémorable pour les 30 ans de Julie',
+  date: '2022-05-04T20:00:00',
+  image: 'https://picsum.photos/400/200?random=8'
+}];
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
   return new Intl.DateTimeFormat('fr-FR', {
@@ -99,37 +84,31 @@ const formatDate = (dateString: string) => {
     minute: '2-digit'
   }).format(date);
 };
-
 const Dashboard = () => {
   const [feedFilter, setFeedFilter] = useState<'all' | 'future' | 'past'>('all');
-  const { toast } = useToast();
-  
+  const {
+    toast
+  } = useToast();
   const handleMemoryInteraction = (memory: any) => {
     toast({
       title: 'Souvenir partagé',
-      description: 'Votre souvenir a été partagé avec vos amis',
+      description: 'Votre souvenir a été partagé avec vos amis'
     });
   };
-
   const filteredEvents = () => {
     if (feedFilter === 'future') return [...upcomingEvents, ...friendsEvents];
     if (feedFilter === 'past') return pastEvents;
     // Mix all content for "all" filter
     return [...upcomingEvents, ...pastEvents, ...friendsEvents];
   };
-
-  return (
-    <AppLayout>
+  return <AppLayout>
       <div className="space-y-6 py-4">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Accueil</h1>
             <p className="text-sm text-gray-500 mt-1">Découvrez ce qui se passe dans votre réseau</p>
           </div>
-          <Link
-            to="/events/create"
-            className="inline-flex items-center rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-2 text-sm font-medium text-white hover:opacity-90"
-          >
+          <Link to="/events/create" className="inline-flex items-center rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-2 text-sm font-medium text-white hover:opacity-90">
             <Plus className="mr-2 h-4 w-4" />
             Créer
           </Link>
@@ -137,19 +116,14 @@ const Dashboard = () => {
 
         {/* Feed filters */}
         <div className="border-b border-gray-200">
-          <Tabs defaultValue="all" className="w-full" onValueChange={(value) => setFeedFilter(value as 'all' | 'future' | 'past')}>
-            <TabsList className="w-full grid grid-cols-3 max-w-md mx-auto">
-              <TabsTrigger value="all" className="text-sm">Tout</TabsTrigger>
-              <TabsTrigger value="future" className="text-sm">À venir</TabsTrigger>
-              <TabsTrigger value="past" className="text-sm">Souvenirs</TabsTrigger>
-            </TabsList>
+          <Tabs defaultValue="all" className="w-full" onValueChange={value => setFeedFilter(value as 'all' | 'future' | 'past')}>
+            
           </Tabs>
         </div>
 
         {/* Feed content - Social media style */}
         <div className="space-y-6">
-          {filteredEvents().map((event: any, index) => (
-            <Card key={event.id} className="overflow-hidden border-gray-100 hover:shadow-sm transition-shadow">
+          {filteredEvents().map((event: any, index) => <Card key={event.id} className="overflow-hidden border-gray-100 hover:shadow-sm transition-shadow">
               <div className="px-4 py-3 flex items-center justify-between border-b border-gray-50">
                 <div className="flex items-center space-x-3">
                   <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-purple-600 via-pink-500 to-orange-400 p-0.5">
@@ -171,11 +145,7 @@ const Dashboard = () => {
 
               <Link to={`/events/${event.id}`}>
                 <div className="aspect-[4/3] overflow-hidden">
-                  <img 
-                    src={event.image} 
-                    alt={event.title} 
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={event.image} alt={event.title} className="w-full h-full object-cover" />
                 </div>
               </Link>
 
@@ -184,11 +154,9 @@ const Dashboard = () => {
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-gray-900">{event.title}</h3>
                     {/* Show memory count badge for past events */}
-                    {event.memories && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                    {event.memories && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                         {event.memories} souvenirs
-                      </span>
-                    )}
+                      </span>}
                   </div>
 
                   <div className="flex items-center text-gray-600">
@@ -217,12 +185,12 @@ const Dashboard = () => {
                     </div>
                     <div className="flex items-center">
                       <div className="flex -space-x-2 mr-2">
-                        {Array.from({ length: Math.min(3, event.participants || 0) }).map((_, i) => (
-                          <Avatar key={i} className="h-6 w-6 border-2 border-white">
+                        {Array.from({
+                      length: Math.min(3, event.participants || 0)
+                    }).map((_, i) => <Avatar key={i} className="h-6 w-6 border-2 border-white">
                             <AvatarImage src={`https://picsum.photos/200?random=${event.id}-${i}`} />
                             <AvatarFallback className="text-xs bg-purple-100 text-purple-800">U</AvatarFallback>
-                          </Avatar>
-                        ))}
+                          </Avatar>)}
                       </div>
                       <span className="text-xs text-gray-600">
                         {event.participants} participant{event.participants > 1 ? 's' : ''}
@@ -231,27 +199,20 @@ const Dashboard = () => {
                   </div>
                 </div>
               </CardContent>
-            </Card>
-          ))}
+            </Card>)}
 
           {/* Memories section - Only show if "all" or "past" filter is selected */}
-          {(feedFilter === 'all' || feedFilter === 'past') && (
-            <section>
+          {(feedFilter === 'all' || feedFilter === 'past') && <section>
               <h3 className="text-lg font-semibold text-gray-800 mb-3">Vos souvenirs</h3>
               <div className="space-y-4">
-                {memories.map((memory) => (
-                  <Card key={memory.id} className="overflow-hidden border-gray-100 bg-gradient-to-br from-purple-50 to-pink-50 hover:shadow-sm transition-shadow">
+                {memories.map(memory => <Card key={memory.id} className="overflow-hidden border-gray-100 bg-gradient-to-br from-purple-50 to-pink-50 hover:shadow-sm transition-shadow">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-lg">{memory.title}</CardTitle>
                       <CardDescription>{memory.description}</CardDescription>
                     </CardHeader>
                     <div className="px-6 pb-3">
                       <div className="aspect-[16/9] overflow-hidden rounded-md">
-                        <img 
-                          src={memory.image} 
-                          alt={memory.title} 
-                          className="w-full h-full object-cover"
-                        />
+                        <img src={memory.image} alt={memory.title} className="w-full h-full object-cover" />
                       </div>
                     </div>
                     <CardFooter className="pt-0 flex justify-between">
@@ -262,11 +223,9 @@ const Dashboard = () => {
                         {formatDate(memory.date)}
                       </div>
                     </CardFooter>
-                  </Card>
-                ))}
+                  </Card>)}
               </div>
-            </section>
-          )}
+            </section>}
 
           {/* "Create new event" card always at the end */}
           <Link to="/events/create" className="block">
@@ -280,8 +239,6 @@ const Dashboard = () => {
           </Link>
         </div>
       </div>
-    </AppLayout>
-  );
+    </AppLayout>;
 };
-
 export default Dashboard;
