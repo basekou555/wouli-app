@@ -1,0 +1,109 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Fonctions utilitaires pour réutiliser la logique
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isEventAdmin(eventPath) {
+      return isAuthenticated() && request.auth.uid in get(eventPath).data.admin;
+    }
+    
+    function isEventParticipant(eventPath) {
+      return isAuthenticated() && request.auth.uid in get(eventPath).data.participants;
+    }
+    
+    function validateRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+    
+    // Users
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isOwner(userId);
+      
+      // Validation de la structure des données utilisateur
+      allow update: if isOwner(userId) && 
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdAt', 'role']));
+    }
+    
+    // Events
+    match /events/{eventId} {
+      allow read: if (
+        resource.data.privacy == 'public' ||
+        (isAuthenticated() && resource.data.privacy == 'friends-of-members' && 
+          request.auth.uid in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.friends) ||
+        (isAuthenticated() && resource.data.privacy == 'private' && 
+          request.auth.uid in resource.data.participants)
+      );
+      allow create: if isAuthenticated() && 
+        validateRequiredFields(['title', 'privacy', 'admin', 'participants']) &&
+        request.resource.data.admin is list && request.auth.uid in request.resource.data.admin;
+      allow update: if isEventAdmin(/databases/$(database)/documents/events/$(eventId));
+      allow delete: if isEventAdmin(/databases/$(database)/documents/events/$(eventId));
+      
+      // Event Messages
+      match /messages/{messageId} {
+        allow read, create: if isEventParticipant(/databases/$(database)/documents/events/$(eventId));
+        allow update, delete: if isAuthenticated() && request.auth.uid == resource.data.senderId;
+      }
+      
+      // Event Medias
+      match /medias/{mediaId} {
+        allow create: if isAuthenticated() && isEventParticipant(/databases/$(database)/documents/events/$(eventId));
+        allow read: if isAuthenticated();
+        allow update, delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      }
+    }
+    
+    // Groups avec validations améliorées
+    match /groups/{groupId} {
+      allow read: if (
+        resource.data.privacy == 'public' ||
+        (isAuthenticated() && resource.data.privacy == 'private' && request.auth.uid in resource.data.members)
+      );
+      allow create: if isAuthenticated() && 
+        validateRequiredFields(['name', 'privacy', 'adminId', 'members']) &&
+        request.resource.data.adminId == request.auth.uid &&
+        request.resource.data.members is list && 
+        request.auth.uid in request.resource.data.members;
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.adminId;
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.adminId;
+      
+      // Group Messages
+      match /messages/{messageId} {
+        allow read, create: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members;
+        allow update, delete: if isAuthenticated() && request.auth.uid == resource.data.senderId;
+      }
+    }
+    
+    // Direct messages avec validation du chatId
+    match /users/{userId}/chats/{chatId}/messages/{messageId} {
+      function isParticipantInChat() {
+        let participants = chatId.split('_');
+        return participants.size() == 2 && request.auth.uid in participants;
+      }
+      
+      allow read, create: if isAuthenticated() && isParticipantInChat();
+      allow update, delete: if isAuthenticated() && request.auth.uid == resource.data.senderId;
+    }
+    
+    // TMDb integration – read-only
+    match /tmdb/movies/{tmdbId} {
+      allow read: if isAuthenticated();
+    }
+    
+    // Souvenirs
+    match /souvenirs/{souvenirId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && validateRequiredFields(['eventId']);
+      allow update, delete: if isAuthenticated() && 
+        isEventParticipant(/databases/$(database)/documents/events/$(resource.data.eventId));
+    }
+  }
+}

@@ -1,0 +1,12 @@
+specVersion: "v1"
+serviceId: "wouli-app"
+location: "europe-west9"
+schema:
+  source: "./schema"
+  datasource:
+    postgresql:
+      database: "fdcdb"
+      cloudSql:
+        instanceId: "wouli-app-fdc"
+      # schemaValidation: "COMPATIBLE"
+connectorDirs: ["./connector"]
