@@ -8,12 +8,12 @@ interface AppLayoutProps {
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex-col">
+    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 flex-col">
       <AppNavbar />
       
       {/* Content area with improved responsive spacing */}
-      <main className="flex-1 md:ml-0 pt-14 pb-20 md:pt-16 md:pb-6 px-3 md:px-8">
-        <div className="max-w-3xl mx-auto w-full">
+      <main className="flex-1 pt-16 pb-20 md:pt-20 md:pb-6 px-4 md:px-8">
+        <div className="max-w-4xl mx-auto w-full">
           {children}
         </div>
       </main>
