@@ -70,7 +70,7 @@
  
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border-color;
   }
   body {
     @apply bg-background text-foreground;
@@ -157,5 +157,9 @@
   
   .tinder-gradient {
     @apply bg-gradient-to-r from-orange-400 to-pink-500;
+  }
+  
+  .border-border-color {
+    border-color: hsl(var(--border));
   }
 }
