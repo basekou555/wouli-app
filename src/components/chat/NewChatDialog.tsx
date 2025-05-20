@@ -12,7 +12,7 @@ import { PrivateChatForm } from './PrivateChatForm';
 import { useData } from '@/hooks/useData';
 import { User as UserType } from '@/types/chat';
 import { addDoc, serverTimestamp, collection } from 'firebase/firestore';
-import { db } from '@/firebase.config';
+import { db } from '../../firebase.config';
 
 interface NewChatDialogProps {
   open: boolean;
@@ -32,16 +32,13 @@ export function NewChatDialog({ open, onOpenChange, onChatCreated }: NewChatDial
   const [filteredUsers, setFilteredUsers] = useState<UserType[]>([]);
 
   useEffect(() => {
-    const newFilteredUsers = users.filter((user): user is UserType =>
-      
-      'name' in user && 'username' in user &&
-      
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.username.toLowerCase().includes(searchTerm.toLowerCase())
+    const newFilteredUsers = users.filter((user): user is UserType => 
+      'displayName' in user && 
+      (user.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+       user.email?.toLowerCase().includes(searchTerm.toLowerCase()))
     );
     setFilteredUsers(newFilteredUsers as UserType[]);
   }, [searchTerm, users]);
-
 
   const createChatToDb = async (chat: Chat) => {
     const docRef = await addDoc(collection(db, 'chats'), { ...chat, createdAt: serverTimestamp() });
@@ -49,7 +46,8 @@ export function NewChatDialog({ open, onOpenChange, onChatCreated }: NewChatDial
   };
 
   const handleCreateChat = async () => {
-    let newChat: Chat;
+    let newChat: Partial<Chat>;
+    
     if (chatType === 'one-to-one') {
       const selectedUserObj = users.find(u => u.id === selectedUser);
       if (!selectedUserObj) return;
@@ -57,12 +55,12 @@ export function NewChatDialog({ open, onOpenChange, onChatCreated }: NewChatDial
       newChat = {
         id: uuidv4(),
         type: chatType,
-        name: selectedUserObj.name,
-        avatar: selectedUserObj.avatar,
+        name: selectedUserObj.displayName || selectedUserObj.email?.split('@')[0] || 'Utilisateur',
+        avatar: selectedUserObj.photoURL,
         unreadCount: 0,
         pinned: false,
         visibility: 'private',
-        createdAt: serverTimestamp(),
+        createdAt: new Date(),
         participants: [
           user && {
             id: user.uid,
@@ -71,8 +69,8 @@ export function NewChatDialog({ open, onOpenChange, onChatCreated }: NewChatDial
           },
           {
             id: selectedUserObj.id,
-            name: selectedUserObj.name,
-            avatar: selectedUserObj.avatar,
+            name: selectedUserObj.displayName || selectedUserObj.email?.split('@')[0] || 'Utilisateur',
+            avatar: selectedUserObj.photoURL,
           }
         ].filter(Boolean),
         createdBy: user?.uid || '',
@@ -80,39 +78,41 @@ export function NewChatDialog({ open, onOpenChange, onChatCreated }: NewChatDial
     } else {
       // Group chat
       if (!groupName.trim()) return;
-          const participants = [
+      
+      const participants = [
         user && {
           id: user.uid,
           name: user.displayName || 'Vous',
-
+          avatar: user.photoURL,
         },
         ...selectedParticipants.map((id) => {
           const user = users.find(u => u.id === id);
-
-          return user &&  {
-            
-            
+          
+          return user && {
             id: user?.id || '',
-            name: user?.name || '',
-            avatar: user?.avatar,
+            name: user?.displayName || user?.email?.split('@')[0] || '',
+            avatar: user?.photoURL,
           };
         }),
-      ];
+      ].filter(Boolean);
       
       newChat = {
+        id: uuidv4(),
         type: chatType,
         name: groupName,
         unreadCount: 0,
         pinned: false,
         visibility: groupVisibility,
         participants,
+        createdAt: new Date(),
         createdBy: user?.uid || '',
       };
     }
-    const newChatId = await createChatToDb(newChat);
+    
+    const newChatId = await createChatToDb(newChat as Chat);
     newChat.id = newChatId;
     
-    onChatCreated(newChat);
+    onChatCreated(newChat as Chat);
     
     // Reset form
     setChatType('group');
