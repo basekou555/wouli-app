@@ -6,7 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Heart, Share2, MapPin, Users } from 'lucide-react';
+import { Heart, Share2, MapPin, Users, Calendar } from 'lucide-react'; // Added Calendar import
 
 // Constants
 const DEFAULT_EVENT_IMAGE = '/assets/images/event-placeholder.jpg';
@@ -68,7 +68,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, isUpcomingEvent, formatEve
           </div>
 
           <div className="flex items-center text-gray-600">
-            <CalendarIcon className="h-4 w-4 mr-2 flex-shrink-0" />
+            <Calendar className="h-4 w-4 mr-2 flex-shrink-0" /> {/* Changed from CalendarIcon to Calendar */}
             <span className="text-sm">
               {formatEventDate(event.date)}
             </span>

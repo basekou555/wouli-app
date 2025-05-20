@@ -5,11 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Chat, Message } from '@/types/chat';
 import { useData } from '@/hooks/useData';
-import { db } from '@/firebase.config';
+import { db } from '../../firebase.config';
 import { addDoc, serverTimestamp, collection } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from '@/components/ui/badge';
-
+import { v4 as uuidv4 } from 'uuid';
 
 interface ChatViewProps {
 
@@ -24,7 +24,6 @@ export function ChatView({ chat, onBack }: ChatViewProps) {
   const { data: allData, loading } = useData('messages');
   const { user, loading: loadingUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { v4: uuidv4 } = require('uuid');
 
   useEffect(() => {
     if (allData) {

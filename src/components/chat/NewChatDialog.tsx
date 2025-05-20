@@ -20,6 +20,14 @@ interface NewChatDialogProps {
   onChatCreated: (chat: Chat) => void;
 }
 
+// Interface for user data from Firestore
+interface FirestoreUser {
+  id: string;
+  displayName?: string;
+  email?: string;
+  photoURL?: string;
+}
+
 export function NewChatDialog({ open, onOpenChange, onChatCreated }: NewChatDialogProps) {
   const [chatType, setChatType] = useState<ChatType>('group');
   const [groupName, setGroupName] = useState('');
@@ -27,17 +35,37 @@ export function NewChatDialog({ open, onOpenChange, onChatCreated }: NewChatDial
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>('');
-  const { data: users } = useData('users');
+  const { data: usersData } = useData('users');
   const { user } = useAuth();
   const [filteredUsers, setFilteredUsers] = useState<UserType[]>([]);
 
+  // Safely convert raw data to FirestoreUser array
+  const users = usersData
+    .filter((userData): userData is Record<string, unknown> => 
+      typeof userData === 'object' && userData !== null && 'id' in userData
+    )
+    .map(userData => ({
+      id: String(userData.id),
+      displayName: userData.displayName as string | undefined,
+      email: userData.email as string | undefined,
+      photoURL: userData.photoURL as string | undefined
+    }));
+
   useEffect(() => {
-    const newFilteredUsers = users.filter((user): user is UserType => 
-      'displayName' in user && 
-      (user.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-       user.email?.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-    setFilteredUsers(newFilteredUsers as UserType[]);
+    if (searchTerm === '') {
+      setFilteredUsers(users as unknown as UserType[]);
+      return;
+    }
+    
+    const newFilteredUsers = users.filter((user) => {
+      const displayName = user.displayName || '';
+      const email = user.email || '';
+      const searchTermLower = searchTerm.toLowerCase();
+      return displayName.toLowerCase().includes(searchTermLower) || 
+             email.toLowerCase().includes(searchTermLower);
+    });
+    
+    setFilteredUsers(newFilteredUsers as unknown as UserType[]);
   }, [searchTerm, users]);
 
   const createChatToDb = async (chat: Chat) => {
@@ -55,7 +83,7 @@ export function NewChatDialog({ open, onOpenChange, onChatCreated }: NewChatDial
       newChat = {
         id: uuidv4(),
         type: chatType,
-        name: selectedUserObj.displayName || selectedUserObj.email?.split('@')[0] || 'Utilisateur',
+        name: selectedUserObj.displayName || (selectedUserObj.email ? selectedUserObj.email.split('@')[0] : 'Utilisateur'),
         avatar: selectedUserObj.photoURL,
         unreadCount: 0,
         pinned: false,
@@ -69,7 +97,7 @@ export function NewChatDialog({ open, onOpenChange, onChatCreated }: NewChatDial
           },
           {
             id: selectedUserObj.id,
-            name: selectedUserObj.displayName || selectedUserObj.email?.split('@')[0] || 'Utilisateur',
+            name: selectedUserObj.displayName || (selectedUserObj.email ? selectedUserObj.email.split('@')[0] : 'Utilisateur'),
             avatar: selectedUserObj.photoURL,
           }
         ].filter(Boolean),
@@ -86,12 +114,12 @@ export function NewChatDialog({ open, onOpenChange, onChatCreated }: NewChatDial
           avatar: user.photoURL,
         },
         ...selectedParticipants.map((id) => {
-          const user = users.find(u => u.id === id);
+          const userObj = users.find(u => u.id === id);
           
-          return user && {
-            id: user?.id || '',
-            name: user?.displayName || user?.email?.split('@')[0] || '',
-            avatar: user?.photoURL,
+          return userObj && {
+            id: userObj.id || '',
+            name: userObj.displayName || (userObj.email ? userObj.email.split('@')[0] : ''),
+            avatar: userObj.photoURL,
           };
         }),
       ].filter(Boolean);
