@@ -1,3 +1,4 @@
+
 import { Event } from "@/types/chat";
 
 // Mock Events

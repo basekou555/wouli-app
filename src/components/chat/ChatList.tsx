@@ -1,35 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { MessageSquare, Plus, Search, Users, UserPlus, Calendar, PlusCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { User } from '@/types/chat';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Chat, ChatType } from '@/types/chat';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { useData } from '@/hooks/useData';
+import { mockChats } from './data/chats';
 
 interface ChatListProps {
+  chats: Chat[];
   activeChat: Chat | null;
   setActiveChat: (chat: Chat) => void;
   onNewChat: () => void;
 }
 
-export function ChatList({ activeChat, setActiveChat, onNewChat }: ChatListProps) {
+export function ChatList({ chats, activeChat, setActiveChat, onNewChat }: ChatListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<ChatType | 'all'>('all');
-  const { data: chats, loading } = useData('chats', true);
-  const [filteredChats, setFilteredChats] = useState<Chat[]>([]);
-
-  useEffect(() => {
-    const newFilteredChats = chats.filter((chat : any) => {
-      const matchesSearch = chat.name.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesFilter = filter === 'all' || chat.type === filter;
-      return matchesSearch && matchesFilter;
-    });
-    setFilteredChats(newFilteredChats as Chat[]);
-  }, [searchQuery, filter, chats]);
   
-  const sortedChats = [...filteredChats].sort((a: Chat, b: Chat) => {
+  const filteredChats = chats.filter(chat => {
+    const matchesSearch = chat.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = filter === 'all' || chat.type === filter;
+    return matchesSearch && matchesFilter;
+  });
+  
+  const sortedChats = [...filteredChats].sort((a, b) => {
     // First sort by pinned status
     if (a.pinned && !b.pinned) return -1;
     if (!a.pinned && b.pinned) return 1;
@@ -40,18 +35,6 @@ export function ChatList({ activeChat, setActiveChat, onNewChat }: ChatListProps
     return bTime.getTime() - aTime.getTime();
   });
   
-  if (loading) {
-    return (
-      <div className="flex flex-col h-full items-center justify-center">
-        <p>Chargement...</p>
-      </div>
-    );
-  }
-  if (chats.length === 0) {
-    return <div className='flex flex-col h-full items-center justify-center'><p>Aucune conversation</p></div>;
-  }
-  
-
   const pinnedChats = sortedChats.filter(chat => chat.pinned);
   const unpinnedChats = sortedChats.filter(chat => !chat.pinned);
 
@@ -144,7 +127,7 @@ export function ChatList({ activeChat, setActiveChat, onNewChat }: ChatListProps
           </div>
         )}
         
-        {filteredChats.length === 0 && (
+        {sortedChats.length === 0 && (
           <div className="p-4 text-center text-gray-500">
             <p>Aucune conversation trouvée</p>
           </div>
@@ -194,19 +177,15 @@ function ChatListItem({ chat, isActive, onClick }: ChatListItemProps) {
   };
   
   const getChatInitials = () => {
-    if (chat.participants) {
-      if (chat.type === 'one-to-one') {
-        // For one-to-one chats, use the other person's initial
-        const otherPerson = chat.participants.find(p => p.id !== 'current-user-id');
-        if(otherPerson) {
-          return otherPerson.name?.charAt(0) || '?';
-        }
-      } else {
-        // For groups and events, use the first letter of the chat name
-        return chat.name.charAt(0);
-      }
+    if (chat.type === 'one-to-one') {
+      // For one-to-one chats, use the other person's initial
+      const otherPerson = chat.participants.find(p => p.id !== 'current-user-id');
+      return otherPerson?.name.charAt(0) || '?';
+    } else {
+      // For groups and events, use the first letter of the chat name
+      return chat.name.charAt(0);
     }
-  }
+  };
 
   return (
     <div 

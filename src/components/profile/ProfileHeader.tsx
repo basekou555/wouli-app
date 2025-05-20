@@ -1,124 +1,116 @@
 
 import React from 'react';
-import { Settings, Edit, Image, MapPin, Calendar, Shield } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Edit2, Settings, LogOut, Eye, EyeOff } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
-interface ProfileHeaderProps {
-  userProfile: any;
-  toggleSettings: () => void;
-  onEditProfile: () => void;
-  isMobile?: boolean;
+interface UserProfile {
+  name: string;
+  username: string;
+  avatar: string;
+  bio: string;
+  isPublic: boolean;
+  stats: {
+    events: number;
+    friends: number;
+    photos: number;
+    organized: number;
+    participated: number;
+  };
 }
 
-const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userProfile, toggleSettings, onEditProfile, isMobile = false }) => {
-  const { name, username, avatar, bio, isPublic, stats } = userProfile;
-  
+interface ProfileHeaderProps {
+  userProfile: UserProfile;
+  toggleSettings: () => void;
+  onEditProfile?: () => void;
+}
+
+const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userProfile, toggleSettings, onEditProfile }) => {
+  const { signOutUser } = useAuth();
+
+  const handleEditProfile = () => {
+    if (onEditProfile) {
+      onEditProfile();
+    }
+  };
+
   return (
-    <div className="animate-fade-down space-y-4 md:space-y-6">
-      {/* Cover image placeholder */}
-      <div className="relative h-24 md:h-36 w-full bg-gradient-to-r from-purple-400 to-pink-400 rounded-lg overflow-hidden">
-        <div className="absolute inset-0 flex items-center justify-center text-white opacity-50">
-          <Image className="h-8 w-8" />
-        </div>
-        <div className="absolute bottom-4 right-4">
-          <Button size="sm" variant="ghost" className="bg-black/20 text-white hover:bg-black/30">
-            <Image className="h-4 w-4 mr-1" />
-            <span className="text-xs">Ajouter une couverture</span>
-          </Button>
-        </div>
-      </div>
-      
-      {/* Profile information */}
-      <div className="flex flex-col md:flex-row md:items-end md:gap-6">
-        <div className={`${isMobile ? '-mt-12' : '-mt-16'} mx-auto md:mx-0 relative`}>
-          <Avatar className={`${isMobile ? 'h-24 w-24' : 'h-32 w-32'} border-4 border-white`}>
-            <AvatarImage src={avatar} alt={name} />
-            <AvatarFallback>{name[0]}</AvatarFallback>
+    <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
+      <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+        <div className="relative">
+          <Avatar className="h-24 w-24 border-4 border-white shadow-sm">
+            {userProfile.avatar ? (
+              <AvatarImage src={userProfile.avatar} alt={userProfile.name} />
+            ) : (
+              <AvatarFallback>{userProfile.name.charAt(0)}</AvatarFallback>
+            )}
           </Avatar>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="absolute bottom-0 right-0 rounded-full h-8 w-8 p-1.5 bg-gray-100"
-            onClick={onEditProfile}
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
+          <div className="absolute -bottom-2 -right-2 flex items-center bg-white rounded-full p-1 shadow-sm">
+            {userProfile.isPublic ? 
+              <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">
+                <Eye className="h-3 w-3 mr-1" /> Public
+              </Badge> : 
+              <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">
+                <EyeOff className="h-3 w-3 mr-1" /> Privé
+              </Badge>
+            }
+          </div>
         </div>
         
-        <div className={`flex flex-col ${isMobile ? 'mt-3 items-center' : 'mt-0'} md:flex-grow`}>
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between w-full">
-            <div className={`space-y-1 ${isMobile ? 'text-center' : ''}`}>
-              <div className="flex items-center justify-center md:justify-start gap-2">
-                <h1 className="text-xl md:text-2xl font-bold">{name}</h1>
-                {isPublic ? (
-                  <Badge variant="outline" className="bg-green-50 border-green-200 text-green-700 text-xs">
-                    Public
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="bg-orange-50 border-orange-200 text-orange-700 text-xs">
-                    Privé
-                  </Badge>
-                )}
-              </div>
-              <p className="text-gray-500 text-sm">{username}</p>
-            </div>
-            
-            <div className={`flex gap-2 ${isMobile ? 'mt-3 justify-center' : ''}`}>
-              <Button size={isMobile ? "sm" : "default"} variant="outline" onClick={toggleSettings}>
-                <Settings className="h-4 w-4 mr-1" />
-                Paramètres
-              </Button>
-              <Button size={isMobile ? "sm" : "default"}>
-                <Edit className="h-4 w-4 mr-1" />
-                Modifier
-              </Button>
-            </div>
-          </div>
+        <div className="flex-1 text-center md:text-left">
+          <h1 className="text-2xl font-bold">{userProfile.name}</h1>
+          <p className="text-gray-500">{userProfile.username}</p>
           
-          <div className={`mt-3 md:mt-4 ${isMobile ? 'text-center' : ''}`}>
-            <p className="text-sm text-gray-700">{bio}</p>
+          <p className="mt-2 text-gray-700">{userProfile.bio}</p>
+          
+          <div className="mt-4 flex flex-wrap justify-center md:justify-start gap-4">
+            <Badge variant="outline" className="flex items-center p-2 bg-purple-50 text-purple-700 border-purple-200">
+              <span className="font-bold">{userProfile.stats.organized}</span>
+              <span className="ml-1">organisés</span>
+            </Badge>
             
-            <div className="flex items-center justify-center md:justify-start gap-4 mt-2 text-gray-500 text-sm">
-              <div className="flex items-center">
-                <MapPin className="h-4 w-4 mr-1" />
-                <span>France</span>
-              </div>
-              <div className="flex items-center">
-                <Calendar className="h-4 w-4 mr-1" />
-                <span>Depuis 2023</span>
-              </div>
-              <div className="flex items-center">
-                <Shield className="h-4 w-4 mr-1" />
-                <span>Vérifié</span>
-              </div>
-            </div>
+            <Badge variant="outline" className="flex items-center p-2 bg-pink-50 text-pink-700 border-pink-200">
+              <span className="font-bold">{userProfile.stats.participated}</span>
+              <span className="ml-1">participés</span>
+            </Badge>
+            
+            <Badge variant="outline" className="flex items-center p-2 bg-blue-50 text-blue-700 border-blue-200">
+              <span className="font-bold">{userProfile.stats.photos}</span>
+              <span className="ml-1">photos</span>
+            </Badge>
           </div>
         </div>
-      </div>
-      
-      {/* Stats cards */}
-      <div className="grid grid-cols-3 md:grid-cols-5 gap-2 md:gap-3 mt-2">
-        <div className="bg-white rounded-lg border p-2 md:p-3 text-center">
-          <p className="text-base md:text-lg font-semibold text-gray-900">{stats.events || 0}</p>
-          <p className="text-[10px] md:text-xs text-gray-500">Événements</p>
-        </div>
-        <div className="bg-white rounded-lg border p-2 md:p-3 text-center">
-          <p className="text-base md:text-lg font-semibold text-gray-900">{stats.organized || 0}</p>
-          <p className="text-[10px] md:text-xs text-gray-500">Organisés</p>
-        </div>
-        <div className="bg-white rounded-lg border p-2 md:p-3 text-center">
-          <p className="text-base md:text-lg font-semibold text-gray-900">{stats.participated || 0}</p>
-          <p className="text-[10px] md:text-xs text-gray-500">Participés</p>
-        </div>
-        <div className="bg-white rounded-lg border p-2 md:p-3 text-center">
-          <p className="text-base md:text-lg font-semibold text-gray-900">{stats.photos || 0}</p>
-          <p className="text-[10px] md:text-xs text-gray-500">Photos</p>
-        </div>
-        <div className="bg-white rounded-lg border p-2 md:p-3 text-center hidden md:block">
-          <p className="text-lg font-semibold text-gray-900">{stats.friends || 0}</p>
-          <p className="text-xs text-gray-500">Amis</p>
+        
+        <div className="flex flex-col space-y-2">
+          <Button 
+            variant="outline" 
+            className="flex items-center"
+            onClick={handleEditProfile}
+          >
+            <Edit2 className="h-4 w-4 mr-2" />
+            Éditer le profil
+          </Button>
+          
+          <Button 
+            variant="secondary" 
+            className="flex items-center"
+            onClick={toggleSettings}
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Paramètres
+          </Button>
+          
+          <Button
+            variant="outline"
+            className="flex items-center"
+            onClick={() => signOutUser()}
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Déconnexion
+          </Button>
         </div>
       </div>
     </div>
