@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { ChatList } from '@/components/chat/ChatList';
 import { ChatView } from '@/components/chat/ChatView';
-import { NewChatDialog } from '@/components/chat/NewChatDialog';
+import NewChatDialog from '@/components/chat/NewChatDialog';
 import { Chat } from '@/types/chat';
 import { MessageSquare } from 'lucide-react';
 import { db } from '../firebase.config';

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useData, User } from "@/hooks/useData";
@@ -8,18 +7,19 @@ import { db } from "@/firebase.config";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Avatar } from "@/components/ui/avatar";
 import { Plus, X } from "lucide-react";
-import PrivateChatForm from "./PrivateChatForm";
-import GroupChatForm from "./GroupChatForm";
+import { PrivateChatForm } from "./PrivateChatForm";
+import { GroupChatForm } from "./GroupChatForm";
+import { Chat } from "@/types/chat";
 
 interface NewChatDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onChatCreated?: (chat: Chat) => void;
 }
 
-const NewChatDialog = ({ open, onOpenChange }: NewChatDialogProps) => {
+const NewChatDialog = ({ open, onOpenChange, onChatCreated }: NewChatDialogProps) => {
   const { user } = useAuth();
   const { data: userData, loading: loadingUsers } = useData("users");
   const { toast } = useToast();
@@ -27,16 +27,9 @@ const NewChatDialog = ({ open, onOpenChange }: NewChatDialogProps) => {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [groupName, setGroupName] = useState("");
 
-  // Type guard to ensure we're working with User objects
-  const isUser = (item: any): item is User => {
-    return item && typeof item === 'object' && 'email' in item;
-  };
-
-  // Filter out current user from the list
-  const filteredUsers = userData.filter(item => {
-    if (!isUser(item)) return false;
-    return item.id !== user?.uid;
-  }) as User[];
+  // Filter out current user from the list and ensure we have User objects
+  const filteredUsers = userData
+    .filter(item => item.id !== user?.uid && 'email' in item) as User[];
 
   const handleUserSelection = (userId: string) => {
     if (selectedUsers.includes(userId)) {
@@ -56,22 +49,39 @@ const NewChatDialog = ({ open, onOpenChange }: NewChatDialogProps) => {
     if (!user) return;
 
     try {
+      let newChat: any;
+      
       if (chatType === "private" && selectedUsers.length === 1) {
         // Create private chat
-        await addDoc(collection(db, "chats"), {
+        const docRef = await addDoc(collection(db, "chats"), {
           participants: [user.uid, selectedUsers[0]],
           isGroup: false,
           createdAt: new Date(),
         });
+        
+        newChat = {
+          id: docRef.id,
+          participants: [user.uid, selectedUsers[0]],
+          isGroup: false,
+        };
+        
         toast({ description: "Private chat created!" });
       } else if (chatType === "group" && selectedUsers.length > 0 && groupName) {
         // Create group chat
-        await addDoc(collection(db, "chats"), {
+        const docRef = await addDoc(collection(db, "chats"), {
           name: groupName,
           participants: [user.uid, ...selectedUsers],
           isGroup: true,
           createdAt: new Date(),
         });
+        
+        newChat = {
+          id: docRef.id,
+          name: groupName,
+          participants: [user.uid, ...selectedUsers],
+          isGroup: true,
+        };
+        
         toast({ description: "Group chat created!" });
       } else {
         toast({ 
@@ -84,6 +94,9 @@ const NewChatDialog = ({ open, onOpenChange }: NewChatDialogProps) => {
       
       resetForm();
       onOpenChange(false);
+      if (onChatCreated && newChat) {
+        onChatCreated(newChat as Chat);
+      }
     } catch (error) {
       console.error("Error creating chat:", error);
       toast({ 

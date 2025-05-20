@@ -1,5 +1,5 @@
 
-import { Restaurant, Cinema, Beer, Music, Dumbbell } from 'lucide-react';
+import { Utensils, Film, Beer, Music, Dumbbell } from 'lucide-react';
 
 export type EventType = 'restaurant' | 'cinema' | 'bar' | 'concert' | 'sport';
 
@@ -36,7 +36,7 @@ export interface QuickEvent {
 export const eventTemplates: EventTemplate[] = [
   {
     id: 'restaurant',
-    icon: Restaurant,
+    icon: Utensils,
     label: 'Restaurant',
     defaultDuration: 120, // 2 hours
     defaultMaxParticipants: 8,
@@ -49,7 +49,7 @@ export const eventTemplates: EventTemplate[] = [
   },
   {
     id: 'cinema',
-    icon: Cinema,
+    icon: Film,
     label: 'Cinéma',
     defaultDuration: 150, // 2.5 hours
     defaultMaxParticipants: 6,

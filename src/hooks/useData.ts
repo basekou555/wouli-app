@@ -7,6 +7,7 @@ import { mockUsers } from "@/mocks/users";
 import { mockChats } from "@/mocks/chats";
 import { mockMessages } from "@/mocks/messages";
 import { mockEvents } from "@/mocks/events";
+import { Chat } from "@/types/chat";
 
 export type User = {
   id: string;
@@ -20,23 +21,23 @@ export type User = {
   [key: string]: any;
 };
 
-export type Chat = {
-  id: string;
-  name: string;
-  lastMessage?: string;
-  lastMessageTime?: any;
-  participants: string[];
-  isGroup?: boolean;
-  [key: string]: any;
-};
-
 export type Message = {
   id: string;
   chatId: string;
-  senderId: string;
-  text: string;
-  timestamp: any;
-  [key: string]: any;
+  content: string;
+  sender: {
+    id: string;
+    name: string;
+    avatar?: string;
+  };
+  timestamp: Date;
+  read: boolean;
+  attachments?: Array<{
+    id: string;
+    type: 'image' | 'video' | 'file';
+    url: string;
+    thumbnail?: string;
+  }>;
 };
 
 export type Event = {
@@ -51,11 +52,15 @@ export type Event = {
   [key: string]: any;
 };
 
-type CollectionName = "users" | "chats" | "messages" | "events";
 export type DataItem = User | Chat | Message | Event;
 
-function useData(collectionName: CollectionName, realTime: boolean = true) {
-  const [data, setData] = useState<DataItem[]>([]);
+type CollectionName = "users" | "chats" | "messages" | "events";
+
+function useData<T extends DataItem>(collectionName: CollectionName, realTime: boolean = true): { 
+  data: T[],
+  loading: boolean 
+} {
+  const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const { user } = useAuth();
   const firstFetch = useRef(true);
@@ -74,45 +79,49 @@ function useData(collectionName: CollectionName, realTime: boolean = true) {
           const fetchedData = querySnapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
-          })) as DataItem[];
+          })) as T[];
 
           onSnapshot(q, (snapshot) => {
             if (!firstFetch.current) {
               console.log("real time"); 
             }
             firstFetch.current = false;
-            setData(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as DataItem[]);
+            const newData = snapshot.docs.map((doc) => ({ 
+              id: doc.id, 
+              ...doc.data() 
+            })) as T[];
+            setData(newData);
           });
-          setData(fetchedData as DataItem[]);
+          setData(fetchedData);
         } else if (user){
           const q = query(collection(db, collectionName));
           const querySnapshot = await getDocs(q);
           const fetchedData = querySnapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
-          }));
-          setData(fetchedData as DataItem[]);
+          })) as T[];
+          setData(fetchedData);
         } else {
           // Use mock data if user is not logged in
           switch (collectionName) {
             case "users":
-              setData(mockUsers as DataItem[]);
+              setData(mockUsers as unknown as T[]);
               break;
             case "chats":
-              setData(mockChats as DataItem[]);
+              setData(mockChats as unknown as T[]);
               break;
             case "messages":
-              setData(mockMessages as DataItem[]);
+              setData(mockMessages as unknown as T[]);
               break;
             case "events":
-              setData(mockEvents as DataItem[]);
+              setData(mockEvents as unknown as T[]);
               break;
           }
         }
       } catch (error) {
-        console.error(`Error fetching ${collectionName}:`, error)
+        console.error(`Error fetching ${collectionName}:`, error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     };
     fetchData();

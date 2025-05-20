@@ -1,7 +1,7 @@
 
 import { EventType } from "@/types/eventTemplate";
 import { User } from "@/hooks/useData";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { addDays, addHours, format, isAfter, parse, startOfToday } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -107,7 +107,7 @@ export const suggestionService = {
       return suggestions;
     } catch (error) {
       console.error('Error fetching place suggestions:', error);
-      toast.error('Could not load place suggestions. Please try again.');
+      toast("Could not load place suggestions. Please try again.");
       return [];
     }
   },
