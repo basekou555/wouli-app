@@ -9,7 +9,7 @@ dotenv.config();
 // Initialiser Firebase Admin
 admin.initializeApp();
 
-// Fonction utilitaire pour récupérer la clé API en fonction de l'environnement
+// Fonction utilitaire améliorée pour récupérer la clé API en fonction de l'environnement
 const getApiKey = (localKey: string | undefined, configPath: string): string => {
   // En production, utiliser functions.config()
   if (process.env.NODE_ENV === 'production') {
@@ -21,6 +21,7 @@ const getApiKey = (localKey: string | undefined, configPath: string): string => 
       for (const part of pathParts) {
         config = config[part];
         if (config === undefined) {
+          console.error(`Configuration ${configPath} non trouvée`);
           throw new Error(`Configuration ${configPath} non trouvée`);
         }
       }
@@ -34,27 +35,35 @@ const getApiKey = (localKey: string | undefined, configPath: string): string => 
   
   // En local, utiliser process.env
   if (!localKey) {
+    console.error(`Clé API ${configPath.replace('.', '_').toUpperCase()} non trouvée dans les variables d'environnement`);
     throw new Error(`Clé API ${configPath.replace('.', '_').toUpperCase()} non trouvée dans les variables d'environnement`);
   }
   
   return localKey;
 };
 
+// Fonction pour vérifier l'authenticité de la requête
+const verifyAuth = (context: functions.https.CallableContext) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      'unauthenticated',
+      'Authentification requise pour accéder à cette fonctionnalité'
+    );
+  }
+  
+  return context.auth.uid;
+};
+
 // Exemple d'utilisation avec l'API TMDB
 export const getTmdbData = functions.https.onCall(async (data, context) => {
   try {
+    // Vérifier l'authentification
+    const userId = verifyAuth(context);
+    
     // Récupérer la clé API
     const apiKey = getApiKey(process.env.TMDB_API_KEY, 'tmdb.key');
     
-    // Vérifier l'authentification si nécessaire
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
-        'unauthenticated',
-        'Authentification requise pour accéder à cette fonctionnalité'
-      );
-    }
-    
-    // Exemple de requête à l'API TMDB
+    // Valider les paramètres
     const movieId = data.movieId;
     if (!movieId) {
       throw new functions.https.HttpsError(
@@ -64,6 +73,7 @@ export const getTmdbData = functions.https.onCall(async (data, context) => {
     }
     
     // Simuler un appel API (à remplacer par votre vraie logique)
+    console.log(`Utilisateur ${userId} demande des informations sur le film ${movieId}`);
     console.log(`Appel à l'API TMDB avec la clé ${apiKey.substring(0, 3)}...`);
     
     // Retourner une réponse simulée
@@ -84,13 +94,40 @@ export const getTmdbData = functions.https.onCall(async (data, context) => {
 // Exemple d'utilisation avec une autre API (ex: Stripe)
 export const processPayment = functions.https.onCall(async (data, context) => {
   try {
+    // Vérifier l'authentification
+    const userId = verifyAuth(context);
+    
     // Récupérer la clé API Stripe
     const apiKey = getApiKey(process.env.STRIPE_API_KEY, 'stripe.key');
     
-    // Logique similaire pour Stripe...
-    console.log(`Traitement de paiement avec la clé Stripe ${apiKey.substring(0, 3)}...`);
+    // Validation des données de paiement
+    if (!data.amount || !data.currency || !data.paymentMethod) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Informations de paiement incomplètes'
+      );
+    }
     
-    return { success: true, message: 'Paiement simulé avec succès' };
+    // Logique similaire pour Stripe...
+    console.log(`Traitement de paiement pour l'utilisateur ${userId}`);
+    console.log(`Montant: ${data.amount} ${data.currency}`);
+    console.log(`Traitement avec la clé Stripe ${apiKey.substring(0, 3)}...`);
+    
+    // Ajouter une trace dans Firestore pour suivre la transaction
+    await admin.firestore().collection('payments').add({
+      userId,
+      amount: data.amount,
+      currency: data.currency,
+      paymentMethod: data.paymentMethod,
+      status: 'completed',
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
+    });
+    
+    return { 
+      success: true, 
+      message: 'Paiement traité avec succès',
+      transactionId: `tx_${Date.now()}`
+    };
   } catch (error: any) {
     console.error('Erreur dans la Cloud Function processPayment:', error);
     throw new functions.https.HttpsError(

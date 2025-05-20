@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,10 +6,8 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/components/ui/use-toast";
-import { db } from '../../firebase.config';
-import { collection, query, where, getDocs, orderBy, Timestamp, DocumentData } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
+import { fetchEvents, EventData } from '../services/eventService';
 
 interface EventData {
   id: string;
@@ -29,72 +26,22 @@ const Dashboard = () => {
   const [events, setEvents] = useState<EventData[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
-  const { toast } = useToast();
 
   useEffect(() => {
-    const fetchEvents = async () => {
+    const getEvents = async () => {
       if (!user) return;
       
       try {
         setLoading(true);
-        const eventsRef = collection(db, 'events');
-        let q;
-
-        if (feedFilter === 'future') {
-          q = query(
-            eventsRef,
-            where('date', '>=', new Date()),
-            orderBy('date', 'asc')
-          );
-        } else if (feedFilter === 'past') {
-          q = query(
-            eventsRef,
-            where('date', '<', new Date()),
-            orderBy('date', 'desc')
-          );
-        } else {
-          q = query(eventsRef, orderBy('date', 'desc'));
-        }
-
-        const querySnapshot = await getDocs(q);
-        const eventsData: EventData[] = [];
-        
-        querySnapshot.forEach((doc) => {
-          const data = doc.data() as DocumentData;
-          
-          // Make sure all required properties exist
-          if (data.title && data.location && data.date) {
-            eventsData.push({
-              id: doc.id,
-              title: data.title,
-              location: data.location,
-              date: data.date,
-              image: data.image || null,
-              organizerName: data.organizerName || 'Utilisateur',
-              organizerAvatar: data.organizerAvatar || null,
-              participants: data.participants || [],
-              ...data // Include any other properties
-            } as EventData);
-          } else {
-            console.warn(`Event ${doc.id} is missing required properties and was skipped`);
-          }
-        });
-        
+        const eventsData = await fetchEvents(feedFilter);
         setEvents(eventsData);
-      } catch (error) {
-        console.error('Error fetching events:', error);
-        toast({
-          title: "Erreur",
-          description: "Impossible de charger les événements.",
-          variant: "destructive"
-        });
       } finally {
         setLoading(false);
       }
     };
 
-    fetchEvents();
-  }, [user, feedFilter, toast]);
+    getEvents();
+  }, [user, feedFilter]);
 
   return (
     <AppLayout>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import ProfileHeader from '../components/profile/ProfileHeader';
@@ -6,9 +5,10 @@ import ProfileSettings from '../components/profile/ProfileSettings';
 import EventTabs from '../components/profile/EventTabs';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../../firebase.config';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from 'react-router-dom';
+import { fetchUserEvents } from '../services/eventService';
 
 interface UserProfile {
   name: string;
@@ -45,6 +45,7 @@ const Profile = () => {
       if (user) {
         setLoadingProfile(true);
         try {
+          // Fetch user profile data
           const userDocRef = doc(db, 'users', user.uid);
           const userDocSnap = await getDoc(userDocRef);
           
@@ -72,8 +73,9 @@ const Profile = () => {
               setIsNewAccount(true);
             }
 
-            // Récupérer les événements
-            await fetchUserEvents(user.uid);
+            // Fetch events using the centralized service
+            const userEvents = await fetchUserEvents(user.uid);
+            setEvents(userEvents);
           } else {
             console.log('No user data found in Firestore. Creating default profile.');
             const defaultProfile = {
@@ -109,58 +111,6 @@ const Profile = () => {
         } finally {
           setLoadingProfile(false);
         }
-      }
-    };
-
-    const fetchUserEvents = async (userId: string) => {
-      try {
-        // Requête pour les événements à venir
-        const upcomingEventsQuery = query(
-          collection(db, 'events'), 
-          where('participants', 'array-contains', userId),
-          where('date', '>=', new Date())
-        );
-        const upcomingEventsSnapshot = await getDocs(upcomingEventsQuery);
-        const upcomingEvents = upcomingEventsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-
-        // Requête pour les événements passés
-        const pastEventsQuery = query(
-          collection(db, 'events'), 
-          where('participants', 'array-contains', userId),
-          where('date', '<', new Date())
-        );
-        const pastEventsSnapshot = await getDocs(pastEventsQuery);
-        const pastEvents = pastEventsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-
-        // Requête pour les événements organisés
-        const organizedEventsQuery = query(
-          collection(db, 'events'), 
-          where('organizer', '==', userId)
-        );
-        const organizedEventsSnapshot = await getDocs(organizedEventsQuery);
-        const organizedEvents = organizedEventsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-
-        setEvents({
-          upcoming: upcomingEvents,
-          past: pastEvents,
-          organized: organizedEvents
-        });
-      } catch (error) {
-        console.error('Error fetching events:', error);
-        toast({
-          title: "Erreur",
-          description: "Impossible de charger vos événements.",
-          variant: "destructive"
-        });
       }
     };
 
