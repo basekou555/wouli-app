@@ -4,10 +4,11 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { UserList } from './UserList';
-import { User } from '@/hooks/useData';
+import { User as ChatUser } from '@/types/chat';
+import { User as DataUser } from '@/hooks/useData';
 
 interface PrivateChatFormProps {
-  users: User[];
+  users: DataUser[];
   selectedUsers: string[];
   onUserSelect: (userId: string) => void;
   loading?: boolean;
@@ -25,6 +26,14 @@ export function PrivateChatForm({
     user.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
     user.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Convert users to match the expected ChatUser type
+  const convertedUsers: ChatUser[] = filteredUsers.map(user => ({
+    id: user.id,
+    name: user.name || '',
+    username: user.username || user.displayName || '',
+    avatar: user.avatar || user.photoURL || ''
+  }));
 
   return (
     <div className="space-y-4">
@@ -48,7 +57,7 @@ export function PrivateChatForm({
           </div>
         ) : filteredUsers.length > 0 ? (
           <UserList
-            users={filteredUsers}
+            users={convertedUsers}
             selectedUsers={selectedUsers}
             onUserSelect={onUserSelect}
             singleSelect={true}

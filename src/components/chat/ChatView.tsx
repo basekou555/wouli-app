@@ -1,11 +1,10 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, MoreVertical, Paperclip, Send, Image, Smile, Users, Info, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Chat, Message } from '@/types/chat';
-import { useData } from '@/hooks/useData';
+import { Chat, Message as ChatMessage } from '@/types/chat';
+import { useData, Message as DataMessage } from '@/hooks/useData';
 import { db } from '../../firebase.config';
 import { addDoc, serverTimestamp, collection } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
@@ -19,7 +18,7 @@ interface ChatViewProps {
 
 export function ChatView({ chat, onBack }: ChatViewProps) {
   const [newMessage, setNewMessage] = useState('');
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { data: allData, loading } = useData('messages');
   const { user, loading: loadingUser } = useAuth();
@@ -27,10 +26,18 @@ export function ChatView({ chat, onBack }: ChatViewProps) {
 
   useEffect(() => {
     if (allData) {
-      // Fix the type issue by explicitly casting message objects
+      // Convert data items to chat messages
       const chatMessages = allData
-        .filter((item) => 'content' in item && item.chatId === chat.id)
-        .map(item => item as unknown as Message);
+        .filter(item => 'content' in item && 'chatId' in item && item.chatId === chat.id)
+        .map(item => ({
+          id: item.id,
+          chatId: (item as any).chatId,
+          content: (item as any).content,
+          sender: (item as any).sender,
+          timestamp: (item as any).timestamp,
+          read: (item as any).read,
+          attachments: (item as any).attachments
+        } as ChatMessage));
       
       setMessages(chatMessages);
     }
@@ -42,24 +49,25 @@ export function ChatView({ chat, onBack }: ChatViewProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const sendMessageToDb = async (message: Message) => {
+  const sendMessageToDb = async (message: ChatMessage) => {
     await addDoc(collection(db, 'messages'), { ...message, timestamp: serverTimestamp() });
   };
 
   const handleSendMessage = async () => {
     if (newMessage.trim() === '') return;
     const userId = user?.uid;
-    const newMsg: Message = {
+    const newMsg: ChatMessage = {
       id: uuidv4(),
-      chatId: chat.id, content: newMessage,
+      chatId: chat.id, 
+      content: newMessage,
       sender: {
-        id: userId,
+        id: userId || 'anonymous',
         name: user?.displayName || 'Vous',
       },
       timestamp: new Date(),
       read: false,
     };
-     await sendMessageToDb(newMsg);
+    await sendMessageToDb(newMsg);
 
     setMessages([...messages, newMsg]);
     setNewMessage('');
@@ -205,7 +213,7 @@ export function ChatView({ chat, onBack }: ChatViewProps) {
 }
 
 interface MessageBubbleProps {
-  message: Message;
+  message: ChatMessage;
   isSelf: boolean;
   showAvatar: boolean;
 }

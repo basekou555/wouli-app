@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useData, User } from "@/hooks/useData";
@@ -7,7 +8,6 @@ import { db } from "@/firebase.config";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Avatar } from "@/components/ui/avatar";
 import { Plus, X } from "lucide-react";
 import { PrivateChatForm } from "./PrivateChatForm";
 import { GroupChatForm } from "./GroupChatForm";
