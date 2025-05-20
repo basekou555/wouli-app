@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Chat, Message } from '@/types/chat';
-import { mockMessages } from './data/messages';
+import { mockMessages } from './mockData';
 import { Badge } from '@/components/ui/badge';
 
 interface ChatViewProps {

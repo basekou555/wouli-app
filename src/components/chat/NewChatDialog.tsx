@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Check, Users, User, Calendar, Search } from 'lucide-react';
 import { Chat, ChatType, ChatVisibility } from '@/types/chat';
-import { mockUsers } from './data/users';
+import { mockUsers } from './mockData';
 
 interface NewChatDialogProps {
   open: boolean;

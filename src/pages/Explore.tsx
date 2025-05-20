@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,92 +7,104 @@ import { Calendar, MapPin, Search, Users, Filter, Heart, X, Star } from 'lucide-
 import { Link } from 'react-router-dom';
 import { motion, PanInfo, useAnimation } from "framer-motion";
 import { useToast } from "@/components/ui/use-toast";
-import { db } from '../../firebase.config';
-import { collection, query, getDocs, where, orderBy, Timestamp, DocumentData } from 'firebase/firestore';
-import { useAuth } from '../context/AuthContext';
 
-interface EventData {
-  id: string;
-  title: string;
-  location: string;
-  date: Timestamp;
-  image?: string;
-  participants?: string[];
-  type?: string;
-  [key: string]: any; // Allow for additional properties
-}
+// Exemple d'événements à explorer
+const exploreEvents = [
+  {
+    id: '5',
+    title: 'Festival de Musique Électronique',
+    date: '2024-06-15T20:00:00',
+    location: 'Parc des Expositions, Paris',
+    participants: 120,
+    image: 'https://picsum.photos/400/200?random=10',
+    type: 'public'
+  },
+  {
+    id: '6',
+    title: 'Séance de Yoga en Plein Air',
+    date: '2024-05-22T09:00:00',
+    location: 'Parc Monceau, Paris',
+    participants: 15,
+    image: 'https://picsum.photos/400/200?random=11',
+    type: 'public'
+  },
+  {
+    id: '7',
+    title: 'Atelier Cuisine Italienne',
+    date: '2024-05-28T18:30:00',
+    location: 'École de Cuisine, Lyon',
+    participants: 8,
+    image: 'https://picsum.photos/400/200?random=12',
+    type: 'public'
+  },
+  {
+    id: '8',
+    title: 'Tournoi de Pétanque Amateur',
+    date: '2024-06-02T14:00:00',
+    location: 'Place du village, Marseille',
+    participants: 24,
+    image: 'https://picsum.photos/400/200?random=13',
+    type: 'public'
+  },
+  {
+    id: '9',
+    title: 'Soirée Jeux de Société',
+    date: '2024-05-30T19:00:00',
+    location: 'Bar à Jeux, Bordeaux',
+    participants: 12,
+    image: 'https://picsum.photos/400/200?random=14',
+    type: 'friends'
+  },
+  {
+    id: '10',
+    title: 'Randonnée en Montagne',
+    date: '2024-06-08T08:00:00',
+    location: 'Mont Blanc, Chamonix',
+    participants: 8,
+    image: 'https://picsum.photos/400/200?random=15',
+    type: 'friends'
+  },
+];
+
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date);
+};
 
 const Explore = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [events, setEvents] = useState<EventData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [filteredEvents, setFilteredEvents] = useState(exploreEvents);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState('all'); // 'all', 'public', 'friends'
   const [showSearch, setShowSearch] = useState(false);
   const controls = useAnimation();
   const { toast } = useToast();
-  const { user } = useAuth();
 
-  useEffect(() => {
-    const fetchEvents = async () => {
-      if (!user) return;
+  const handleFilter = (filterType: string) => {
+    setFilter(filterType);
+    if (filterType === 'all') {
+      setFilteredEvents(exploreEvents);
+    } else {
+      setFilteredEvents(exploreEvents.filter(event => event.type === filterType));
+    }
+    setCurrentIndex(0);
+  };
+
+  const performSearch = () => {
+    const results = exploreEvents.filter(event => {
+      const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                        event.location.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesFilter = filter === 'all' || event.type === filter;
       
-      try {
-        setLoading(true);
-        const eventsRef = collection(db, 'events');
-        let q = query(eventsRef, where('date', '>=', new Date()), orderBy('date', 'asc'));
-
-        if (filter !== 'all') {
-          q = query(q, where('type', '==', filter));
-        }
-
-        const querySnapshot = await getDocs(q);
-        const eventsData: EventData[] = [];
-        
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          eventsData.push({
-            id: doc.id,
-            title: data.title || 'Sans titre',
-            location: data.location || 'Non spécifié',
-            date: data.date,
-            image: data.image || '',
-            participants: data.participants || [],
-            type: data.type || 'public',
-            ...data
-          });
-        });
-        
-        const filteredEvents = eventsData.filter(event => 
-          searchTerm === '' || 
-          event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          event.location.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-
-        setEvents(filteredEvents);
-        setCurrentIndex(0);
-      } catch (error) {
-        console.error('Error fetching events:', error);
-        toast({
-          title: "Erreur",
-          description: "Impossible de charger les événements.",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchEvents();
-  }, [user, filter, searchTerm, toast]);
-
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('fr-FR', {
-      day: 'numeric',
-      month: 'long',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
+      return matchesSearch && matchesFilter;
+    });
+    setFilteredEvents(results);
+    setCurrentIndex(0);
   };
 
   const handleSwipe = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
@@ -118,7 +130,7 @@ const Explore = () => {
     }).then(() => {
       toast({
         title: "J'aime !",
-        description: `Vous avez aimé "${events[currentIndex]?.title}"`,
+        description: `Vous avez aimé "${filteredEvents[currentIndex]?.title}"`,
       });
       moveToNextCard();
     });
@@ -137,12 +149,12 @@ const Explore = () => {
   const handleSave = () => {
     toast({
       title: "Sauvegardé",
-      description: `${events[currentIndex]?.title} a été ajouté à vos favoris`,
+      description: `${filteredEvents[currentIndex]?.title} a été ajouté à vos favoris`,
     });
   };
 
   const moveToNextCard = () => {
-    if (currentIndex < events.length - 1) {
+    if (currentIndex < filteredEvents.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
       // Reached the end of the cards
@@ -156,7 +168,7 @@ const Explore = () => {
     controls.start({ x: 0, opacity: 1 });
   };
 
-  const currentEvent = events[currentIndex];
+  const currentEvent = filteredEvents[currentIndex];
 
   return (
     <AppLayout>
@@ -180,7 +192,7 @@ const Explore = () => {
           <div className="flex space-x-2">
             <Button 
               variant={filter === 'all' ? 'default' : 'outline'} 
-              onClick={() => setFilter('all')}
+              onClick={() => handleFilter('all')}
               size="sm"
               className="rounded-full"
             >
@@ -188,7 +200,7 @@ const Explore = () => {
             </Button>
             <Button 
               variant={filter === 'public' ? 'default' : 'outline'} 
-              onClick={() => setFilter('public')}
+              onClick={() => handleFilter('public')}
               size="sm"
               className="rounded-full"
             >
@@ -196,7 +208,7 @@ const Explore = () => {
             </Button>
             <Button 
               variant={filter === 'friends' ? 'default' : 'outline'} 
-              onClick={() => setFilter('friends')}
+              onClick={() => handleFilter('friends')}
               size="sm"
               className="rounded-full"
             >
@@ -217,15 +229,12 @@ const Explore = () => {
                 className="pl-10"
               />
             </div>
-            <Button onClick={() => {}}>Chercher</Button>
+            <Button onClick={performSearch}>Chercher</Button>
           </div>
         )}
-
-        {loading ? (
-          <div className="text-center py-10">
-            <p>Chargement des événements...</p>
-          </div>
-        ) : events.length > 0 ? (
+        
+        {/* Card swiper */}
+        {filteredEvents.length > 0 ? (
           <div className="relative h-[70vh] flex items-center justify-center">
             <motion.div
               className="absolute w-full max-w-md"
@@ -237,9 +246,10 @@ const Explore = () => {
               whileTap={{ scale: 1.05 }}
             >
               <div className="bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100">
+                {/* Card Image */}
                 <div className="relative w-full h-96">
                   <img
-                    src={currentEvent?.image || 'https://picsum.photos/400/300'}
+                    src={currentEvent?.image}
                     alt={currentEvent?.title}
                     className="w-full h-full object-cover"
                   />
@@ -252,11 +262,11 @@ const Explore = () => {
                     </div>
                     <div className="flex items-center mt-1">
                       <Calendar className="h-4 w-4 mr-1" />
-                      <span className="text-sm">{currentEvent?.date && formatDate(currentEvent.date.toDate())}</span>
+                      <span className="text-sm">{formatDate(currentEvent?.date)}</span>
                     </div>
                     <div className="flex items-center mt-1">
                       <Users className="h-4 w-4 mr-1" />
-                      <span className="text-sm">{currentEvent?.participants?.length || 0} participants</span>
+                      <span className="text-sm">{currentEvent?.participants} participants</span>
                     </div>
                   </div>
                 </div>
@@ -306,9 +316,10 @@ const Explore = () => {
           </div>
         )}
         
+        {/* Card counter */}
         <div className="text-center text-gray-500 text-sm">
-          {events.length > 0 ? 
-            `${currentIndex + 1} / ${events.length}` : 
+          {filteredEvents.length > 0 ? 
+            `${currentIndex + 1} / ${filteredEvents.length}` : 
             "0 événements"
           }
         </div>
