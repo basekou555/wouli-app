@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardHeader, CardContent, CardFooter, CardTitle } from "@/components/ui/card";
 import { useForm } from "react-hook-form";
@@ -8,7 +9,7 @@ import { Lock, Bell, Shield, Eye, Palette, Globe, Settings } from 'lucide-react'
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { updateDoc, doc } from 'firebase/firestore';
-import { db } from '../../../firebase.config';
+import { db } from '../firebase.config';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from "@/hooks/use-toast";
 

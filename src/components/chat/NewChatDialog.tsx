@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { v4 as uuidv4 } from 'uuid';
@@ -41,14 +40,12 @@ export function NewChatDialog({ open, onOpenChange, onChatCreated }: NewChatDial
 
   // Safely convert raw data to FirestoreUser array
   const users = usersData
-    .filter((userData): userData is Record<string, unknown> => 
-      typeof userData === 'object' && userData !== null && 'id' in userData
-    )
-    .map(userData => ({
-      id: String(userData.id),
-      displayName: userData.displayName as string | undefined,
-      email: userData.email as string | undefined,
-      photoURL: userData.photoURL as string | undefined
+    .filter((userData) => typeof userData === 'object' && userData !== null && 'id' in userData)
+    .map((userData): FirestoreUser => ({
+      id: String(userData.id || ''),
+      displayName: typeof userData.displayName === 'string' ? userData.displayName : undefined,
+      email: typeof userData.email === 'string' ? userData.email : undefined,
+      photoURL: typeof userData.photoURL === 'string' ? userData.photoURL : undefined
     }));
 
   useEffect(() => {

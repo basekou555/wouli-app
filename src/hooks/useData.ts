@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { db } from "../../firebase.config";
+import { db } from "../firebase.config";
 import { collection, query, getDocs, onSnapshot } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import { mockUsers } from "@/mocks/users";
