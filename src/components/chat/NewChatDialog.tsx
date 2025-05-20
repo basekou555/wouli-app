@@ -1,13 +1,18 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { v4 as uuidv4 } from 'uuid';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, User } from 'lucide-react';
 import { Chat, ChatType, ChatVisibility } from '@/types/chat';
-import { mockUsers } from './mockData';
 import { GroupChatForm } from './GroupChatForm';
 import { PrivateChatForm } from './PrivateChatForm';
+import { useData } from '@/hooks/useData';
+import { User as UserType } from '@/types/chat';
+import { addDoc, serverTimestamp, collection } from 'firebase/firestore';
+import { db } from '@/firebase.config';
 
 interface NewChatDialogProps {
   open: boolean;
@@ -22,53 +27,71 @@ export function NewChatDialog({ open, onOpenChange, onChatCreated }: NewChatDial
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>('');
+  const { data: users } = useData('users');
+  const { user } = useAuth();
+  const [filteredUsers, setFilteredUsers] = useState<UserType[]>([]);
 
-  const filteredUsers = mockUsers.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.username.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    const newFilteredUsers = users.filter((user): user is UserType =>
+      
+      'name' in user && 'username' in user &&
+      
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.username.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredUsers(newFilteredUsers as UserType[]);
+  }, [searchTerm, users]);
 
-  const handleCreateChat = () => {
+
+  const createChatToDb = async (chat: Chat) => {
+    const docRef = await addDoc(collection(db, 'chats'), { ...chat, createdAt: serverTimestamp() });
+    return docRef.id;
+  };
+
+  const handleCreateChat = async () => {
     let newChat: Chat;
-    
     if (chatType === 'one-to-one') {
-      const selectedUserObj = mockUsers.find(u => u.id === selectedUser);
+      const selectedUserObj = users.find(u => u.id === selectedUser);
       if (!selectedUserObj) return;
       
       newChat = {
-        id: `new-${Date.now()}`,
-        type: 'one-to-one',
+        id: uuidv4(),
+        type: chatType,
         name: selectedUserObj.name,
         avatar: selectedUserObj.avatar,
         unreadCount: 0,
         pinned: false,
         visibility: 'private',
+        createdAt: serverTimestamp(),
         participants: [
-          {
-            id: 'current-user-id',
-            name: 'Vous',
+          user && {
+            id: user.uid,
+            name: user.displayName || 'Vous',
+            avatar: user.photoURL,
           },
           {
             id: selectedUserObj.id,
             name: selectedUserObj.name,
             avatar: selectedUserObj.avatar,
-          },
-        ],
-        createdAt: new Date(),
-        createdBy: 'current-user-id',
+          }
+        ].filter(Boolean),
+        createdBy: user?.uid || '',
       };
     } else {
       // Group chat
       if (!groupName.trim()) return;
-      
-      const participants = [
-        {
-          id: 'current-user-id',
-          name: 'Vous',
+          const participants = [
+        user && {
+          id: user.uid,
+          name: user.displayName || 'Vous',
+
         },
-        ...selectedParticipants.map(id => {
-          const user = mockUsers.find(u => u.id === id);
-          return {
+        ...selectedParticipants.map((id) => {
+          const user = users.find(u => u.id === id);
+
+          return user &&  {
+            
+            
             id: user?.id || '',
             name: user?.name || '',
             avatar: user?.avatar,
@@ -77,17 +100,17 @@ export function NewChatDialog({ open, onOpenChange, onChatCreated }: NewChatDial
       ];
       
       newChat = {
-        id: `new-${Date.now()}`,
         type: chatType,
         name: groupName,
         unreadCount: 0,
         pinned: false,
         visibility: groupVisibility,
         participants,
-        createdAt: new Date(),
-        createdBy: 'current-user-id',
+        createdBy: user?.uid || '',
       };
     }
+    const newChatId = await createChatToDb(newChat);
+    newChat.id = newChatId;
     
     onChatCreated(newChat);
     

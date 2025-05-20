@@ -1,4 +1,3 @@
-
 import { Message } from '@/types/chat';
 
 // Mock Messages

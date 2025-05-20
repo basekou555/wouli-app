@@ -1,143 +1,63 @@
 import React, { useState, useEffect } from 'react';
+import { getDocs, query, collection, where, orderBy, Timestamp, DocumentData } from 'firebase/firestore';
 import AppLayout from '../components/AppLayout';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar, MapPin, Search, Users, Filter, Heart, X, Star } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Calendar, MapPin, Search, Users, Heart, X, Star } from 'lucide-react';
 import { motion, PanInfo, useAnimation } from "framer-motion";
-import { useToast } from "@/components/ui/use-toast";
-import { db } from '../../firebase.config';
-import { collection, query, getDocs, where, orderBy, Timestamp, DocumentData } from 'firebase/firestore';
+import { useToast } from "@/hooks/use-toast";
+import { mockEvents } from '@/mocks/events';
 import { useAuth } from '../context/AuthContext';
-import { mockEvents } from '../components/chat/data/events';
+import { useData } from '@/hooks/useData';
 
 interface EventData {
   id: string;
   title: string;
   location: string;
-  date: Timestamp;
+  date: any;
   image?: string;
   participants?: string[];
   type?: string;
   [key: string]: any; // Allow for additional properties
 }
 
-const Explore = () => {
+const ExplorePage = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [events, setEvents] = useState<EventData[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState('all');
+  const [eventFilter, setFilter] = useState('all');
   const [showSearch, setShowSearch] = useState(false);
-  const [usingMockData, setUsingMockData] = useState(false);
   const controls = useAnimation();
-  const { toast } = useToast();
+  const { toast } = useToast()
   const { user } = useAuth();
+  const { data, loading } = useData('events');
+
+  const [event, setEvent] = useState<EventData[]>([]);
+  const [usingMockData, setUsingMockData] = useState(false);
+  const [filteredEvents, setFilteredEvents] = useState<EventData[]>([]);
+  
+  useEffect(() => {if(data){
+    // Apply search and filter
+    const newFilteredEvents = event.filter(event => 
+      searchTerm === '' || 
+      event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.location.toLowerCase().includes(searchTerm.toLowerCase())
+    ).filter(event => eventFilter === 'all' || event.type === eventFilter);
+
+    setFilteredEvents(newFilteredEvents as EventData[]);
+  }}, [searchTerm, eventFilter, data]);
+
 
   useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        setLoading(true);
-        
-        // Try to fetch from Firestore first
-        if (user) {
-          const eventsRef = collection(db, 'events');
-          let q = query(eventsRef, where('date', '>=', new Date()), orderBy('date', 'asc'));
-
-          if (filter !== 'all') {
-            q = query(q, where('type', '==', filter));
-          }
-
-          try {
-            const querySnapshot = await getDocs(q);
-            const eventsData: EventData[] = [];
-            
-            querySnapshot.forEach((doc) => {
-              const data = doc.data();
-              eventsData.push({
-                id: doc.id,
-                title: data.title || 'Sans titre',
-                location: data.location || 'Non spécifié',
-                date: data.date,
-                image: data.image || '',
-                participants: data.participants || [],
-                type: data.type || 'public',
-                ...data
-              });
-            });
-            
-            const filteredEvents = eventsData.filter(event => 
-              searchTerm === '' || 
-              event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              event.location.toLowerCase().includes(searchTerm.toLowerCase())
-            );
-
-            if (filteredEvents.length > 0) {
-              setEvents(filteredEvents);
-              setUsingMockData(false);
-            } else {
-              // Fall back to mock data if no events found in Firestore
-              useMockEvents();
-            }
-          } catch (error) {
-            console.error('Error fetching events from Firestore:', error);
-            useMockEvents();
-          }
-        } else {
-          useMockEvents();
-        }
-      } catch (error) {
-        console.error('Error in fetchEvents:', error);
-        useMockEvents();
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const useMockEvents = () => {
-      // Convert mock events to EventData format
-      const formattedMockEvents: EventData[] = mockEvents.map(event => ({
-        id: event.id,
-        title: event.title,
-        location: event.location,
-        // Convert Date object to Firestore Timestamp
-        date: {
-          toDate: () => event.date,
-          seconds: Math.floor(event.date.getTime() / 1000),
-          nanoseconds: (event.date.getTime() % 1000) * 1000000
-        } as Timestamp,
-        image: event.image,
-        participants: event.participants || [],
-        type: event.type || 'public',
-        description: event.description,
-        organizerId: event.organizerId,
-        organizerName: event.organizerName,
-        organizerAvatar: event.organizerAvatar,
-        price: event.price,
-        capacity: event.capacity,
-        category: event.category
-      }));
-
-      const filteredEvents = formattedMockEvents.filter(event => 
-        searchTerm === '' || 
-        event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        event.location.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-
-      if (!usingMockData) {
-        toast({
-          title: "Données de démonstration",
-          description: "Affichage des événements fictifs pour la démonstration",
-        });
+    if (data && data.length > 0) {
+      if(user){
+        setUsingMockData(false)
+        setEvent(data as EventData[])
+      } else {
         setUsingMockData(true);
       }
-      
-      setEvents(filteredEvents);
-    };
-
-    fetchEvents();
-  }, [user, filter, searchTerm, toast, usingMockData]);
-
+    }
+  }, [event, user,data]);
+  
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('fr-FR', {
       day: 'numeric',
@@ -170,7 +90,7 @@ const Explore = () => {
     }).then(() => {
       toast({
         title: "J'aime !",
-        description: `Vous avez aimé "${events[currentIndex]?.title}"`,
+        description: `Vous avez aimé "${filteredEvents[currentIndex]?.title}"`,
       });
       moveToNextCard();
     });
@@ -189,12 +109,12 @@ const Explore = () => {
   const handleSave = () => {
     toast({
       title: "Sauvegardé",
-      description: `${events[currentIndex]?.title} a été ajouté à vos favoris`,
+      description: `${filteredEvents[currentIndex]?.title} a été ajouté à vos favoris`,
     });
   };
 
   const moveToNextCard = () => {
-    if (currentIndex < events.length - 1) {
+    if (currentIndex < filteredEvents.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
       // Reached the end of the cards
@@ -208,7 +128,7 @@ const Explore = () => {
     controls.start({ x: 0, opacity: 1 });
   };
 
-  const currentEvent = events[currentIndex];
+  const currentEvent = filteredEvents[currentIndex];
 
   return (
     <AppLayout>
@@ -236,7 +156,7 @@ const Explore = () => {
           
           <div className="flex space-x-2">
             <Button 
-              variant={filter === 'all' ? 'default' : 'outline'} 
+              variant={eventFilter === 'all' ? 'default' : 'outline'} 
               onClick={() => setFilter('all')}
               size="sm"
               className="rounded-full"
@@ -244,15 +164,15 @@ const Explore = () => {
               Tous
             </Button>
             <Button 
-              variant={filter === 'public' ? 'default' : 'outline'} 
+              variant={eventFilter === 'public' ? 'default' : 'outline'} 
               onClick={() => setFilter('public')}
               size="sm"
               className="rounded-full"
             >
               Publics
             </Button>
-            <Button 
-              variant={filter === 'friends' ? 'default' : 'outline'} 
+              <Button 
+              variant={eventFilter === 'friends' ? 'default' : 'outline'} 
               onClick={() => setFilter('friends')}
               size="sm"
               className="rounded-full"
@@ -274,15 +194,15 @@ const Explore = () => {
                 className="pl-10"
               />
             </div>
-            <Button onClick={() => {}}>Chercher</Button>
+            <Button onClick={() => { }}>Chercher</Button>
           </div>
         )}
 
         {loading ? (
-          <div className="text-center py-10">
+          <div className="text-center py-10" >
             <p>Chargement des événements...</p>
           </div>
-        ) : events.length > 0 ? (
+        ) : filteredEvents.length > 0 ? (
           <div className="relative h-[70vh] flex items-center justify-center">
             <motion.div
               className="absolute w-full max-w-md"
@@ -364,8 +284,8 @@ const Explore = () => {
         )}
         
         <div className="text-center text-gray-500 text-sm">
-          {events.length > 0 ? 
-            `${currentIndex + 1} / ${events.length}` : 
+          {filteredEvents.length > 0 ? 
+            `${currentIndex + 1} / ${filteredEvents.length}` : 
             "0 événements"
           }
         </div>
@@ -374,4 +294,6 @@ const Explore = () => {
   );
 };
 
-export default Explore;
+
+
+export { ExplorePage };

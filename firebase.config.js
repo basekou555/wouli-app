@@ -10,15 +10,14 @@ import { getFirestore } from "firebase/firestore"; // Import Firestore
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyB20Y1v-zIzwG5Urwiow2O3jJ5SeNom2NY",
-  authDomain: "wouli-app.firebaseapp.com",
-  databaseURL: "https://wouli-app-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "wouli-app",
-  storageBucket: "wouli-app.firebasestorage.app",
-  messagingSenderId: "741019699279",
-  appId: "1:741019699279:web:0a9f46d20ea4f55107823a",
-  measurementId: "G-ED8HYNVD0W"
+  apiKey: "AIzaSyABA70pKIC9DCMVQhsadHMzFEAhilgG1ww",
+  authDomain: "wouli-453800.firebaseapp.com",
+  projectId: "wouli-453800",
+  storageBucket: "wouli-453800.firebasestorage.app",
+  messagingSenderId: "753627987327",
+  appId: "1:753627987327:web:9d32200f19fd2380506e4a"
 };
+
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);

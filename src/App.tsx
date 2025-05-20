@@ -1,6 +1,6 @@
 
-import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -10,9 +10,10 @@ import Dashboard from "./pages/Dashboard";
 import EventCreate from "./pages/EventCreate";
 import EventDetails from "./pages/EventDetails";
 import Profile from "./pages/Profile";
-import Explore from "./pages/Explore";
+import { ExplorePage } from "./pages/Explore";
 import Messages from "./pages/Messages";
 import CreateProfile from "./pages/CreateProfile";
+import ContentCreation from "./pages/ContentCreation"; // Import new page
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
 const queryClient = new QueryClient();
@@ -20,7 +21,6 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
       <Sonner />    
       <AuthProvider>
         <BrowserRouter>
@@ -47,7 +47,7 @@ const App = () => (
             />
             <Route
               path="/explore"
-              element={<ProtectedRoute element={<Explore />} />}
+              element={<ProtectedRoute element={<ExplorePage />} />}
             />
             <Route
               path="/messages"
@@ -56,6 +56,11 @@ const App = () => (
             <Route
               path="/create-profile"
               element={<ProtectedRoute element={<CreateProfile />} />}
+            />
+            {/* New route for content creation */}
+            <Route
+              path="/content"
+              element={<ProtectedRoute element={<ContentCreation />} />}
             />
             <Route path="*" element={<NotFound />} />
           </Routes>
