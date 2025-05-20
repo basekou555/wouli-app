@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { db } from '../../firebase.config';
 import { collection, query, getDocs, where, orderBy, Timestamp, DocumentData } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
+import { mockEvents } from '../components/chat/data/events';
 
 interface EventData {
   id: string;
@@ -29,62 +29,114 @@ const Explore = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
   const [showSearch, setShowSearch] = useState(false);
+  const [usingMockData, setUsingMockData] = useState(false);
   const controls = useAnimation();
   const { toast } = useToast();
   const { user } = useAuth();
 
   useEffect(() => {
     const fetchEvents = async () => {
-      if (!user) return;
-      
       try {
         setLoading(true);
-        const eventsRef = collection(db, 'events');
-        let q = query(eventsRef, where('date', '>=', new Date()), orderBy('date', 'asc'));
+        
+        // Try to fetch from Firestore first
+        if (user) {
+          const eventsRef = collection(db, 'events');
+          let q = query(eventsRef, where('date', '>=', new Date()), orderBy('date', 'asc'));
 
-        if (filter !== 'all') {
-          q = query(q, where('type', '==', filter));
+          if (filter !== 'all') {
+            q = query(q, where('type', '==', filter));
+          }
+
+          try {
+            const querySnapshot = await getDocs(q);
+            const eventsData: EventData[] = [];
+            
+            querySnapshot.forEach((doc) => {
+              const data = doc.data();
+              eventsData.push({
+                id: doc.id,
+                title: data.title || 'Sans titre',
+                location: data.location || 'Non spécifié',
+                date: data.date,
+                image: data.image || '',
+                participants: data.participants || [],
+                type: data.type || 'public',
+                ...data
+              });
+            });
+            
+            const filteredEvents = eventsData.filter(event => 
+              searchTerm === '' || 
+              event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              event.location.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            if (filteredEvents.length > 0) {
+              setEvents(filteredEvents);
+              setUsingMockData(false);
+            } else {
+              // Fall back to mock data if no events found in Firestore
+              useMockEvents();
+            }
+          } catch (error) {
+            console.error('Error fetching events from Firestore:', error);
+            useMockEvents();
+          }
+        } else {
+          useMockEvents();
         }
-
-        const querySnapshot = await getDocs(q);
-        const eventsData: EventData[] = [];
-        
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          eventsData.push({
-            id: doc.id,
-            title: data.title || 'Sans titre',
-            location: data.location || 'Non spécifié',
-            date: data.date,
-            image: data.image || '',
-            participants: data.participants || [],
-            type: data.type || 'public',
-            ...data
-          });
-        });
-        
-        const filteredEvents = eventsData.filter(event => 
-          searchTerm === '' || 
-          event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          event.location.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-
-        setEvents(filteredEvents);
-        setCurrentIndex(0);
       } catch (error) {
-        console.error('Error fetching events:', error);
-        toast({
-          title: "Erreur",
-          description: "Impossible de charger les événements.",
-          variant: "destructive"
-        });
+        console.error('Error in fetchEvents:', error);
+        useMockEvents();
       } finally {
         setLoading(false);
       }
     };
 
+    const useMockEvents = () => {
+      // Convert mock events to EventData format
+      const formattedMockEvents: EventData[] = mockEvents.map(event => ({
+        id: event.id,
+        title: event.title,
+        location: event.location,
+        // Convert Date object to Firestore Timestamp
+        date: {
+          toDate: () => event.date,
+          seconds: Math.floor(event.date.getTime() / 1000),
+          nanoseconds: (event.date.getTime() % 1000) * 1000000
+        } as Timestamp,
+        image: event.image,
+        participants: event.participants || [],
+        type: event.type || 'public',
+        description: event.description,
+        organizerId: event.organizerId,
+        organizerName: event.organizerName,
+        organizerAvatar: event.organizerAvatar,
+        price: event.price,
+        capacity: event.capacity,
+        category: event.category
+      }));
+
+      const filteredEvents = formattedMockEvents.filter(event => 
+        searchTerm === '' || 
+        event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        event.location.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+
+      if (!usingMockData) {
+        toast({
+          title: "Données de démonstration",
+          description: "Affichage des événements fictifs pour la démonstration",
+        });
+        setUsingMockData(true);
+      }
+      
+      setEvents(filteredEvents);
+    };
+
     fetchEvents();
-  }, [user, filter, searchTerm, toast]);
+  }, [user, filter, searchTerm, toast, usingMockData]);
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('fr-FR', {
@@ -164,6 +216,11 @@ const Explore = () => {
         <div className="flex flex-col space-y-2">
           <h1 className="text-2xl font-bold text-gray-900">Découvrir</h1>
           <p className="text-gray-500">Trouvez de nouvelles activités qui pourraient vous plaire</p>
+          {usingMockData && (
+            <div className="text-amber-500 text-sm font-medium">
+              Mode démo: Données fictives
+            </div>
+          )}
         </div>
         
         {/* Barre de recherche et filtres */}
