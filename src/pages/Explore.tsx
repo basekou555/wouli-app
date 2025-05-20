@@ -1,203 +1,316 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { Search, Heart, X, Star, MessageCircle, RefreshCw } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Calendar, MapPin, Search, Users, Filter, Heart, X, Star } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { motion, PanInfo, useAnimation } from "framer-motion";
+import { useToast } from "@/components/ui/use-toast";
+import { db } from '../../firebase.config';
+import { collection, query, getDocs, where, orderBy, Timestamp, DocumentData } from 'firebase/firestore';
+import { useAuth } from '../context/AuthContext';
 
-// Mock data for event cards
-const mockEvents = [
-  {
-    id: '1',
-    title: 'Soirée cocktails',
-    image: 'https://images.unsplash.com/photo-1575444758702-4a6b9222336e?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
-    description: 'Venez déguster des cocktails signature dans un cadre élégant',
-    location: 'Le Perchoir, Paris',
-    date: '2025-05-20T20:00:00',
-    organizer: 'Julien D.',
-    distance: '2.5 km'
-  },
-  {
-    id: '2',
-    title: 'Exposition d\'art contemporain',
-    image: 'https://images.unsplash.com/photo-1501084817091-a4f3d1d19e07?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
-    description: 'Découvrez les œuvres de jeunes artistes émergents',
-    location: 'Galerie Moderne, Lyon',
-    date: '2025-05-22T18:30:00',
-    organizer: 'Marie L.',
-    distance: '3.8 km'
-  },
-  {
-    id: '3',
-    title: 'Concert jazz en plein air',
-    image: 'https://images.unsplash.com/photo-1511192336575-5a79af67a629?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80',
-    description: 'Une soirée musicale sous les étoiles avec les meilleurs musiciens de jazz',
-    location: 'Jardin Public, Bordeaux',
-    date: '2025-05-25T21:00:00',
-    organizer: 'Thomas B.',
-    distance: '1.2 km'
-  }
-];
+interface EventData {
+  id: string;
+  title: string;
+  location: string;
+  date: Timestamp;
+  image?: string;
+  participants?: string[];
+  type?: string;
+  [key: string]: any; // Allow for additional properties
+}
 
-const Explore: React.FC = () => {
-  const isMobile = useIsMobile();
+const Explore = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [direction, setDirection] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [events, setEvents] = useState<EventData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [showSearch, setShowSearch] = useState(false);
+  const controls = useAnimation();
+  const { toast } = useToast();
+  const { user } = useAuth();
 
-  const currentEvent = mockEvents[currentIndex];
+  useEffect(() => {
+    const fetchEvents = async () => {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
+        const eventsRef = collection(db, 'events');
+        let q = query(eventsRef, where('date', '>=', new Date()), orderBy('date', 'asc'));
 
-  const handleSwipe = (dir: string) => {
-    setDirection(dir);
-    
-    // Reset after animation completes
-    setTimeout(() => {
-      if (currentIndex < mockEvents.length - 1) {
-        setCurrentIndex(prev => prev + 1);
-      } else {
-        // Reset to beginning if we've gone through all cards
+        if (filter !== 'all') {
+          q = query(q, where('type', '==', filter));
+        }
+
+        const querySnapshot = await getDocs(q);
+        const eventsData: EventData[] = [];
+        
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          eventsData.push({
+            id: doc.id,
+            title: data.title || 'Sans titre',
+            location: data.location || 'Non spécifié',
+            date: data.date,
+            image: data.image || '',
+            participants: data.participants || [],
+            type: data.type || 'public',
+            ...data
+          });
+        });
+        
+        const filteredEvents = eventsData.filter(event => 
+          searchTerm === '' || 
+          event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          event.location.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        setEvents(filteredEvents);
         setCurrentIndex(0);
+      } catch (error) {
+        console.error('Error fetching events:', error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les événements.",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
       }
-      setDirection(null);
-    }, 300);
+    };
+
+    fetchEvents();
+  }, [user, filter, searchTerm, toast]);
+
+  const formatDate = (date: Date) => {
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
   };
-  
-  const handleLike = () => handleSwipe('right');
-  const handleDislike = () => handleSwipe('left');
-  const handleSuperLike = () => handleSwipe('up');
+
+  const handleSwipe = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    const swipeThreshold = 100;
+    
+    if (info.offset.x > swipeThreshold) {
+      // Swiped right (like)
+      handleLike();
+    } else if (info.offset.x < -swipeThreshold) {
+      // Swiped left (pass)
+      handlePass();
+    } else {
+      // Reset if not swiped far enough
+      controls.start({ x: 0, opacity: 1 });
+    }
+  };
+
+  const handleLike = () => {
+    controls.start({ 
+      x: 300, 
+      opacity: 0,
+      transition: { duration: 0.3 } 
+    }).then(() => {
+      toast({
+        title: "J'aime !",
+        description: `Vous avez aimé "${events[currentIndex]?.title}"`,
+      });
+      moveToNextCard();
+    });
+  };
+
+  const handlePass = () => {
+    controls.start({ 
+      x: -300, 
+      opacity: 0,
+      transition: { duration: 0.3 } 
+    }).then(() => {
+      moveToNextCard();
+    });
+  };
+
+  const handleSave = () => {
+    toast({
+      title: "Sauvegardé",
+      description: `${events[currentIndex]?.title} a été ajouté à vos favoris`,
+    });
+  };
+
+  const moveToNextCard = () => {
+    if (currentIndex < events.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+    } else {
+      // Reached the end of the cards
+      toast({
+        title: "C'est tout !",
+        description: "Vous avez parcouru tous les événements disponibles",
+      });
+      // Optionally restart or show end screen
+      setCurrentIndex(0);
+    }
+    controls.start({ x: 0, opacity: 1 });
+  };
+
+  const currentEvent = events[currentIndex];
 
   return (
     <AppLayout>
-      <div className="py-4 md:py-6 space-y-4">
-        <h1 className="text-xl sm:text-2xl font-bold mb-2 bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Explorer</h1>
-        
-        <div className="flex gap-2 mb-4">
-          <div className="relative flex-grow">
-            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input 
-              placeholder="Rechercher des événements, groupes..." 
-              className="pl-9 py-2 h-10 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-full focus:ring-purple-500 focus:border-purple-500"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <Button 
-            size={isMobile ? "sm" : "default"}
-            className="rounded-full"
-          >
-            Rechercher
-          </Button>
+      <div className="py-6 space-y-6">
+        <div className="flex flex-col space-y-2">
+          <h1 className="text-2xl font-bold text-gray-900">Découvrir</h1>
+          <p className="text-gray-500">Trouvez de nouvelles activités qui pourraient vous plaire</p>
         </div>
         
-        <div className="flex flex-col items-center gap-4">
-          {/* Tinder-style card stack */}
-          <div className="relative w-full max-w-sm h-[460px] mx-auto">
-            <AnimatePresence>
-              {currentEvent && direction === null && (
-                <motion.div
-                  key={currentEvent.id}
-                  className="absolute w-full h-full"
-                  initial={{ scale: 0.95, opacity: 0.5 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{
-                    x: direction === 'left' ? -300 : direction === 'right' ? 300 : 0,
-                    y: direction === 'up' ? -300 : 0,
-                    opacity: 0,
-                    scale: 0.95
-                  }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Card className="w-full h-full overflow-hidden rounded-2xl shadow-xl border-none">
-                    <div className="relative w-full h-full">
-                      {/* Event image */}
-                      <div className="absolute inset-0">
-                        <img 
-                          src={currentEvent.image} 
-                          alt={currentEvent.title}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-80"></div>
-                      </div>
-                      
-                      {/* Event info */}
-                      <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
-                        <div className="flex items-end justify-between">
-                          <div>
-                            <h3 className="text-2xl font-bold">{currentEvent.title}</h3>
-                            <p className="text-white/80 flex items-center text-sm mt-1">
-                              <span className="bg-white/20 px-2 py-0.5 rounded-full">
-                                {new Date(currentEvent.date).toLocaleDateString('fr-FR', {
-                                  month: 'short',
-                                  day: 'numeric'
-                                })}
-                              </span>
-                              <span className="mx-2">•</span>
-                              <span>{currentEvent.distance}</span>
-                            </p>
-                          </div>
-                          <div className="bg-white/20 backdrop-blur-sm px-2 py-1 rounded-lg">
-                            <p className="text-sm font-medium">Par {currentEvent.organizer}</p>
-                          </div>
-                        </div>
-                        
-                        <p className="mt-3 text-white/90 line-clamp-3">
-                          {currentEvent.description}
-                        </p>
-                        
-                        <p className="mt-3 text-sm text-white/70">
-                          {currentEvent.location}
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+        {/* Barre de recherche et filtres */}
+        <div className="flex justify-between items-center">
+          <Button 
+            variant="outline" 
+            size="icon"
+            className="rounded-full"
+            onClick={() => setShowSearch(!showSearch)}
+          >
+            <Search className="h-4 w-4" />
+          </Button>
           
-          {/* Action buttons */}
-          <div className="flex items-center justify-center gap-4 mt-4">
+          <div className="flex space-x-2">
             <Button 
-              onClick={handleDislike}
-              size="icon" 
-              variant="outline"
-              className="w-12 h-12 rounded-full border-gray-300 bg-white shadow-md hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-colors"
-            >
-              <X className="h-6 w-6" />
-            </Button>
-            
-            <Button 
-              onClick={handleSuperLike}
-              size="icon" 
-              className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-400 to-cyan-400 shadow-md hover:shadow-lg transition-all"
-            >
-              <Star className="h-5 w-5 text-white" />
-            </Button>
-            
-            <Button 
-              onClick={handleLike}
-              size="icon" 
-              variant="outline"
-              className="w-12 h-12 rounded-full border-gray-300 bg-white shadow-md hover:bg-green-50 hover:border-green-200 hover:text-green-500 transition-colors"
-            >
-              <Heart className="h-6 w-6" />
-            </Button>
-          </div>
-          
-          <div className="text-center mt-4">
-            <Button 
-              variant="ghost" 
+              variant={filter === 'all' ? 'default' : 'outline'} 
+              onClick={() => setFilter('all')}
               size="sm"
-              className="text-gray-500 flex items-center gap-2"
-              onClick={() => setCurrentIndex(0)}
+              className="rounded-full"
             >
-              <RefreshCw className="h-4 w-4" />
-              Réinitialiser
+              Tous
+            </Button>
+            <Button 
+              variant={filter === 'public' ? 'default' : 'outline'} 
+              onClick={() => setFilter('public')}
+              size="sm"
+              className="rounded-full"
+            >
+              Publics
+            </Button>
+            <Button 
+              variant={filter === 'friends' ? 'default' : 'outline'} 
+              onClick={() => setFilter('friends')}
+              size="sm"
+              className="rounded-full"
+            >
+              Amis
             </Button>
           </div>
+        </div>
+        
+        {/* Search drawer (collapsible) */}
+        {showSearch && (
+          <div className="flex space-x-2 items-center pb-2 pt-1">
+            <div className="relative flex-grow">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Rechercher un événement ou un lieu"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Button onClick={() => {}}>Chercher</Button>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="text-center py-10">
+            <p>Chargement des événements...</p>
+          </div>
+        ) : events.length > 0 ? (
+          <div className="relative h-[70vh] flex items-center justify-center">
+            <motion.div
+              className="absolute w-full max-w-md"
+              animate={controls}
+              initial={{ x: 0, opacity: 1 }}
+              drag="x"
+              dragConstraints={{ left: -10, right: 10 }}
+              onDragEnd={handleSwipe}
+              whileTap={{ scale: 1.05 }}
+            >
+              <div className="bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100">
+                <div className="relative w-full h-96">
+                  <img
+                    src={currentEvent?.image || 'https://picsum.photos/400/300'}
+                    alt={currentEvent?.title}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+                  <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
+                    <h2 className="text-2xl font-bold mb-1">{currentEvent?.title}</h2>
+                    <div className="flex items-center mt-1">
+                      <MapPin className="h-4 w-4 mr-1" />
+                      <span className="text-sm">{currentEvent?.location}</span>
+                    </div>
+                    <div className="flex items-center mt-1">
+                      <Calendar className="h-4 w-4 mr-1" />
+                      <span className="text-sm">{currentEvent?.date && formatDate(currentEvent.date.toDate())}</span>
+                    </div>
+                    <div className="flex items-center mt-1">
+                      <Users className="h-4 w-4 mr-1" />
+                      <span className="text-sm">{currentEvent?.participants?.length || 0} participants</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Card Actions */}
+                <div className="flex justify-center space-x-4 py-4">
+                  <Button 
+                    variant="outline"
+                    size="icon"
+                    className="h-14 w-14 rounded-full border-2 border-red-400 text-red-500"
+                    onClick={handlePass}
+                  >
+                    <X className="h-6 w-6" />
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    size="icon"
+                    className="h-14 w-14 rounded-full border-2 border-blue-400 text-blue-500"
+                    onClick={handleSave}
+                  >
+                    <Star className="h-6 w-6" />
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    size="icon"
+                    className="h-14 w-14 rounded-full border-2 border-green-400 text-green-500"
+                    onClick={handleLike}
+                  >
+                    <Heart className="h-6 w-6" />
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+            
+            {/* Swipe instructions */}
+            <div className="absolute bottom-2 left-0 right-0 text-center text-gray-500 text-sm">
+              Swipez à gauche pour passer, à droite pour aimer
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="text-gray-400 mb-4">
+              <Search className="h-12 w-12 mx-auto" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900">Aucun événement trouvé</h3>
+            <p className="text-gray-500 mt-1">Essayez de modifier vos critères de recherche</p>
+          </div>
+        )}
+        
+        <div className="text-center text-gray-500 text-sm">
+          {events.length > 0 ? 
+            `${currentIndex + 1} / ${events.length}` : 
+            "0 événements"
+          }
         </div>
       </div>
     </AppLayout>

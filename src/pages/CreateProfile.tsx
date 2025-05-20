@@ -1,20 +1,18 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
-import { Avatar, AvatarImage } from '@/components/ui/avatar';
+import { Avatar } from '@/components/ui/avatar';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Textarea } from '@/components/ui/textarea';
-import { db } from '../firebase.config';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { useToast } from "@/hooks/use-toast";
-import { useIsMobile } from '@/hooks/use-mobile';
+import { db } from '../../firebase.config';
+import { doc, setDoc } from 'firebase/firestore';
+import { useToast } from "@/components/ui/use-toast";
 
 interface ProfileFormValues {
   name: string;
@@ -28,10 +26,7 @@ const CreateProfile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [avatarPreview, setAvatarPreview] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [existingProfile, setExistingProfile] = useState<any>(null);
   const storage = getStorage();
-  const isMobile = useIsMobile();
 
   const form = useForm<ProfileFormValues>({
     defaultValues: {
@@ -42,38 +37,6 @@ const CreateProfile = () => {
     },
   });
 
-  // Check if profile already exists and load data
-  useEffect(() => {
-    async function checkExistingProfile() {
-      if (user) {
-        try {
-          const userDocRef = doc(db, 'users', user.uid);
-          const userDocSnap = await getDoc(userDocRef);
-          
-          if (userDocSnap.exists()) {
-            const userData = userDocSnap.data();
-            setExistingProfile(userData);
-            
-            // Pre-fill form with existing data
-            form.reset({
-              name: userData.name || '',
-              username: userData.username || '',
-              bio: userData.bio || '',
-            });
-            
-            if (userData.avatar) {
-              setAvatarPreview(userData.avatar);
-            }
-          }
-        } catch (error) {
-          console.error("Error checking existing profile:", error);
-        }
-      }
-    }
-    
-    checkExistingProfile();
-  }, [user, form]);
-
   useEffect(() => {
     if (form.watch('avatar')) {
       const file = form.watch('avatar')?.[0];
@@ -83,102 +46,65 @@ const CreateProfile = () => {
           setAvatarPreview(reader.result as string);
         };
         reader.readAsDataURL(file);
+      } else {
+        setAvatarPreview('');
       }
     }
   }, [form.watch('avatar')]);
 
   const onSubmit = async (formData: ProfileFormValues) => {
+    console.log("Form data submitted:", formData);
     if (!user) return;
     
-    setIsLoading(true);
-    let avatarURL = avatarPreview;
-    
+    let avatarURL = '';
     try {
       if (formData.avatar && formData.avatar.length > 0) {
         const file = formData.avatar[0];
-        const avatarRef = ref(storage, `avatars/${user.uid}`);
+        const avatarRef = ref(storage, `avatars/${user.uid}_${file.name}`);
         await uploadBytes(avatarRef, file);
         avatarURL = await getDownloadURL(avatarRef);
+        console.log('Avatar URL:', avatarURL);
       }
 
-      const profileData = {
+      await setDoc(doc(db, 'users', user.uid), {
         email: user.email,
         name: formData.name,
         username: formData.username,
         bio: formData.bio,
-        avatar: avatarURL || '',
-        isPublic: true,
-        stats: {
-          events: 0,
-          friends: 0,
-          photos: 0,
-          organized: 0,
-          participated: 0,
-        },
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      
-      await setDoc(doc(db, 'users', user.uid), profileData, { merge: true });
+        avatar: avatarURL,
+      });
         
-      toast({ 
-        description: existingProfile ? "Profil mis à jour avec succès !" : "Profil créé avec succès !" 
-      });
-      
-      navigate('/profile');
+      toast({ description: "Profile created successfully!" });
+      navigate('/dashboard');
     } catch (error: any) {
-      toast({ 
-        variant: "destructive",
-        description: existingProfile ? 
-          "Échec de la mise à jour du profil. Veuillez réessayer." : 
-          "Échec de la création du profil. Veuillez réessayer."
-      });
-      console.error("Error creating/updating user document:", error);
-    } finally {
-      setIsLoading(false);
+      toast({ description: "Failed to create profile. Please try again.", variant: "destructive" });
+      console.error("Error creating user document:", error);
     }
   };
 
-  if (!user) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <Card>
-          <CardContent className="p-6">
-            <p>Vous devez être connecté pour créer un profil.</p>
-            <Button className="mt-4 w-full" onClick={() => navigate('/')}>
-              Retour à l'accueil
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-100 px-3 py-4 md:py-0">
-      <Card className={`w-full ${isMobile ? 'max-w-sm' : 'max-w-md'}`}>
+    <div className="flex justify-center items-center min-h-screen bg-gray-100">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-center text-lg md:text-xl">
-            {existingProfile ? "Modifier votre profil" : "Créer votre profil"}
-          </CardTitle>
+          <CardTitle>Create Your Profile</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="mb-4 flex justify-center">
-            <Avatar className="h-20 w-20 md:h-24 md:w-24">
-              <AvatarImage src={avatarPreview || "https://picsum.photos/200?random=profile"} alt="Avatar" />
+            <Avatar className="h-24 w-24">
+              {avatarPreview && <img src={avatarPreview} alt="Avatar Preview" />}
             </Avatar>
           </div>
             
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 md:space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm">Nom</FormLabel>
+                    <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Votre nom" {...field} className="h-9 md:h-10 text-sm" />
+                      <Input placeholder="Your Name" {...field} />
                     </FormControl>
                   </FormItem>
                 )}
@@ -189,9 +115,9 @@ const CreateProfile = () => {
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm">Nom d'utilisateur</FormLabel>
+                    <FormLabel>Username</FormLabel>
                     <FormControl>
-                      <Input placeholder="Votre pseudo" {...field} className="h-9 md:h-10 text-sm" />
+                      <Input placeholder="Your Username" {...field} />
                     </FormControl>
                   </FormItem>
                 )}
@@ -202,9 +128,9 @@ const CreateProfile = () => {
                 name="bio"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm">Bio</FormLabel>
+                    <FormLabel>Bio</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Une courte description de vous" {...field} className="text-sm resize-none" rows={3} />
+                      <Textarea placeholder="A short description about yourself" {...field} />
                     </FormControl>
                   </FormItem>
                 )}
@@ -215,32 +141,14 @@ const CreateProfile = () => {
                 name="avatar"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm">Avatar</FormLabel>
+                    <FormLabel>Avatar</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={(e) => field.onChange(e.target.files)}
-                        className="text-sm"
-                      />
+                      <Input type="file" accept="image/*" onChange={(e) => field.onChange(e.target.files)} />
                     </FormControl>
                   </FormItem>
                 )}
               />
-              <Button 
-                type="submit" 
-                className="w-full mt-2"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <span className="flex items-center">
-                    <span className="mr-2 h-3.5 w-3.5 rounded-full border-2 border-white border-t-transparent animate-spin"/>
-                    {existingProfile ? "Mise à jour..." : "Création..."}
-                  </span>
-                ) : (
-                  existingProfile ? "Mettre à jour le profil" : "Créer votre profil"
-                )}
-              </Button>
+              <Button type="submit">Create Profile</Button>
             </form>
           </Form>
         </CardContent>
