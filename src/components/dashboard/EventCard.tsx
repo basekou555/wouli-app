@@ -6,7 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Heart, Share2, MapPin, Users, Calendar } from 'lucide-react'; // Added Calendar import
+import { Heart, Share2, MapPin, Users, Calendar } from 'lucide-react';
 
 // Constants
 const DEFAULT_EVENT_IMAGE = '/assets/images/event-placeholder.jpg';
@@ -19,6 +19,13 @@ interface EventCardProps {
 
 const EventCard: React.FC<EventCardProps> = ({ event, isUpcomingEvent, formatEventDate }) => {
   const isUpcoming = isUpcomingEvent(event.date);
+  
+  // Fonction de gestion d'erreur de chargement d'image
+  const handleImageError = useCallback((e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const target = e.target as HTMLImageElement;
+    target.src = DEFAULT_EVENT_IMAGE;
+    target.onerror = null; // Prevent infinite error loop
+  }, []);
   
   return (
     <Card className="overflow-hidden border-gray-100 hover:shadow-md transition-all group">
@@ -49,9 +56,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, isUpcomingEvent, formatEve
             src={event.image || DEFAULT_EVENT_IMAGE} 
             alt={event.title} 
             className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = DEFAULT_EVENT_IMAGE;
-            }}
+            onError={handleImageError}
           />
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end">
@@ -68,7 +73,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, isUpcomingEvent, formatEve
           </div>
 
           <div className="flex items-center text-gray-600">
-            <Calendar className="h-4 w-4 mr-2 flex-shrink-0" /> {/* Changed from CalendarIcon to Calendar */}
+            <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
             <span className="text-sm">
               {formatEventDate(event.date)}
             </span>
