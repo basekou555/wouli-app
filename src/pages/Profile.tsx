@@ -10,6 +10,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from 'react-router-dom';
 import { fetchUserEvents } from '../services/eventService';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface UserProfile {
   name: string;
@@ -40,6 +41,7 @@ const Profile = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -148,11 +150,12 @@ const Profile = () => {
 
   return (
     <AppLayout>
-      <div className="py-6 space-y-8">
+      <div className={`py-4 md:py-6 space-y-4 md:space-y-8 ${isMobile ? 'px-1' : ''}`}>
         <ProfileHeader 
           userProfile={userProfile} 
           toggleSettings={toggleSettings}
           onEditProfile={handleEditProfile}
+          isMobile={isMobile}
         />
         
         {showSettings ? (
@@ -165,6 +168,7 @@ const Profile = () => {
             upcomingEvents={events.upcoming}
             pastEvents={events.past}
             organizedEvents={events.organized}
+            isMobile={isMobile}
           />
         )}
       </div>
