@@ -60,10 +60,12 @@ const CreateProfile = () => {
     try {
       if (formData.avatar && formData.avatar.length > 0) {
         const file = formData.avatar[0];
-        const avatarRef = ref(storage, `avatars/${user.uid}_${file.name}`);
+        const avatarRef = ref(storage, `avatars/${user.uid}`);
         await uploadBytes(avatarRef, file);
         avatarURL = await getDownloadURL(avatarRef);
         console.log('Avatar URL:', avatarURL);
+      } else if (avatarPreview) {
+        avatarURL = avatarPreview;
       }
 
       await setDoc(doc(db, 'users', user.uid), {
@@ -71,11 +73,11 @@ const CreateProfile = () => {
         name: formData.name,
         username: formData.username,
         bio: formData.bio,
-        avatar: avatarURL,
+        avatar: avatarURL || '',
       });
         
       toast({ description: "Profile created successfully!" });
-      navigate('/dashboard');
+      navigate('/profile');
     } catch (error: any) {
       toast({ description: "Failed to create profile. Please try again.", variant: "destructive" });
       console.error("Error creating user document:", error);

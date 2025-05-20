@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Avatar } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Edit2, Settings, LogOut, Eye, EyeOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -34,9 +34,6 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userProfile, toggleSettin
   const handleEditProfile = () => {
     if (onEditProfile) {
       onEditProfile();
-    } else {
-      console.log('Edit profile clicked');
-      // Par défaut, nous pourrions rediriger vers une page d'édition
     }
   };
 
@@ -45,7 +42,11 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userProfile, toggleSettin
       <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
         <div className="relative">
           <Avatar className="h-24 w-24 border-4 border-white shadow-sm">
-            <img src={userProfile.avatar} alt={userProfile.name} />
+            {userProfile.avatar ? (
+              <AvatarImage src={userProfile.avatar} alt={userProfile.name} />
+            ) : (
+              <AvatarFallback>{userProfile.name.charAt(0)}</AvatarFallback>
+            )}
           </Avatar>
           <div className="absolute -bottom-2 -right-2 flex items-center bg-white rounded-full p-1 shadow-sm">
             {userProfile.isPublic ? 

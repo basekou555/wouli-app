@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Chat, ChatType } from '@/types/chat';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { mockChats } from './mockData';
+import { mockChats } from './data/chats';
 
 interface ChatListProps {
   chats: Chat[];
