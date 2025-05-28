@@ -3,31 +3,22 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
-import { getAnalytics } from 'firebase/analytics';
 
 // Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyABA70pKIC9DCMVQhsadHMzFEAhilgG1ww",
-  authDomain: "wouli-453800.firebaseapp.com",
-  projectId: "wouli-453800",
-  storageBucket: "wouli-453800.firebasestorage.app",
-  messagingSenderId: "753627987327",
-  appId: "1:753627987327:web:9d32200f19fd2380506e4a"
+  apiKey: "AIzaSyA73IFRHXnSsQpr4YjEOQ4V0AP-vZgWTcU",
+  authDomain: "wouli-app.firebaseapp.com",
+  projectId: "wouli-app",
+  storageBucket: "wouli-app.appspot.com",
+  messagingSenderId: "781812894678",
+  appId: "1:781812894678:web:ecf210c91d7542fa9d1974",
+  measurementId: "G-CWEQCP7FXD"
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-let analytics;
-try {
-  analytics = getAnalytics(app);
-} catch (error) {
-  // Analytics might fail in environments without browser support
-  console.log("Analytics not initialized:", error);
-}
-
-// Initialize services
-export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const auth = getAuth(app);
 export const storage = getStorage(app);
 
 export default app;

@@ -1,30 +1,29 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { UserList } from './UserList';
-import { User } from '@/hooks/useData';
+import { User } from '@/types/chat';
 
 interface PrivateChatFormProps {
-  users: User[];
-  selectedUsers: string[];
-  onUserSelect: (userId: string) => void;
-  loading?: boolean;
+  selectedUser: string;
+  setSelectedUser: (userId: string) => void;
+  filteredUsers: User[];
+  searchTerm: string;
+  setSearchTerm: (term: string) => void;
 }
 
 export function PrivateChatForm({
-  users,
-  selectedUsers,
-  onUserSelect,
-  loading
+  selectedUser,
+  setSelectedUser,
+  filteredUsers,
+  searchTerm,
+  setSearchTerm,
 }: PrivateChatFormProps) {
-  const [searchTerm, setSearchTerm] = useState('');
-  
-  const filteredUsers = users.filter(user => 
-    user.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    user.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleSelectUser = (userId: string) => {
+    setSelectedUser(userId);
+  };
 
   return (
     <div className="space-y-4">
@@ -40,17 +39,15 @@ export function PrivateChatForm({
           />
         </div>
 
-        {loading ? (
-          <div className="text-center text-gray-500">Chargement...</div>
-        ) : selectedUsers.length === 1 ? (
+        {selectedUser ? (
           <div className="text-sm text-gray-500">
             Utilisateur sélectionné.
           </div>
         ) : filteredUsers.length > 0 ? (
           <UserList
             users={filteredUsers}
-            selectedUsers={selectedUsers}
-            onUserSelect={onUserSelect}
+            selectedUsers={selectedUser ? [selectedUser] : []}
+            onUserSelect={handleSelectUser}
             singleSelect={true}
           />
         ) : <div className="text-center text-gray-500">Aucun utilisateur trouvé</div>}

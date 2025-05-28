@@ -1,66 +1,21 @@
-
 import { useState, useEffect, useRef } from "react";
-import { db } from "../firebase.config";
+import { db } from "../../firebase.config";
 import { collection, query, getDocs, onSnapshot } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import { mockUsers } from "@/mocks/users";
 import { mockChats } from "@/mocks/chats";
 import { mockMessages } from "@/mocks/messages";
 import { mockEvents } from "@/mocks/events";
-import { Chat } from "@/types/chat";
-
-export type User = {
-  id: string;
-  name: string;
-  username: string;
-  email: string;
-  avatar?: string;
-  displayName?: string;
-  photoURL?: string;
-  bio?: string;
-  [key: string]: any;
-};
-
-export type Message = {
-  id: string;
-  chatId: string;
-  content: string;
-  sender: {
-    id: string;
-    name: string;
-    avatar?: string;
-  };
-  timestamp: Date;
-  read: boolean;
-  attachments?: Array<{
-    id: string;
-    type: 'image' | 'video' | 'file';
-    url: string;
-    thumbnail?: string;
-  }>;
-};
-
-export type Event = {
-  id: string;
-  title: string;
-  description: string;
-  date: any;
-  location: string;
-  organizerId?: string;
-  participants?: string[];
-  image?: string;
-  [key: string]: any;
-};
-
-export type DataItem = User | Chat | Message | Event;
 
 type CollectionName = "users" | "chats" | "messages" | "events";
+type DataItem =
+  | (typeof mockUsers)[number]
+  | (typeof mockChats)[number]
+  | (typeof mockMessages)[number]
+  | (typeof mockEvents)[number];
 
-function useData<T extends DataItem>(collectionName: CollectionName, realTime: boolean = true): { 
-  data: T[],
-  loading: boolean 
-} {
-  const [data, setData] = useState<T[]>([]);
+function useData(collectionName: CollectionName, realTime: boolean = true) {
+  const [data, setData] = useState<DataItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const { user } = useAuth();
   const firstFetch = useRef(true);
@@ -79,49 +34,45 @@ function useData<T extends DataItem>(collectionName: CollectionName, realTime: b
           const fetchedData = querySnapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
-          })) as T[];
+          })) as DataItem[];
 
           onSnapshot(q, (snapshot) => {
             if (!firstFetch.current) {
               console.log("real time"); 
             }
             firstFetch.current = false;
-            const newData = snapshot.docs.map((doc) => ({ 
-              id: doc.id, 
-              ...doc.data() 
-            })) as T[];
-            setData(newData);
+            setData(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as DataItem[]);
           });
-          setData(fetchedData);
+          setData(fetchedData as DataItem[]);
         } else if (user){
           const q = query(collection(db, collectionName));
           const querySnapshot = await getDocs(q);
           const fetchedData = querySnapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
-          })) as T[];
-          setData(fetchedData);
+          }));
+          setData(fetchedData as DataItem[]);
         } else {
           // Use mock data if user is not logged in
           switch (collectionName) {
             case "users":
-              setData(mockUsers as unknown as T[]);
+              setData(mockUsers as DataItem[]);
               break;
             case "chats":
-              setData(mockChats as unknown as T[]);
+              setData(mockChats as DataItem[]);
               break;
             case "messages":
-              setData(mockMessages as unknown as T[]);
+              setData(mockMessages as DataItem[]);
               break;
             case "events":
-              setData(mockEvents as unknown as T[]);
+              setData(mockEvents as DataItem[]);
               break;
           }
         }
       } catch (error) {
-        console.error(`Error fetching ${collectionName}:`, error);
+        console.error(`Error fetching ${collectionName}:`, error)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
     };
     fetchData();
@@ -129,5 +80,4 @@ function useData<T extends DataItem>(collectionName: CollectionName, realTime: b
 
   return { data, loading };
 };
-
 export { useData };

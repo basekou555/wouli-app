@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import ProfileHeader from '../components/profile/ProfileHeader';
 import ProfileSettings from '../components/profile/ProfileSettings';
 import EventTabs from '../components/profile/EventTabs';
 import { useAuth } from '../context/AuthContext';
-import { db } from '../firebase.config';
+import { db } from '../../firebase.config';
 import { doc, getDoc } from 'firebase/firestore';
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from 'react-router-dom';

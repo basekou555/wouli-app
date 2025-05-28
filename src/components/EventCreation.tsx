@@ -2,7 +2,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { Clock } from 'lucide-react';
 
 const steps = [
   {
@@ -68,32 +67,18 @@ const EventCreation = () => {
             <p className="text-wouli-gray-700 mb-8">
               Plus besoin de jongler entre différentes applications. Wouli centralise tout le processus et vous permet de vous concentrer sur l'essentiel : passer du bon temps avec vos amis.
             </p>
-            <div className="flex space-x-4">
-              <Button
-                asChild
-                size="lg"
-                className="px-7 py-3 bg-wouli-blue text-white rounded-full font-medium transition-all hover:bg-blue-600 active:scale-95"
-              >
-                <Link to="/events/create" className="inline-flex items-center">
-                  <span>Créer un événement</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </Link>
-              </Button>
-              
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="px-7 py-3 border-wouli-blue text-wouli-blue rounded-full font-medium transition-all hover:bg-blue-50 active:scale-95"
-              >
-                <Link to="/quick-event" className="inline-flex items-center">
-                  <Clock className="mr-2 h-4 w-4" />
-                  <span>Création rapide</span>
-                </Link>
-              </Button>
-            </div>
+            <Button
+              asChild
+              size="lg"
+              className="px-7 py-3 bg-wouli-blue text-white rounded-full font-medium transition-all hover:bg-blue-600 active:scale-95"
+            >
+              <Link to="/events/create" className="inline-flex items-center">
+                <span>Créer un événement</span>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </Link>
+            </Button>
           </div>
         </div>
       </div>

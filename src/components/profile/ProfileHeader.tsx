@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -28,7 +29,7 @@ interface ProfileHeaderProps {
 }
 
 const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userProfile, toggleSettings, onEditProfile }) => {
-  const { signOut } = useAuth();
+  const { signOutUser } = useAuth();
 
   const handleEditProfile = () => {
     if (onEditProfile) {
@@ -105,7 +106,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userProfile, toggleSettin
           <Button
             variant="outline"
             className="flex items-center"
-            onClick={() => signOut()}
+            onClick={() => signOutUser()}
           >
             <LogOut className="h-4 w-4 mr-2" />
             Déconnexion

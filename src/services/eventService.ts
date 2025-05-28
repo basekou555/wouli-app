@@ -1,6 +1,5 @@
-
 import { collection, query, where, getDocs, orderBy, Timestamp, DocumentData } from 'firebase/firestore';
-import { db } from '../firebase.config';
+import { db } from '../../firebase.config';
 import { mockEvents } from '../mocks/events';
 import { toast } from "@/hooks/use-toast";
 
@@ -135,7 +134,7 @@ export async function fetchUserEvents(userId: string) {
     // Requête pour les événements organisés
     const organizedEventsQuery = query(
       collection(db, 'events'), 
-      where('organizerId', '==', userId) // Changed from 'organizer' to 'organizerId'
+      where('organizer', '==', userId)
     );
     const organizedEventsSnapshot = await getDocs(organizedEventsQuery);
     const organizedEvents = organizedEventsSnapshot.docs.map(doc => ({
@@ -166,7 +165,7 @@ export async function fetchUserEvents(userId: string) {
       .filter(event => event.participants?.includes(userId));
       
     const mockOrganized = mockEvents
-      .filter(event => event.organizerId === userId); // Changed from event.organizer to event.organizerId
+      .filter(event => event.organizer === userId);
       
     return {
       upcoming: mockUpcoming,

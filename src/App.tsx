@@ -1,84 +1,83 @@
 
-import { RouterProvider, createBrowserRouter } from "react-router-dom";
-import { Toaster } from "sonner";
-import { AuthProvider } from "./context/AuthContext";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
-import SignIn from "./components/SignIn";
-import SignUp from "./components/SignUp";
-import Profile from "./pages/Profile";
-import CreateProfile from "./pages/CreateProfile";
-import Dashboard from "./pages/Dashboard";
-import Explore from "./pages/Explore";
-import Messages from "./pages/Messages";
-import EventDetails from "./pages/EventDetails";
-import EventCreate from "./pages/EventCreate";
-import ContentCreation from "./pages/ContentCreation";
 import NotFound from "./pages/NotFound";
-import QuickEvent from "./pages/QuickEvent";
-import "./App.css";
+import Dashboard from "./pages/Dashboard";
+import EventCreate from "./pages/EventCreate";
+import EventDetails from "./pages/EventDetails";
+import Profile from "./pages/Profile";
+import { ExplorePage } from "./pages/Explore";
+import Messages from "./pages/Messages";
+import CreateProfile from "./pages/CreateProfile";
+import ContentCreation from "./pages/ContentCreation"; // Import new page
+import { AuthProvider, useAuth } from "./context/AuthContext";
 
-function App() {
-  const router = createBrowserRouter([
-    {
-      path: "/",
-      element: <Index />,
-    },
-    {
-      path: "/signin",
-      element: <SignIn />,
-    },
-    {
-      path: "/signup",
-      element: <SignUp />,
-    },
-    {
-      path: "/profile",
-      element: <Profile />,
-    },
-    {
-      path: "/create-profile",
-      element: <CreateProfile />,
-    },
-    {
-      path: "/dashboard",
-      element: <Dashboard />,
-    },
-    {
-      path: "/explore",
-      element: <Explore />,
-    },
-    {
-      path: "/messages",
-      element: <Messages />,
-    },
-    {
-      path: "/events/:eventId",
-      element: <EventDetails />,
-    },
-    {
-      path: "/events/create",
-      element: <EventCreate />,
-    },
-    {
-      path: "/content-creation",
-      element: <ContentCreation />,
-    },
-    {
-      path: "/quick-event",
-      element: <QuickEvent />,
-    },
-    {
-      path: "*",
-      element: <NotFound />,
-    }
-  ]);
+const queryClient = new QueryClient();
 
-  return (
-    <AuthProvider>
-      <RouterProvider router={router} />
-      <Toaster position="top-center" />
-    </AuthProvider>
-  );
-}
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Sonner />    
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route
+              path="/"
+              element={<Index />} 
+            />
+            <Route
+              path="/dashboard"
+              element={<ProtectedRoute element={<Dashboard />} />}
+            />
+            <Route
+              path="/events/create"
+              element={<ProtectedRoute element={<EventCreate />} />}
+            />
+            <Route
+              path="/events/:id"
+              element={<ProtectedRoute element={<EventDetails />} />}
+            />
+            <Route
+              path="/profile"
+              element={<ProtectedRoute element={<Profile />} />}
+            />
+            <Route
+              path="/explore"
+              element={<ProtectedRoute element={<ExplorePage />} />}
+            />
+            <Route
+              path="/messages"
+              element={<ProtectedRoute element={<Messages />} />}
+            />
+            <Route
+              path="/create-profile"
+              element={<ProtectedRoute element={<CreateProfile />} />}
+            />
+            {/* New route for content creation */}
+            <Route
+              path="/content"
+              element={<ProtectedRoute element={<ContentCreation />} />}
+            />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
 
 export default App;
+
+const ProtectedRoute: React.FC<{ element: React.ReactNode }> = ({ element }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  return user ? <>{element}</> : <Navigate to="/" />;
+};

@@ -1,158 +1,192 @@
-import React, { useState } from "react";
-import { useAuth } from "@/context/AuthContext";
-import { useData, User } from "@/hooks/useData";
-import { useToast } from "@/hooks/use-toast";
-import { addDoc, collection } from "firebase/firestore";
-import { db } from "@/firebase.config";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Avatar } from "@/components/ui/avatar";
-import { Plus, X } from "lucide-react";
-import { PrivateChatForm } from "./PrivateChatForm";
-import { GroupChatForm } from "./GroupChatForm";
-import { Chat } from "@/types/chat";
+
+import React, { useState, useEffect, } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { v4 as uuidv4 } from 'uuid';
+import { useAuth } from '@/context/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Users, User } from 'lucide-react';
+import { Chat, ChatType, ChatVisibility } from '@/types/chat';
+import { GroupChatForm } from './GroupChatForm';
+import { PrivateChatForm } from './PrivateChatForm';
+import { useData } from '@/hooks/useData';
+import { User as UserType } from '@/types/chat';
+import { addDoc, serverTimestamp, collection } from 'firebase/firestore';
+import { db } from '../../firebase.config';
 
 interface NewChatDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onChatCreated?: (chat: Chat) => void;
+  onChatCreated: (chat: Chat) => void;
 }
 
-const NewChatDialog = ({ open, onOpenChange, onChatCreated }: NewChatDialogProps) => {
+export function NewChatDialog({ open, onOpenChange, onChatCreated }: NewChatDialogProps) {
+  const [chatType, setChatType] = useState<ChatType>('group');
+  const [groupName, setGroupName] = useState('');
+  const [groupVisibility, setGroupVisibility] = useState<ChatVisibility>('private');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
+  const [selectedUser, setSelectedUser] = useState<string>('');
+  const { data: users } = useData('users');
   const { user } = useAuth();
-  const { data: userData, loading: loadingUsers } = useData("users");
-  const { toast } = useToast();
-  const [chatType, setChatType] = useState<"private" | "group">("private");
-  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-  const [groupName, setGroupName] = useState("");
+  const [filteredUsers, setFilteredUsers] = useState<UserType[]>([]);
 
-  // Filter out current user from the list and ensure we have User objects
-  const filteredUsers = userData
-    .filter(item => item.id !== user?.uid && 'email' in item) as User[];
+  useEffect(() => {
+    const newFilteredUsers = users.filter((user): user is UserType => 
+      'displayName' in user && 
+      (user.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+       user.email?.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+    setFilteredUsers(newFilteredUsers as UserType[]);
+  }, [searchTerm, users]);
 
-  const handleUserSelection = (userId: string) => {
-    if (selectedUsers.includes(userId)) {
-      setSelectedUsers((prev) => prev.filter((id) => id !== userId));
-    } else {
-      setSelectedUsers((prev) => [...prev, userId]);
-    }
-  };
-
-  const resetForm = () => {
-    setSelectedUsers([]);
-    setGroupName("");
-    setChatType("private");
+  const createChatToDb = async (chat: Chat) => {
+    const docRef = await addDoc(collection(db, 'chats'), { ...chat, createdAt: serverTimestamp() });
+    return docRef.id;
   };
 
   const handleCreateChat = async () => {
-    if (!user) return;
+    let newChat: Partial<Chat>;
+    
+    if (chatType === 'one-to-one') {
+      const selectedUserObj = users.find(u => u.id === selectedUser);
+      if (!selectedUserObj) return;
+      
+      newChat = {
+        id: uuidv4(),
+        type: chatType,
+        name: selectedUserObj.displayName || selectedUserObj.email?.split('@')[0] || 'Utilisateur',
+        avatar: selectedUserObj.photoURL,
+        unreadCount: 0,
+        pinned: false,
+        visibility: 'private',
+        createdAt: new Date(),
+        participants: [
+          user && {
+            id: user.uid,
+            name: user.displayName || 'Vous',
+            avatar: user.photoURL,
+          },
+          {
+            id: selectedUserObj.id,
+            name: selectedUserObj.displayName || selectedUserObj.email?.split('@')[0] || 'Utilisateur',
+            avatar: selectedUserObj.photoURL,
+          }
+        ].filter(Boolean),
+        createdBy: user?.uid || '',
+      };
+    } else {
+      // Group chat
+      if (!groupName.trim()) return;
+      
+      const participants = [
+        user && {
+          id: user.uid,
+          name: user.displayName || 'Vous',
+          avatar: user.photoURL,
+        },
+        ...selectedParticipants.map((id) => {
+          const user = users.find(u => u.id === id);
+          
+          return user && {
+            id: user?.id || '',
+            name: user?.displayName || user?.email?.split('@')[0] || '',
+            avatar: user?.photoURL,
+          };
+        }),
+      ].filter(Boolean);
+      
+      newChat = {
+        id: uuidv4(),
+        type: chatType,
+        name: groupName,
+        unreadCount: 0,
+        pinned: false,
+        visibility: groupVisibility,
+        participants,
+        createdAt: new Date(),
+        createdBy: user?.uid || '',
+      };
+    }
+    
+    const newChatId = await createChatToDb(newChat as Chat);
+    newChat.id = newChatId;
+    
+    onChatCreated(newChat as Chat);
+    
+    // Reset form
+    setChatType('group');
+    setGroupName('');
+    setGroupVisibility('private');
+    setSearchTerm('');
+    setSelectedParticipants([]);
+    setSelectedUser('');
+  };
 
-    try {
-      let newChat: any;
-      
-      if (chatType === "private" && selectedUsers.length === 1) {
-        // Create private chat
-        const docRef = await addDoc(collection(db, "chats"), {
-          participants: [user.uid, selectedUsers[0]],
-          isGroup: false,
-          createdAt: new Date(),
-        });
-        
-        newChat = {
-          id: docRef.id,
-          participants: [user.uid, selectedUsers[0]],
-          isGroup: false,
-        };
-        
-        toast({ description: "Private chat created!" });
-      } else if (chatType === "group" && selectedUsers.length > 0 && groupName) {
-        // Create group chat
-        const docRef = await addDoc(collection(db, "chats"), {
-          name: groupName,
-          participants: [user.uid, ...selectedUsers],
-          isGroup: true,
-          createdAt: new Date(),
-        });
-        
-        newChat = {
-          id: docRef.id,
-          name: groupName,
-          participants: [user.uid, ...selectedUsers],
-          isGroup: true,
-        };
-        
-        toast({ description: "Group chat created!" });
-      } else {
-        toast({ 
-          title: "Error",
-          description: "Please fill all required fields", 
-          variant: "destructive" 
-        });
-        return;
-      }
-      
-      resetForm();
-      onOpenChange(false);
-      if (onChatCreated && newChat) {
-        onChatCreated(newChat as Chat);
-      }
-    } catch (error) {
-      console.error("Error creating chat:", error);
-      toast({ 
-        title: "Error",
-        description: "Failed to create chat", 
-        variant: "destructive" 
-      });
+  const isFormValid = () => {
+    if (chatType === 'one-to-one') {
+      return !!selectedUser;
+    } else {
+      return groupName.trim() !== '' && selectedParticipants.length > 0;
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>New Conversation</DialogTitle>
+          <DialogTitle>Nouvelle discussion</DialogTitle>
           <DialogDescription>
-            Start a new conversation with friends or create a group chat
+            Créez un nouveau groupe ou démarrez une conversation privée.
           </DialogDescription>
         </DialogHeader>
-
-        <Tabs defaultValue="private" className="w-full" onValueChange={(value) => setChatType(value as "private" | "group")}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="private">Private Chat</TabsTrigger>
-            <TabsTrigger value="group">Group Chat</TabsTrigger>
+        
+        <Tabs defaultValue="group" onValueChange={(value) => setChatType(value as ChatType)}>
+          <TabsList className="grid grid-cols-2 mb-4">
+            <TabsTrigger value="group" className="flex items-center">
+              <Users className="h-4 w-4 mr-2" />
+              Groupe
+            </TabsTrigger>
+            <TabsTrigger value="one-to-one" className="flex items-center">
+              <User className="h-4 w-4 mr-2" />
+              Message privé
+            </TabsTrigger>
           </TabsList>
-          <TabsContent value="private">
-            <PrivateChatForm 
-              users={filteredUsers} 
-              selectedUsers={selectedUsers} 
-              onUserSelect={handleUserSelection} 
-              loading={loadingUsers}
+          
+          <TabsContent value="group">
+            <GroupChatForm
+              groupName={groupName}
+              setGroupName={setGroupName}
+              groupVisibility={groupVisibility}
+              setGroupVisibility={setGroupVisibility}
+              selectedParticipants={selectedParticipants}
+              setSelectedParticipants={setSelectedParticipants}
+              filteredUsers={filteredUsers}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
             />
           </TabsContent>
-          <TabsContent value="group">
-            <GroupChatForm 
-              users={filteredUsers} 
-              selectedUsers={selectedUsers} 
-              onUserSelect={handleUserSelection} 
-              groupName={groupName}
-              onGroupNameChange={(e) => setGroupName(e.target.value)}
-              loading={loadingUsers}
+          
+          <TabsContent value="one-to-one">
+            <PrivateChatForm
+              selectedUser={selectedUser}
+              setSelectedUser={setSelectedUser}
+              filteredUsers={filteredUsers}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
             />
           </TabsContent>
         </Tabs>
-
-        <DialogFooter className="flex justify-between">
+        
+        <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            Annuler
           </Button>
-          <Button onClick={handleCreateChat} disabled={selectedUsers.length === 0}>
-            Create Chat
+          <Button onClick={handleCreateChat} disabled={!isFormValid()}>
+            Créer
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-};
-
-export default NewChatDialog;
+}
