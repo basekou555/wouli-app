@@ -24,10 +24,20 @@ export type User = {
 export type Message = {
   id: string;
   chatId: string;
-  senderId: string;
-  text: string;
-  timestamp: any;
-  [key: string]: any;
+  content: string;
+  sender: {
+    id: string;
+    name: string;
+    avatar?: string;
+  };
+  timestamp: Date;
+  read: boolean;
+  attachments?: Array<{
+    id: string;
+    type: 'image' | 'video' | 'file';
+    url: string;
+    thumbnail?: string;
+  }>;
 };
 
 export type Event = {
@@ -76,7 +86,11 @@ function useData<T extends DataItem>(collectionName: CollectionName, realTime: b
               console.log("real time"); 
             }
             firstFetch.current = false;
-            setData(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as T[]);
+            const newData = snapshot.docs.map((doc) => ({ 
+              id: doc.id, 
+              ...doc.data() 
+            })) as T[];
+            setData(newData);
           });
           setData(fetchedData);
         } else if (user){

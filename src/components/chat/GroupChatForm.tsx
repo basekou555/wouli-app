@@ -1,42 +1,38 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Search } from 'lucide-react';
 import { UserList } from './UserList';
-import { User, ChatVisibility } from '@/types/chat';
+import { User } from '@/hooks/useData';
+
+type ChatVisibility = 'private' | 'friends' | 'public';
 
 interface GroupChatFormProps {
+  users: User[];
+  selectedUsers: string[];
+  onUserSelect: (userId: string) => void;
   groupName: string;
-  setGroupName: (name: string) => void;
-  groupVisibility: ChatVisibility;
-  setGroupVisibility: (visibility: ChatVisibility) => void;
-  selectedParticipants: string[];
-  setSelectedParticipants: (participants: string[]) => void;
-  filteredUsers: User[];
-  searchTerm: string;
-  setSearchTerm: (term: string) => void;
+  onGroupNameChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  loading?: boolean;
 }
 
 export function GroupChatForm({
+  users,
+  selectedUsers,
+  onUserSelect,
   groupName,
-  setGroupName,
-  groupVisibility,
-  setGroupVisibility,
-  selectedParticipants,
-  setSelectedParticipants,
-  filteredUsers,
-  searchTerm,
-  setSearchTerm,
+  onGroupNameChange,
+  loading
 }: GroupChatFormProps) {
-  const toggleParticipant = (userId: string) => {
-    if (selectedParticipants.includes(userId)) {
-      setSelectedParticipants(selectedParticipants.filter(id => id !== userId));
-    } else {
-      setSelectedParticipants([...selectedParticipants, userId]);
-    }
-  };
+  const [searchTerm, setSearchTerm] = useState('');
+  const [groupVisibility, setGroupVisibility] = useState<ChatVisibility>('private');
+  
+  const filteredUsers = users.filter(user => 
+    user.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="space-y-4">
@@ -46,7 +42,7 @@ export function GroupChatForm({
           id="group-name" 
           placeholder="Entrez le nom du groupe" 
           value={groupName}
-          onChange={(e) => setGroupName(e.target.value)}
+          onChange={onGroupNameChange}
         />
       </div>
       
@@ -83,9 +79,11 @@ export function GroupChatForm({
           />
         </div>
         
-        {selectedParticipants.length > 0 && filteredUsers.length > 0 && (
+        {loading ? (
+          <div className="text-center text-gray-500">Chargement...</div>
+        ) : selectedUsers.length > 0 && filteredUsers.length > 0 && (
           <div className="flex flex-wrap gap-2 py-2">
-            {selectedParticipants.map(id => {
+            {selectedUsers.map(id => {
               const user = filteredUsers.find(u => u.id === id);
               return (
                 <div 
@@ -95,7 +93,7 @@ export function GroupChatForm({
                   <span>{user?.name}</span>
                   <button 
                     className="ml-2"
-                    onClick={() => toggleParticipant(id)}
+                    onClick={() => onUserSelect(id)}
                   >
                     &times;
                   </button>
@@ -105,15 +103,15 @@ export function GroupChatForm({
           </div>
         )}
         
-        {filteredUsers.length > 0 ? (
+        {!loading && filteredUsers.length > 0 ? (
           <UserList
             users={filteredUsers}
-            selectedUsers={selectedParticipants}
-            onUserSelect={toggleParticipant}
+            selectedUsers={selectedUsers}
+            onUserSelect={onUserSelect}
           />
         ) : (
           <div className="text-center text-gray-500">
-            Aucun utilisateur trouvé
+            {loading ? "Chargement..." : "Aucun utilisateur trouvé"}
           </div>
         )}
       </div>

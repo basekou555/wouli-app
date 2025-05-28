@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, MoreVertical, Paperclip, Send, Image, Smile, Users, Info, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,6 @@ import { Badge } from '@/components/ui/badge';
 import { v4 as uuidv4 } from 'uuid';
 
 interface ChatViewProps {
-
   chat: Chat;
   onBack: () => void;
 }
@@ -27,9 +27,11 @@ export function ChatView({ chat, onBack }: ChatViewProps) {
 
   useEffect(() => {
     if (allData) {
-      const chatMessages = allData.filter((item): item is Message => {
-        return 'content' in item && item.chatId === chat.id
-      });
+      // Fix the type issue by explicitly casting message objects
+      const chatMessages = allData
+        .filter((item) => 'content' in item && item.chatId === chat.id)
+        .map(item => item as unknown as Message);
+      
       setMessages(chatMessages);
     }
   }, [chat.id, allData]);

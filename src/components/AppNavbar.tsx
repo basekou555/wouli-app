@@ -16,12 +16,12 @@ import { useToast } from "@/hooks/use-toast";
 
 const AppNavbar = () => {
   const location = useLocation();
-  const { user, signOutUser } = useAuth();
+  const { user, signOut } = useAuth();
   const { toast } = useToast();
 
   const handleLogout = async () => {
     try {
-      await signOutUser();
+      await signOut();
       toast({
         title: "Déconnexion réussie",
         description: "À bientôt !",

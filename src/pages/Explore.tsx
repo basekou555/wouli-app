@@ -2,7 +2,7 @@
 import React from 'react';
 import AppLayout from '../components/AppLayout';
 
-const Explore = () => {
+const Explore: React.FC = () => {
   return (
     <AppLayout>
       <div className="py-6">

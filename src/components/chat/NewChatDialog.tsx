@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useData, User } from "@/hooks/useData";
@@ -8,7 +7,6 @@ import { db } from "@/firebase.config";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Avatar } from "@/components/ui/avatar";
 import { Plus, X } from "lucide-react";
 import { PrivateChatForm } from "./PrivateChatForm";
@@ -29,9 +27,9 @@ const NewChatDialog = ({ open, onOpenChange, onChatCreated }: NewChatDialogProps
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [groupName, setGroupName] = useState("");
 
-  // Filter out current user from the list
+  // Filter out current user from the list and ensure we have User objects
   const filteredUsers = userData
-    .filter(item => 'email' in item && item.id !== user?.uid) as User[];
+    .filter(item => item.id !== user?.uid && 'email' in item) as User[];
 
   const handleUserSelection = (userId: string) => {
     if (selectedUsers.includes(userId)) {
