@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -83,7 +83,7 @@ export function GroupChatForm({
           />
         </div>
         
-        {selectedParticipants.length > 0 && (
+        {selectedParticipants.length > 0 && filteredUsers.length > 0 && (
           <div className="flex flex-wrap gap-2 py-2">
             {selectedParticipants.map(id => {
               const user = filteredUsers.find(u => u.id === id);
@@ -105,11 +105,17 @@ export function GroupChatForm({
           </div>
         )}
         
-        <UserList 
-          users={filteredUsers} 
-          selectedUsers={selectedParticipants} 
-          onUserSelect={toggleParticipant} 
-        />
+        {filteredUsers.length > 0 ? (
+          <UserList
+            users={filteredUsers}
+            selectedUsers={selectedParticipants}
+            onUserSelect={toggleParticipant}
+          />
+        ) : (
+          <div className="text-center text-gray-500">
+            Aucun utilisateur trouvé
+          </div>
+        )}
       </div>
     </div>
   );

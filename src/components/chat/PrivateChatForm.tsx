@@ -38,13 +38,20 @@ export function PrivateChatForm({
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        
-        <UserList 
-          users={filteredUsers} 
-          selectedUsers={selectedUser ? [selectedUser] : []} 
-          onUserSelect={handleSelectUser} 
-          singleSelect={true} 
-        />
+
+        {selectedUser ? (
+          <div className="text-sm text-gray-500">
+            Utilisateur sélectionné.
+          </div>
+        ) : filteredUsers.length > 0 ? (
+          <UserList
+            users={filteredUsers}
+            selectedUsers={selectedUser ? [selectedUser] : []}
+            onUserSelect={handleSelectUser}
+            singleSelect={true}
+          />
+        ) : <div className="text-center text-gray-500">Aucun utilisateur trouvé</div>}
+
       </div>
     </div>
   );

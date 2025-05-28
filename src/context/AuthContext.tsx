@@ -1,12 +1,13 @@
+
 import { createContext, useContext } from 'react';
-import { auth } from '../../firebase.config.js';
+import { auth } from '../firebase.config';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User } from 'firebase/auth';
 import { useAuthState } from 'react-firebase-hooks/auth';
 interface AuthContextType {
   user: User | null;
   signUp: (email: string, password: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
-  signOutUser: () => Promise<void>;
+  signOut: () => Promise<void>;
   loading: boolean;
 }
 
@@ -46,7 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user: user || null,
     signUp,
     signIn,
-    signOutUser,
+    signOut: signOutUser,
     loading,
   };
 

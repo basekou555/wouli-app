@@ -1,14 +1,18 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, MoreVertical, Paperclip, Send, Image, Smile, Users, Info, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Chat, Message } from '@/types/chat';
-import { mockMessages } from './data/messages';
+import { useData } from '@/hooks/useData';
+import { db } from '../../firebase.config';
+import { addDoc, serverTimestamp, collection } from 'firebase/firestore';
+import { useAuth } from '@/context/AuthContext';
 import { Badge } from '@/components/ui/badge';
+import { v4 as uuidv4 } from 'uuid';
 
 interface ChatViewProps {
+
   chat: Chat;
   onBack: () => void;
 }
@@ -17,36 +21,44 @@ export function ChatView({ chat, onBack }: ChatViewProps) {
   const [newMessage, setNewMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { data: allData, loading } = useData('messages');
+  const { user, loading: loadingUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch messages for the chat
   useEffect(() => {
-    // In a real app, we would fetch messages from an API
-    const chatMessages = mockMessages.filter(m => m.chatId === chat.id);
-    setMessages(chatMessages);
-  }, [chat.id]);
-
+    if (allData) {
+      const chatMessages = allData.filter((item): item is Message => {
+        return 'content' in item && item.chatId === chat.id
+      });
+      setMessages(chatMessages);
+    }
+  }, [chat.id, allData]);
+  
+  
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSendMessage = () => {
+  const sendMessageToDb = async (message: Message) => {
+    await addDoc(collection(db, 'messages'), { ...message, timestamp: serverTimestamp() });
+  };
+
+  const handleSendMessage = async () => {
     if (newMessage.trim() === '') return;
-    
-    // In a real app, we would send the message to an API
+    const userId = user?.uid;
     const newMsg: Message = {
-      id: `new-${Date.now()}`,
-      chatId: chat.id,
-      content: newMessage,
+      id: uuidv4(),
+      chatId: chat.id, content: newMessage,
       sender: {
-        id: 'current-user-id',
-        name: 'Vous',
+        id: userId,
+        name: user?.displayName || 'Vous',
       },
       timestamp: new Date(),
       read: false,
     };
-    
+     await sendMessageToDb(newMsg);
+
     setMessages([...messages, newMsg]);
     setNewMessage('');
   };
@@ -134,9 +146,9 @@ export function ChatView({ chat, onBack }: ChatViewProps) {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message, index) => (
           <MessageBubble 
-            key={message.id} 
+          key={message.id} 
             message={message} 
-            isSelf={message.sender.id === 'current-user-id'} 
+            isSelf={message.sender.id === user?.uid}
             showAvatar={index === 0 || messages[index - 1].sender.id !== message.sender.id}
           />
         ))}
