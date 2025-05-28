@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { ChevronLeft } from 'lucide-react';
 import { useIsMobile } from '../hooks/use-mobile';
 
-// Types pour les nouvelles catégories optimisées
+// Types for categories and subcategories
 type SubCategory = {
   id: string;
   name: string;
@@ -25,125 +25,83 @@ interface CategorySelectorProps {
   selectedSubCategory: string | null;
 }
 
-// Liste optimisée des catégories et sous-catégories
+// Liste complète des catégories et sous-catégories
 const categories: Category[] = [
   {
-    id: 'culture-spectacle',
-    name: 'Culture & Spectacle',
-    emoji: '🎬',
+    id: 'sorties',
+    name: 'Sorties & Loisirs',
+    emoji: '🎭',
     subCategories: [
-      { id: 'cinema', name: 'Cinéma', emoji: '🎬' },
-      { id: 'theatre', name: 'Théâtre', emoji: '🎭' },
-      { id: 'concerts', name: 'Concerts', emoji: '🎵' },
-      { id: 'festivals', name: 'Festivals', emoji: '🎪' },
-      { id: 'expositions', name: 'Expositions', emoji: '🖼️' },
+      { id: 'cinema', name: 'Cinéma & Spectacle', emoji: '🎬' },
+      { id: 'jeux', name: 'Jeux & Expériences', emoji: '🎮' },
+      { id: 'parcs', name: 'Parcs & Attractions', emoji: '🎡' },
+      { id: 'sport', name: 'Activités Sportives', emoji: '⚽' },
+      { id: 'bars', name: 'Bars & Afterworks', emoji: '🎯' },
+      { id: 'perso-sorties', name: 'Événements Personnalisés', emoji: '➕' },
     ]
   },
   {
-    id: 'jeux-activites',
-    name: 'Jeux & Activités Ludiques',
-    emoji: '🎮',
-    subCategories: [
-      { id: 'escape-game', name: 'Escape Game', emoji: '🔐' },
-      { id: 'vr', name: 'Réalité Virtuelle', emoji: '🥽' },
-      { id: 'jeux-societe', name: 'Jeux de Société', emoji: '🎲' },
-      { id: 'bowling', name: 'Bowling', emoji: '🎳' },
-      { id: 'laser-game', name: 'Laser Game', emoji: '🔫' },
-    ]
-  },
-  {
-    id: 'sport-aventure',
-    name: 'Sport & Aventure',
-    emoji: '⚽',
-    subCategories: [
-      { id: 'karting', name: 'Karting', emoji: '🏎️' },
-      { id: 'escalade', name: 'Escalade', emoji: '🧗' },
-      { id: 'randonnee', name: 'Randonnée', emoji: '🥾' },
-      { id: 'bivouac', name: 'Bivouac', emoji: '🏕️' },
-      { id: 'ski', name: 'Ski', emoji: '🎿' },
-    ]
-  },
-  {
-    id: 'food-tasting',
-    name: 'Food & Tasting',
+    id: 'food',
+    name: 'Food & Chill',
     emoji: '🍽️',
     subCategories: [
-      { id: 'restaurants', name: 'Restaurants', emoji: '🍕' },
-      { id: 'brunchs', name: 'Brunchs', emoji: '🥞' },
-      { id: 'aperos', name: 'Apéros', emoji: '🥂' },
-      { id: 'degustations', name: 'Dégustations', emoji: '🍷' },
-      { id: 'food-trucks', name: 'Food Trucks', emoji: '🚚' },
+      { id: 'restaurant', name: 'Restaurant', emoji: '🍕' },
+      { id: 'cafe', name: 'Café & Détente', emoji: '☕' },
+      { id: 'maison', name: 'Soirée à la Maison', emoji: '🍱' },
+      { id: 'picnic', name: 'Pique-Nique & Balade', emoji: '🌿' },
+      { id: 'tasting', name: 'Tasting & Expérience', emoji: '🍻' },
+      { id: 'perso-food', name: 'Événements Personnalisés', emoji: '➕' },
     ]
   },
   {
-    id: 'bars-soirees',
-    name: 'Bars & Soirées',
-    emoji: '🍸',
+    id: 'culture',
+    name: 'Culture & Inspiration',
+    emoji: '🎨',
     subCategories: [
-      { id: 'bars-theme', name: 'Bars à Thème', emoji: '🍻' },
-      { id: 'rooftops', name: 'Rooftops', emoji: '🏙️' },
-      { id: 'afterworks', name: 'Afterworks', emoji: '🥃' },
-      { id: 'boites-nuit', name: 'Boîtes de Nuit', emoji: '💃' },
-      { id: 'cocktails', name: 'Cocktails', emoji: '🍹' },
+      { id: 'musee', name: 'Musée & Expo', emoji: '🏛️' },
+      { id: 'conference', name: 'Conférences & Talks', emoji: '📖' },
+      { id: 'ateliers', name: 'Ateliers Créatifs', emoji: '🎭' },
+      { id: 'concerts', name: 'Concerts & Festivals', emoji: '🎼' },
+      { id: 'communaute', name: 'Événements Communautaires', emoji: '🕌' },
+      { id: 'perso-culture', name: 'Événements Personnalisés', emoji: '➕' },
     ]
   },
   {
-    id: 'chill-detente',
-    name: 'Chill & Détente',
-    emoji: '☕',
-    subCategories: [
-      { id: 'cafes', name: 'Cafés', emoji: '☕' },
-      { id: 'coworking', name: 'Coworking', emoji: '💻' },
-      { id: 'pique-nique', name: 'Pique-nique', emoji: '🧺' },
-      { id: 'balades', name: 'Balades', emoji: '🚶' },
-      { id: 'salons-the', name: 'Salons de Thé', emoji: '🍵' },
-    ]
-  },
-  {
-    id: 'apprentissage-inspiration',
-    name: 'Apprentissage & Inspiration',
-    emoji: '🧠',
-    subCategories: [
-      { id: 'talks', name: 'Talks', emoji: '🎤' },
-      { id: 'masterclass', name: 'Masterclass', emoji: '🎓' },
-      { id: 'formations', name: 'Formations', emoji: '📚' },
-      { id: 'ateliers-creatifs', name: 'Ateliers Créatifs', emoji: '🎨' },
-      { id: 'tedx', name: 'TEDx', emoji: '💡' },
-    ]
-  },
-  {
-    id: 'voyages-escapades',
-    name: 'Voyages & Escapades',
+    id: 'voyages',
+    name: 'Voyages & Évasions',
     emoji: '🌍',
     subCategories: [
-      { id: 'road-trip', name: 'Road Trip', emoji: '🚗' },
-      { id: 'week-end', name: 'Week-end', emoji: '🏖️' },
-      { id: 'plage', name: 'Plage', emoji: '🏄' },
-      { id: 'montagne', name: 'Montagne', emoji: '🏔️' },
-      { id: 'international', name: 'International', emoji: '✈️' },
+      { id: 'roadtrip', name: 'Road Trip & Excursion', emoji: '🚗' },
+      { id: 'camping', name: 'Camping & Nature', emoji: '🏕️' },
+      { id: 'plage', name: 'Plage & Détente', emoji: '🏖️' },
+      { id: 'montagne', name: 'Montagne & Ski', emoji: '🏔️' },
+      { id: 'international', name: 'Voyage International', emoji: '✈️' },
+      { id: 'perso-voyages', name: 'Événements Personnalisés', emoji: '➕' },
     ]
   },
   {
-    id: 'reseautage-business',
-    name: 'Réseautage & Business',
+    id: 'business',
+    name: 'Business & Développement',
     emoji: '💼',
     subCategories: [
-      { id: 'networking', name: 'Networking', emoji: '🤝' },
-      { id: 'hackathons', name: 'Hackathons', emoji: '💻' },
-      { id: 'incubateurs', name: 'Incubateurs', emoji: '🚀' },
-      { id: 'innovation', name: 'Innovation', emoji: '💡' },
-      { id: 'finance', name: 'Finance', emoji: '📊' },
+      { id: 'networking', name: 'Networking & Meet-ups', emoji: '🤝' },
+      { id: 'coworking', name: 'Coworking & Travail', emoji: '🧑‍💻' },
+      { id: 'formation', name: 'Formation & Éducation', emoji: '🏫' },
+      { id: 'startups', name: 'Startups & Innovation', emoji: '🚀' },
+      { id: 'investissement', name: 'Investissement & Finance', emoji: '📊' },
+      { id: 'perso-business', name: 'Événements Personnalisés', emoji: '➕' },
     ]
   },
   {
-    id: 'evenements-prives',
-    name: 'Événements Privés',
+    id: 'perso',
+    name: 'Événements Personnels',
     emoji: '🎉',
     subCategories: [
-      { id: 'anniversaires', name: 'Anniversaires', emoji: '🎂' },
-      { id: 'dates', name: 'Dates', emoji: '💕' },
-      { id: 'celebrations', name: 'Célébrations', emoji: '🎊' },
-      { id: 'personnalises', name: 'Personnalisés', emoji: '✨' },
+      { id: 'anniversaires', name: 'Anniversaires & Célébrations', emoji: '🎂' },
+      { id: 'famille', name: 'Réunions Familiales', emoji: '🎁' },
+      { id: 'surprise', name: 'Surprise & Événement Mystère', emoji: '🎈' },
+      { id: 'rencontres', name: 'Rencontres & Dates', emoji: '💌' },
+      { id: 'perso-events', name: 'Événements Personnalisés', emoji: '➕' },
     ]
   },
 ];
@@ -162,6 +120,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
     setCurrentCategory(category);
     onCategorySelect(category.id);
     setActiveView('subcategories');
+    // Reset subcategory when changing category
     onSubCategorySelect(null);
   };
   
@@ -173,6 +132,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
     setActiveView('categories');
   };
   
+  // Find current category from selectedCategory
   React.useEffect(() => {
     if (selectedCategory) {
       const category = categories.find(cat => cat.id === selectedCategory);
@@ -188,6 +148,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
   return (
     <div className="w-full">
       {activeView === 'categories' ? (
+        // Main categories view
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {categories.map((category) => (
             <div
@@ -202,7 +163,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
                 ${isMobile ? 'h-24' : ''}
               `}
             >
-              <span className={`${isMobile ? 'text-2xl' : 'text-3xl'} mb-1`}>{category.emoji}</span>
+              <span className={`${isMobile ? 'text-3xl' : 'text-4xl'} mb-1`}>{category.emoji}</span>
               <span className={`text-center font-medium ${isMobile ? 'text-xs' : 'text-sm'} line-clamp-2`}>
                 {category.name}
               </span>
@@ -210,6 +171,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
           ))}
         </div>
       ) : (
+        // Subcategories view
         <div className="px-1">
           {currentCategory && (
             <>
