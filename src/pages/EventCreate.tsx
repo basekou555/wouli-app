@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useNavigate } from 'react-router-dom';
@@ -138,332 +139,333 @@ const EventCreate = () => {
           </div>
         </div>
 
-        <div className="relative overflow-hidden">
-          <div className={`transition-transform duration-500 flex ${
-            step === 'infos' ? 'translate-x-0' : '-translate-x-full'
-          }`} style={{ width: '200%' }}>
-            {/* Étape 1: Informations essentielles */}
-            <div className="w-full px-2 sm:px-4">
-              <Card className="mb-6">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Informations essentielles</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-5">
-                    <div>
-                      <Input
-                        id="title"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        placeholder="Nommer votre événement"
-                        className="text-lg sm:text-xl font-medium placeholder:text-gray-400 focus:border-wouli-blue transition-colors"
-                        required
-                      />
-                    </div>
-                    
-                    <div>
-                      <Textarea
-                        id="description"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        placeholder="Ajoutez des détails : description, dress code, etc."
-                        rows={3}
-                        className="focus:border-wouli-blue transition-colors"
-                        required
-                      />
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Date
-                        </label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className="w-full justify-start text-left font-normal"
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4 text-gray-500" />
-                              {date ? format(date, 'PPP', { locale: fr }) : <span className="text-gray-400">Choisir une date</span>}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
-                            <Calendar
-                              mode="single"
-                              selected={date}
-                              onSelect={setDate}
-                              initialFocus
-                              locale={fr}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                      
-                      <div>
-                        <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-1">
-                          Heure
-                        </label>
-                        <div className="relative">
-                          <Clock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                          <Input
-                            id="time"
-                            type="time"
-                            value={time}
-                            onChange={(e) => setTime(e.target.value)}
-                            className="pl-10"
-                            required
-                          />
-                        </div>
-                      </div>
-                    </div>
+        {/* Fixed: Change the container positioning and slide effect */}
+        <div className="relative w-full">
+          {/* Step 1: Information */}
+          <div className={`transition-all duration-500 ease-in-out absolute w-full ${
+            step === 'infos' ? 'opacity-100 z-10' : 'opacity-0 z-0'
+          }`}>
+            <Card className="mb-6">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Informations essentielles</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-5">
+                  <div>
+                    <Input
+                      id="title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="Nommer votre événement"
+                      className="text-lg sm:text-xl font-medium placeholder:text-gray-400 focus:border-wouli-blue transition-colors"
+                      required
+                    />
                   </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Catégorie</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CategorySelector 
-                    onCategorySelect={setSelectedCategory} 
-                    onSubCategorySelect={setSelectedSubCategory}
-                    selectedCategory={selectedCategory}
-                    selectedSubCategory={selectedSubCategory}
-                  />
-                </CardContent>
-              </Card>
-              
-              <div className="mt-6 flex justify-end">
-                <Button 
-                  type="button" 
-                  onClick={handleNextStep}
-                  className="bg-wouli-blue hover:bg-blue-600 text-white px-6"
-                >
-                  Suivant
-                  <ChevronRight className="ml-1 h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            
-            {/* Étape 2: Lieu et Invitations */}
-            <div className="w-full px-2 sm:px-4">
-              <Card className="mb-6">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Lieu</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-5">
+                  
+                  <div>
+                    <Textarea
+                      id="description"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Ajoutez des détails : description, dress code, etc."
+                      rows={3}
+                      className="focus:border-wouli-blue transition-colors"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
-                        Rechercher un lieu
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Date
+                      </label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4 text-gray-500" />
+                            {date ? format(date, 'PPP', { locale: fr }) : <span className="text-gray-400">Choisir une date</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={date}
+                            onSelect={setDate}
+                            initialFocus
+                            locale={fr}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    
+                    <div>
+                      <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-1">
+                        Heure
                       </label>
                       <div className="relative">
-                        <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                        <Clock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
                         <Input
-                          id="location"
-                          value={location}
-                          onChange={(e) => setLocation(e.target.value)}
-                          placeholder="Nom de l'établissement, adresse..."
+                          id="time"
+                          type="time"
+                          value={time}
+                          onChange={(e) => setTime(e.target.value)}
                           className="pl-10"
                           required
                         />
                       </div>
-                      
-                      {/* Suggestions de lieux */}
-                      {location && location.length > 2 && (
-                        <div className="mt-2 border rounded-md overflow-hidden shadow-sm">
-                          {suggestedPlaces.map((place) => (
-                            <div 
-                              key={place.id}
-                              onClick={() => selectPlace(place)}
-                              className="p-3 border-b last:border-b-0 flex items-start hover:bg-gray-50 cursor-pointer transition-colors"
-                            >
-                              <MapPin className="h-5 w-5 mr-2 text-gray-400 flex-shrink-0 mt-0.5" />
-                              <div>
-                                <p className="font-medium">{place.name}</p>
-                                <p className="text-sm text-gray-500">{place.address}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    
-                    {location && (
-                      <div>
-                        <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
-                          Adresse complète
-                        </label>
-                        <Input
-                          id="address"
-                          value={address}
-                          onChange={(e) => setAddress(e.target.value)}
-                          placeholder="Adresse complète"
-                          required
-                        />
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="mb-6">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Paramètres</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-5">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-3">
-                        Confidentialité
-                      </label>
-                      <RadioGroup 
-                        defaultValue={privacy} 
-                        onValueChange={setPrivacy}
-                        className="flex space-x-2"
-                      >
-                        <div className={`flex flex-col items-center p-2 sm:p-3 border rounded-lg cursor-pointer transition-colors ${privacy === 'private' ? 'border-wouli-blue bg-blue-50' : 'border-gray-200'}`}>
-                          <Lock className={`h-5 sm:h-6 w-5 sm:w-6 mb-1 ${privacy === 'private' ? 'text-wouli-blue' : 'text-gray-400'}`} />
-                          <span className={`text-xs sm:text-sm ${privacy === 'private' ? 'text-wouli-blue font-medium' : 'text-gray-600'}`}>Privé</span>
-                          <RadioGroupItem value="private" id="privacy-private" className="sr-only" />
-                        </div>
-                        <div className={`flex flex-col items-center p-2 sm:p-3 border rounded-lg cursor-pointer transition-colors ${privacy === 'friends' ? 'border-wouli-blue bg-blue-50' : 'border-gray-200'}`}>
-                          <Users className={`h-5 sm:h-6 w-5 sm:w-6 mb-1 ${privacy === 'friends' ? 'text-wouli-blue' : 'text-gray-400'}`} />
-                          <span className={`text-xs sm:text-sm ${privacy === 'friends' ? 'text-wouli-blue font-medium' : 'text-gray-600'}`}>Amis</span>
-                          <RadioGroupItem value="friends" id="privacy-friends" className="sr-only" />
-                        </div>
-                        <div className={`flex flex-col items-center p-2 sm:p-3 border rounded-lg cursor-pointer transition-colors ${privacy === 'public' ? 'border-wouli-blue bg-blue-50' : 'border-gray-200'}`}>
-                          <Globe className={`h-5 sm:h-6 w-5 sm:w-6 mb-1 ${privacy === 'public' ? 'text-wouli-blue' : 'text-gray-400'}`} />
-                          <span className={`text-xs sm:text-sm ${privacy === 'public' ? 'text-wouli-blue font-medium' : 'text-gray-600'}`}>Public</span>
-                          <RadioGroupItem value="public" id="privacy-public" className="sr-only" />
-                        </div>
-                      </RadioGroup>
-                    </div>
-                    
-                    <div>
-                      <label htmlFor="maxParticipants" className="block text-sm font-medium text-gray-700 mb-1">
-                        Nombre maximum de participants
-                      </label>
-                      <Input
-                        id="maxParticipants"
-                        type="number"
-                        value={maxParticipants}
-                        onChange={(e) => setMaxParticipants(e.target.value)}
-                        placeholder="Laisser vide si illimité"
-                        min={1}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <label htmlFor="allowPlusOne" className="text-sm font-medium text-gray-700">
-                          Autoriser les invités à amener quelqu'un (+1)
-                        </label>
-                        <button 
-                          type="button"
-                          onClick={() => setAllowPlusOne(!allowPlusOne)}
-                          className={`w-10 h-6 rounded-full flex items-center transition-colors ${allowPlusOne ? 'bg-wouli-blue justify-end' : 'bg-gray-300 justify-start'}`}
-                        >
-                          <span className={`w-4 h-4 rounded-full bg-white transform mx-1`}></span>
-                        </button>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <label htmlFor="requireApproval" className="text-sm font-medium text-gray-700">
-                          Approuver manuellement chaque participant
-                        </label>
-                        <button 
-                          type="button"
-                          onClick={() => setRequireApproval(!requireApproval)}
-                          className={`w-10 h-6 rounded-full flex items-center transition-colors ${requireApproval ? 'bg-wouli-blue justify-end' : 'bg-gray-300 justify-start'}`}
-                        >
-                          <span className={`w-4 h-4 rounded-full bg-white transform mx-1`}></span>
-                        </button>
-                      </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="mb-6">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Invitations</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Catégorie</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CategorySelector 
+                  onCategorySelect={setSelectedCategory} 
+                  onSubCategorySelect={setSelectedSubCategory}
+                  selectedCategory={selectedCategory}
+                  selectedSubCategory={selectedSubCategory}
+                />
+              </CardContent>
+            </Card>
+            
+            <div className="mt-6 flex justify-end">
+              <Button 
+                type="button" 
+                onClick={handleNextStep}
+                className="bg-wouli-blue hover:bg-blue-600 text-white px-6"
+              >
+                Suivant
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          
+          {/* Step 2: Location and Invitations */}
+          <div className={`transition-all duration-500 ease-in-out absolute w-full ${
+            step === 'location' ? 'opacity-100 z-10' : 'opacity-0 z-0'
+          }`}>
+            <Card className="mb-6">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Lieu</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-5">
+                  <div>
+                    <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
+                      Rechercher un lieu
+                    </label>
                     <div className="relative">
                       <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                       <Input
-                        placeholder="Rechercher des amis..."
+                        id="location"
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                        placeholder="Nom de l'établissement, adresse..."
                         className="pl-10"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        required
                       />
                     </div>
                     
-                    <div className="flex overflow-x-auto py-2 space-x-2 -mx-2 px-2">
-                      {filteredFriends.map((friend) => (
-                        <div 
-                          key={friend.id} 
-                          onClick={() => toggleFriend(friend.id)}
-                          className={`flex-shrink-0 flex flex-col items-center w-16 sm:w-20 p-2 rounded-lg cursor-pointer transition-all ${
-                            friends.includes(friend.id) ? 'bg-blue-50 border border-wouli-blue' : 'hover:bg-gray-50'
-                          }`}
-                        >
-                          <div className="relative mb-1">
-                            <img 
-                              src={friend.avatar} 
-                              alt={friend.name} 
-                              className="w-10 sm:w-12 h-10 sm:h-12 rounded-full object-cover border-2 border-white shadow-sm"
-                            />
-                            {friends.includes(friend.id) && (
-                              <div className="absolute -bottom-1 -right-1 bg-wouli-blue text-white rounded-full w-5 h-5 flex items-center justify-center">
-                                <Check className="h-3 w-3" />
-                              </div>
-                            )}
+                    {/* Suggestions de lieux */}
+                    {location && location.length > 2 && (
+                      <div className="mt-2 border rounded-md overflow-hidden shadow-sm">
+                        {suggestedPlaces.map((place) => (
+                          <div 
+                            key={place.id}
+                            onClick={() => selectPlace(place)}
+                            className="p-3 border-b last:border-b-0 flex items-start hover:bg-gray-50 cursor-pointer transition-colors"
+                          >
+                            <MapPin className="h-5 w-5 mr-2 text-gray-400 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <p className="font-medium">{place.name}</p>
+                              <p className="text-sm text-gray-500">{place.address}</p>
+                            </div>
                           </div>
-                          <span className="text-xs text-center line-clamp-1">{friend.name.split(' ')[0]}</span>
-                        </div>
-                      ))}
-                    </div>
-                    
-                    {friends.length > 0 && (
-                      <div className="bg-blue-50 p-3 rounded-lg text-sm">
-                        <span className="font-medium">{friends.length} ami{friends.length > 1 ? 's' : ''} invité{friends.length > 1 ? 's' : ''}</span>
+                        ))}
                       </div>
                     )}
                   </div>
-                </CardContent>
-              </Card>
-              
-              <div className="mt-6 flex justify-between">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={handlePrevStep}
-                >
-                  <ChevronLeft className="mr-1 h-4 w-4" />
-                  Précédent
-                </Button>
-                
-                <Button 
-                  type="button" 
-                  onClick={handleCreateEvent}
-                  className="bg-wouli-blue hover:bg-blue-600 text-white min-w-24 sm:min-w-32 relative"
-                  disabled={isCreating}
-                >
-                  {isCreating ? (
-                    <div className="flex items-center">
-                      <div className="animate-spin h-4 w-4 sm:h-5 sm:w-5 border-2 border-white border-r-transparent rounded-full mr-2"></div>
-                      <span>Création...</span>
+                  
+                  {location && (
+                    <div>
+                      <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
+                        Adresse complète
+                      </label>
+                      <Input
+                        id="address"
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        placeholder="Adresse complète"
+                        required
+                      />
                     </div>
-                  ) : (
-                    <span>Créer l'événement</span>
                   )}
-                </Button>
-              </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="mb-6">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Paramètres</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-5">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Confidentialité
+                    </label>
+                    <RadioGroup 
+                      defaultValue={privacy} 
+                      onValueChange={setPrivacy}
+                      className="flex space-x-2"
+                    >
+                      <div className={`flex flex-col items-center p-2 sm:p-3 border rounded-lg cursor-pointer transition-colors ${privacy === 'private' ? 'border-wouli-blue bg-blue-50' : 'border-gray-200'}`}>
+                        <Lock className={`h-5 sm:h-6 w-5 sm:w-6 mb-1 ${privacy === 'private' ? 'text-wouli-blue' : 'text-gray-400'}`} />
+                        <span className={`text-xs sm:text-sm ${privacy === 'private' ? 'text-wouli-blue font-medium' : 'text-gray-600'}`}>Privé</span>
+                        <RadioGroupItem value="private" id="privacy-private" className="sr-only" />
+                      </div>
+                      <div className={`flex flex-col items-center p-2 sm:p-3 border rounded-lg cursor-pointer transition-colors ${privacy === 'friends' ? 'border-wouli-blue bg-blue-50' : 'border-gray-200'}`}>
+                        <Users className={`h-5 sm:h-6 w-5 sm:w-6 mb-1 ${privacy === 'friends' ? 'text-wouli-blue' : 'text-gray-400'}`} />
+                        <span className={`text-xs sm:text-sm ${privacy === 'friends' ? 'text-wouli-blue font-medium' : 'text-gray-600'}`}>Amis</span>
+                        <RadioGroupItem value="friends" id="privacy-friends" className="sr-only" />
+                      </div>
+                      <div className={`flex flex-col items-center p-2 sm:p-3 border rounded-lg cursor-pointer transition-colors ${privacy === 'public' ? 'border-wouli-blue bg-blue-50' : 'border-gray-200'}`}>
+                        <Globe className={`h-5 sm:h-6 w-5 sm:w-6 mb-1 ${privacy === 'public' ? 'text-wouli-blue' : 'text-gray-400'}`} />
+                        <span className={`text-xs sm:text-sm ${privacy === 'public' ? 'text-wouli-blue font-medium' : 'text-gray-600'}`}>Public</span>
+                        <RadioGroupItem value="public" id="privacy-public" className="sr-only" />
+                      </div>
+                    </RadioGroup>
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="maxParticipants" className="block text-sm font-medium text-gray-700 mb-1">
+                      Nombre maximum de participants
+                    </label>
+                    <Input
+                      id="maxParticipants"
+                      type="number"
+                      value={maxParticipants}
+                      onChange={(e) => setMaxParticipants(e.target.value)}
+                      placeholder="Laisser vide si illimité"
+                      min={1}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label htmlFor="allowPlusOne" className="text-sm font-medium text-gray-700">
+                        Autoriser les invités à amener quelqu'un (+1)
+                      </label>
+                      <button 
+                        type="button"
+                        onClick={() => setAllowPlusOne(!allowPlusOne)}
+                        className={`w-10 h-6 rounded-full flex items-center transition-colors ${allowPlusOne ? 'bg-wouli-blue justify-end' : 'bg-gray-300 justify-start'}`}
+                      >
+                        <span className={`w-4 h-4 rounded-full bg-white transform mx-1`}></span>
+                      </button>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <label htmlFor="requireApproval" className="text-sm font-medium text-gray-700">
+                        Approuver manuellement chaque participant
+                      </label>
+                      <button 
+                        type="button"
+                        onClick={() => setRequireApproval(!requireApproval)}
+                        className={`w-10 h-6 rounded-full flex items-center transition-colors ${requireApproval ? 'bg-wouli-blue justify-end' : 'bg-gray-300 justify-start'}`}
+                      >
+                        <span className={`w-4 h-4 rounded-full bg-white transform mx-1`}></span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="mb-6">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Invitations</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Rechercher des amis..."
+                      className="pl-10"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="flex overflow-x-auto py-2 space-x-2 -mx-2 px-2">
+                    {filteredFriends.map((friend) => (
+                      <div 
+                        key={friend.id} 
+                        onClick={() => toggleFriend(friend.id)}
+                        className={`flex-shrink-0 flex flex-col items-center w-16 sm:w-20 p-2 rounded-lg cursor-pointer transition-all ${
+                          friends.includes(friend.id) ? 'bg-blue-50 border border-wouli-blue' : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="relative mb-1">
+                          <img 
+                            src={friend.avatar} 
+                            alt={friend.name} 
+                            className="w-10 sm:w-12 h-10 sm:h-12 rounded-full object-cover border-2 border-white shadow-sm"
+                          />
+                          {friends.includes(friend.id) && (
+                            <div className="absolute -bottom-1 -right-1 bg-wouli-blue text-white rounded-full w-5 h-5 flex items-center justify-center">
+                              <Check className="h-3 w-3" />
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-xs text-center line-clamp-1">{friend.name.split(' ')[0]}</span>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {friends.length > 0 && (
+                    <div className="bg-blue-50 p-3 rounded-lg text-sm">
+                      <span className="font-medium">{friends.length} ami{friends.length > 1 ? 's' : ''} invité{friends.length > 1 ? 's' : ''}</span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+            
+            <div className="mt-6 flex justify-between">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={handlePrevStep}
+              >
+                <ChevronLeft className="mr-1 h-4 w-4" />
+                Précédent
+              </Button>
+              
+              <Button 
+                type="button" 
+                onClick={handleCreateEvent}
+                className="bg-wouli-blue hover:bg-blue-600 text-white min-w-24 sm:min-w-32 relative"
+                disabled={isCreating}
+              >
+                {isCreating ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin h-4 w-4 sm:h-5 sm:w-5 border-2 border-white border-r-transparent rounded-full mr-2"></div>
+                    <span>Création...</span>
+                  </div>
+                ) : (
+                  <span>Créer l'événement</span>
+                )}
+              </Button>
             </div>
           </div>
         </div>
