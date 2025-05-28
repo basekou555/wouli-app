@@ -1,6 +1,6 @@
 import { collection, query, where, getDocs, orderBy, Timestamp, DocumentData } from 'firebase/firestore';
 import { db } from '../../firebase.config';
-import { mockEvents } from '../mocks/events';
+import { mockEvents } from '../components/chat/mockData';
 import { toast } from "@/hooks/use-toast";
 
 export interface EventData {

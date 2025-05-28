@@ -12,16 +12,16 @@ import {
   Edit,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 
 const AppNavbar = () => {
   const location = useLocation();
-  const { user, signOutUser } = useAuth();
+  const { user, logout } = useAuth();
   const { toast } = useToast();
 
   const handleLogout = async () => {
     try {
-      await signOutUser();
+      await logout();
       toast({
         title: "Déconnexion réussie",
         description: "À bientôt !",

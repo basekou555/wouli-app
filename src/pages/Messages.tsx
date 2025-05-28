@@ -6,7 +6,7 @@ import { ChatView } from '@/components/chat/ChatView';
 import { NewChatDialog } from '@/components/chat/NewChatDialog';
 import { Chat } from '@/types/chat';
 import { MessageSquare } from 'lucide-react';
-import { db } from '../firebase.config';
+import { db } from '../../firebase.config';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 
@@ -46,6 +46,7 @@ const Messages = () => {
             </div>
           ) : (
             <ChatList 
+              chats={chats}
               activeChat={activeChat} 
               setActiveChat={setActiveChat}
               onNewChat={() => setIsNewChatDialogOpen(true)}
