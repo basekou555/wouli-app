@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -10,7 +11,7 @@ import { useForm } from 'react-hook-form';
 import { Avatar } from '@/components/ui/avatar';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Textarea } from '@/components/ui/textarea';
-import { db } from '../../firebase.config';
+import { db } from '../firebase.config';
 import { doc, setDoc } from 'firebase/firestore';
 import { useToast } from "@/hooks/use-toast";
 
