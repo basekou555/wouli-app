@@ -1,0 +1,59 @@
+
+import React from 'react';
+import { Button } from "@/components/ui/button";
+import { Heart, Search, Calendar, User } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+
+const BottomNavigation = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const navItems = [
+    {
+      icon: Heart,
+      label: 'Découvrir',
+      path: '/app',
+      isActive: location.pathname === '/app'
+    },
+    {
+      icon: Search,
+      label: 'Rechercher',
+      path: '/search',
+      isActive: location.pathname === '/search'
+    },
+    {
+      icon: Calendar,
+      label: 'Mes événements',
+      path: '/mes-evenements',
+      isActive: location.pathname === '/mes-evenements'
+    }
+  ];
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 shadow-lg">
+      <div className="flex justify-around items-center max-w-md mx-auto">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <Button
+              key={item.path}
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate(item.path)}
+              className={`flex flex-col items-center space-y-1 min-w-0 px-3 py-2 ${
+                item.isActive 
+                  ? 'text-purple-600 bg-purple-50' 
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Icon className="h-5 w-5" />
+              <span className="text-xs font-medium">{item.label}</span>
+            </Button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+export default BottomNavigation;

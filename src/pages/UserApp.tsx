@@ -1,9 +1,9 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Heart, X, MapPin, Calendar, Users, Filter, ArrowLeft, Clock, Tag, Euro } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import { mockEvents, categories, Event } from '../data/mockEvents';
+import BottomNavigation from '../components/BottomNavigation';
 
 const UserApp = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -69,7 +69,7 @@ const UserApp = () => {
 
   if (selectedEvent) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 pb-20">
         {/* Header */}
         <div className="bg-white shadow-sm p-4 flex items-center">
           <Button 
@@ -195,12 +195,13 @@ const UserApp = () => {
             </div>
           </div>
         </div>
+        <BottomNavigation />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col pb-20">
       {/* Header */}
       <div className="bg-white shadow-sm p-4">
         <div className="flex items-center justify-between">

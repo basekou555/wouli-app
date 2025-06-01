@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, MapPin, Users, Heart, X, Trash2 } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import { Link } from 'react-router-dom';
+import BottomNavigation from '../components/BottomNavigation';
 
 // Mock data pour l'historique - en production, cela viendrait du localStorage ou d'une base de données
 const mockLikedEvents = [
@@ -126,77 +126,80 @@ const UserHistory = () => {
   );
 
   return (
-    <AppLayout>
-      <div className="py-6 space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Mes Événements</h1>
-          <p className="text-gray-500">Gérez vos favoris et participations</p>
+    <div className="min-h-screen bg-gray-50 pb-20">
+      <AppLayout>
+        <div className="py-6 space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Mes Événements</h1>
+            <p className="text-gray-500">Gérez vos favoris et participations</p>
+          </div>
+
+          <Tabs defaultValue="liked" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="liked" className="flex items-center">
+                <Heart className="h-4 w-4 mr-2" />
+                Favoris ({likedEvents.length})
+              </TabsTrigger>
+              <TabsTrigger value="participating" className="flex items-center">
+                <Calendar className="h-4 w-4 mr-2" />
+                Participations ({participatingEvents.length})
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="liked" className="mt-6">
+              {likedEvents.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {likedEvents.map((event) => (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      onRemove={removeLikedEvent}
+                      removeText="Retirer des favoris"
+                      removeIcon={<X className="h-4 w-4" />}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Heart className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900">Aucun favori</h3>
+                  <p className="text-gray-500 mt-2">Les événements que vous aimez apparaîtront ici</p>
+                  <Link to="/app">
+                    <Button className="mt-4">Découvrir des événements</Button>
+                  </Link>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="participating" className="mt-6">
+              {participatingEvents.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {participatingEvents.map((event) => (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      onRemove={removeParticipation}
+                      removeText="Annuler participation"
+                      removeIcon={<Trash2 className="h-4 w-4" />}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900">Aucune participation</h3>
+                  <p className="text-gray-500 mt-2">Les événements auxquels vous participez apparaîtront ici</p>
+                  <Link to="/app">
+                    <Button className="mt-4">Rejoindre des événements</Button>
+                  </Link>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
-
-        <Tabs defaultValue="liked" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="liked" className="flex items-center">
-              <Heart className="h-4 w-4 mr-2" />
-              Favoris ({likedEvents.length})
-            </TabsTrigger>
-            <TabsTrigger value="participating" className="flex items-center">
-              <Calendar className="h-4 w-4 mr-2" />
-              Participations ({participatingEvents.length})
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="liked" className="mt-6">
-            {likedEvents.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                {likedEvents.map((event) => (
-                  <EventCard
-                    key={event.id}
-                    event={event}
-                    onRemove={removeLikedEvent}
-                    removeText="Retirer des favoris"
-                    removeIcon={<X className="h-4 w-4" />}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <Heart className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900">Aucun favori</h3>
-                <p className="text-gray-500 mt-2">Les événements que vous aimez apparaîtront ici</p>
-                <Link to="/app">
-                  <Button className="mt-4">Découvrir des événements</Button>
-                </Link>
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="participating" className="mt-6">
-            {participatingEvents.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                {participatingEvents.map((event) => (
-                  <EventCard
-                    key={event.id}
-                    event={event}
-                    onRemove={removeParticipation}
-                    removeText="Annuler participation"
-                    removeIcon={<Trash2 className="h-4 w-4" />}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900">Aucune participation</h3>
-                <p className="text-gray-500 mt-2">Les événements auxquels vous participez apparaîtront ici</p>
-                <Link to="/app">
-                  <Button className="mt-4">Rejoindre des événements</Button>
-                </Link>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </div>
-    </AppLayout>
+      </AppLayout>
+      <BottomNavigation />
+    </div>
   );
 };
 
