@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Heart, X, MapPin, Calendar, Users, Filter, ArrowLeft, Clock, Tag, Euro } from 'lucide-react';
+import { Heart, X, MapPin, Calendar, Users, Filter, ArrowLeft, Clock, Tag, Euro, Building } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import { mockEvents, categories, Event } from '../data/mockEvents';
 import BottomNavigation from '../components/BottomNavigation';
@@ -97,6 +98,12 @@ const UserApp = () => {
                 <span className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium">
                   {categories.find(c => c.id === selectedEvent.category)?.icon} {categories.find(c => c.id === selectedEvent.category)?.name}
                 </span>
+              </div>
+              <div className="absolute bottom-4 left-4 right-4">
+                <div className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium text-gray-700 inline-flex items-center">
+                  <Building className="h-4 w-4 mr-1" />
+                  Proposé par {selectedEvent.organizer}
+                </div>
               </div>
             </div>
 
@@ -260,6 +267,12 @@ const UserApp = () => {
                     {categories.find(c => c.id === currentEvent.category)?.icon}
                   </span>
                 </div>
+                <div className="absolute top-4 left-4">
+                  <div className="bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-medium text-gray-700 flex items-center">
+                    <Building className="h-3 w-3 mr-1" />
+                    {currentEvent.organizer}
+                  </div>
+                </div>
                 <div className="absolute bottom-4 left-4 right-4 text-white">
                   <h2 className="text-2xl font-bold mb-2">{currentEvent.title}</h2>
                   <div className="space-y-1">
@@ -353,6 +366,8 @@ const UserApp = () => {
         <p>Événement {currentIndex + 1} sur {filteredEvents.length}</p>
         <p>{likedEvents.length} favoris • {participatingEvents.length} participations</p>
       </div>
+      
+      <BottomNavigation />
     </div>
   );
 };

@@ -2,11 +2,12 @@
 import React, { useState, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Heart, Calendar, MapPin, Users, Tag, Euro, Search as SearchIcon, Filter, X } from 'lucide-react';
+import { Search as SearchIcon, MapPin, Calendar, Users, Heart, X, Filter, Building } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import { mockEvents, categories, Event } from '../data/mockEvents';
+import BottomNavigation from '../components/BottomNavigation';
 
 const Search = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -14,35 +15,70 @@ const Search = () => {
   const [selectedDate, setSelectedDate] = useState('all');
   const [likedEvents, setLikedEvents] = useState<string[]>([]);
   const [participatingEvents, setParticipatingEvents] = useState<string[]>([]);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
   const { toast } = useToast();
 
-  // Options de filtrage par date
   const dateFilters = [
-    { id: 'all', label: 'Toutes les dates' },
-    { id: 'today', label: 'Aujourd\'hui' },
-    { id: 'weekend', label: 'Ce week-end' },
-    { id: 'week', label: 'Cette semaine' },
-    { id: 'next-week', label: 'Semaine prochaine' }
+    { id: 'all', name: 'Toutes les dates' },
+    { id: 'today', name: 'Aujourd\'hui' },
+    { id: 'weekend', name: 'Ce weekend' },
+    { id: 'week', name: 'Cette semaine' },
+    { id: 'month', name: 'Ce mois' }
   ];
 
-  // Fonction de filtrage en temps réel
   const filteredEvents = useMemo(() => {
-    return mockEvents.filter(event => {
-      // Filtre par mots-clés
-      const matchesSearch = searchTerm === '' || 
+    let filtered = mockEvents;
+
+    // Filtre par terme de recherche
+    if (searchTerm) {
+      filtered = filtered.filter(event => 
         event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         event.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        event.venue.toLowerCase().includes(searchTerm.toLowerCase());
+        event.venue.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        event.organizer.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
 
-      // Filtre par catégorie
-      const matchesCategory = selectedCategory === 'all' || event.category === selectedCategory;
+    // Filtre par catégorie
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(event => event.category === selectedCategory);
+    }
 
-      // Filtre par date (simplifié pour la démo)
-      const matchesDate = selectedDate === 'all' || true; // Pour l'instant, tous les événements
+    // Filtre par date (simplifié pour la démo)
+    if (selectedDate !== 'all') {
+      const today = new Date();
+      const eventDate = new Date();
+      
+      switch (selectedDate) {
+        case 'today':
+          filtered = filtered.filter(event => {
+            const eDate = new Date(event.date);
+            return eDate.toDateString() === today.toDateString();
+          });
+          break;
+        case 'weekend':
+          // Logique simplifiée pour le weekend
+          filtered = filtered.filter(event => {
+            const eDate = new Date(event.date);
+            const day = eDate.getDay();
+            return day === 0 || day === 6; // Dimanche ou Samedi
+          });
+          break;
+        case 'week':
+          // Événements de cette semaine
+          filtered = filtered.filter(event => {
+            const eDate = new Date(event.date);
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() - today.getDay());
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+            return eDate >= weekStart && eDate <= weekEnd;
+          });
+          break;
+      }
+    }
 
-      return matchesSearch && matchesCategory && matchesDate;
-    });
+    return filtered;
   }, [searchTerm, selectedCategory, selectedDate]);
 
   const handleLike = (eventId: string) => {
@@ -73,122 +109,35 @@ const Search = () => {
     setSelectedDate('all');
   };
 
-  const hasActiveFilters = searchTerm || selectedCategory !== 'all' || selectedDate !== 'all';
-
-  if (selectedEvent) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        {/* Header détails */}
-        <div className="bg-white shadow-sm p-4 flex items-center">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => setSelectedEvent(null)}
-            className="mr-3"
-          >
-            <X className="h-5 w-5" />
-          </Button>
-          <h1 className="text-xl font-bold">Détails de l'événement</h1>
-        </div>
-
-        {/* Contenu détails (réutilisation de la logique existante) */}
-        <div className="p-4">
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <div className="relative h-64">
-              <img
-                src={selectedEvent.image}
-                alt={selectedEvent.title}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute top-4 right-4">
-                <span className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium">
-                  {categories.find(c => c.id === selectedEvent.category)?.icon} {categories.find(c => c.id === selectedEvent.category)?.name}
-                </span>
-              </div>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <h1 className="text-2xl font-bold text-gray-900">{selectedEvent.title}</h1>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center text-gray-600">
-                  <MapPin className="h-4 w-4 mr-2 text-purple-500" />
-                  <span className="text-sm">{selectedEvent.venue}</span>
-                </div>
-                <div className="flex items-center text-gray-600">
-                  <Calendar className="h-4 w-4 mr-2 text-purple-500" />
-                  <span className="text-sm">{new Date(selectedEvent.date).toLocaleDateString('fr-FR')}</span>
-                </div>
-                <div className="flex items-center text-gray-600">
-                  <Users className="h-4 w-4 mr-2 text-purple-500" />
-                  <span className="text-sm">{selectedEvent.participants} participants</span>
-                </div>
-                {selectedEvent.price && (
-                  <div className="flex items-center text-gray-600">
-                    <Euro className="h-4 w-4 mr-2 text-green-500" />
-                    <span className="text-sm font-medium">{selectedEvent.price}</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="border-t pt-4">
-                <h3 className="font-medium text-gray-900 mb-2">Description</h3>
-                <p className="text-gray-600 text-sm leading-relaxed">{selectedEvent.description}</p>
-              </div>
-
-              {selectedEvent.tags.length > 0 && (
-                <div className="border-t pt-4">
-                  <h3 className="font-medium text-gray-900 mb-2">Tags</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedEvent.tags.map((tag, index) => (
-                      <span key={index} className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs">
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="p-6 pt-0 space-y-3">
-              <Button 
-                className="w-full h-12"
-                onClick={() => handleParticipate(selectedEvent.id)}
-                disabled={participatingEvents.includes(selectedEvent.id)}
-              >
-                {participatingEvents.includes(selectedEvent.id) ? '✅ Tu participes déjà' : '🗓️ Participer'}
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                className="w-full h-12"
-                onClick={() => handleLike(selectedEvent.id)}
-                disabled={likedEvents.includes(selectedEvent.id)}
-              >
-                {likedEvents.includes(selectedEvent.id) ? '❤️ Déjà dans tes favoris' : '❤️ Sauvegarder'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm p-4">
-        <h1 className="text-2xl font-bold text-purple-600 mb-2">🔍 Rechercher</h1>
-        <p className="text-gray-600 text-sm">Trouve l'événement parfait pour toi</p>
-      </div>
+    <div className="min-h-screen bg-gray-50 pb-20">
+      <div className="bg-white shadow-sm p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-gray-900">Rechercher</h1>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <Filter className="h-4 w-4" />
+          </Button>
+        </div>
 
-      {/* Filtres de recherche */}
-      <div className="bg-white border-b p-4 space-y-4">
         {/* Barre de recherche */}
         <div className="relative">
           <SearchIcon className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Rechercher par titre, description ou lieu..."
+            placeholder="Rechercher un événement, lieu, organisateur..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -196,171 +145,156 @@ const Search = () => {
         </div>
 
         {/* Filtres */}
-        <div className="grid grid-cols-2 gap-3">
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger>
-              <SelectValue placeholder="Catégorie" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Toutes les catégories</SelectItem>
-              {categories.slice(1).map((category) => (
-                <SelectItem key={category.id} value={category.id}>
-                  {category.icon} {category.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {showFilters && (
+          <div className="space-y-3 pt-2 border-t">
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-2">Catégorie</p>
+              <div className="flex gap-2 flex-wrap">
+                {categories.map((category) => (
+                  <Badge
+                    key={category.id}
+                    variant={selectedCategory === category.id ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => setSelectedCategory(category.id)}
+                  >
+                    {category.icon} {category.name}
+                  </Badge>
+                ))}
+              </div>
+            </div>
 
-          <Select value={selectedDate} onValueChange={setSelectedDate}>
-            <SelectTrigger>
-              <SelectValue placeholder="Quand ?" />
-            </SelectTrigger>
-            <SelectContent>
-              {dateFilters.map((filter) => (
-                <SelectItem key={filter.id} value={filter.id}>
-                  {filter.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-2">Date</p>
+              <div className="flex gap-2 flex-wrap">
+                {dateFilters.map((filter) => (
+                  <Badge
+                    key={filter.id}
+                    variant={selectedDate === filter.id ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => setSelectedDate(filter.id)}
+                  >
+                    {filter.name}
+                  </Badge>
+                ))}
+              </div>
+            </div>
 
-        {/* Ville fixe */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center text-gray-600">
-            <MapPin className="h-4 w-4 mr-2" />
-            <span className="text-sm font-medium">Lyon</span>
-            <Badge variant="secondary" className="ml-2 text-xs">Ville fixe</Badge>
+            <div className="flex justify-between items-center">
+              <p className="text-sm text-gray-500">📍 Lyon, France (fixe)</p>
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                <X className="h-4 w-4 mr-1" />
+                Effacer les filtres
+              </Button>
+            </div>
           </div>
-          
-          {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearFilters}
-              className="text-red-600 hover:text-red-700"
-            >
-              <X className="h-4 w-4 mr-1" />
-              Effacer
-            </Button>
-          )}
-        </div>
+        )}
       </div>
 
       {/* Résultats */}
       <div className="p-4">
-        <div className="flex justify-between items-center mb-4">
-          <p className="text-gray-600 text-sm">
-            {filteredEvents.length} événement{filteredEvents.length > 1 ? 's' : ''} trouvé{filteredEvents.length > 1 ? 's' : ''}
+        <div className="mb-4 flex justify-between items-center">
+          <p className="text-gray-600">
+            {filteredEvents.length} événement{filteredEvents.length !== 1 ? 's' : ''} trouvé{filteredEvents.length !== 1 ? 's' : ''}
           </p>
-          {hasActiveFilters && (
-            <div className="flex items-center text-xs text-purple-600">
-              <Filter className="h-3 w-3 mr-1" />
+          {(searchTerm || selectedCategory !== 'all' || selectedDate !== 'all') && (
+            <Badge variant="secondary">
               Filtres actifs
-            </div>
+            </Badge>
           )}
         </div>
 
         {filteredEvents.length > 0 ? (
           <div className="space-y-4">
             {filteredEvents.map((event) => (
-              <div key={event.id} className="bg-white rounded-2xl shadow-lg overflow-hidden">
-                <div className="relative h-48">
-                  <img
-                    src={event.image}
-                    alt={event.title}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                  <div className="absolute top-3 right-3">
-                    <span className="bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-medium">
-                      {categories.find(c => c.id === event.category)?.icon}
-                    </span>
+              <Card key={event.id} className="overflow-hidden">
+                <div className="flex">
+                  <div className="w-24 h-24 flex-shrink-0">
+                    <img
+                      src={event.image}
+                      alt={event.title}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
-                  <div className="absolute bottom-3 left-3 right-3 text-white">
-                    <h3 className="text-lg font-bold mb-1">{event.title}</h3>
-                    <div className="flex items-center text-sm mb-1">
-                      <MapPin className="h-3 w-3 mr-1" />
-                      {event.venue}
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <Calendar className="h-3 w-3 mr-1" />
-                      {new Date(event.date).toLocaleDateString('fr-FR')} à {event.time}
-                    </div>
-                  </div>
-                </div>
+                  <CardContent className="flex-1 p-4">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-start">
+                        <h3 className="font-semibold text-lg line-clamp-1">{event.title}</h3>
+                        <Badge variant="outline" className="ml-2 text-xs">
+                          {categories.find(c => c.id === event.category)?.icon}
+                        </Badge>
+                      </div>
+                      
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Building className="h-3 w-3 mr-1" />
+                        <span className="text-xs font-medium">Proposé par {event.organizer}</span>
+                      </div>
 
-                <div className="p-4">
-                  <p className="text-gray-600 text-sm line-clamp-2 mb-3">{event.description}</p>
-                  
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center text-sm text-gray-500">
-                      <Users className="h-4 w-4 mr-1" />
-                      {event.participants} participants
-                      {event.price && (
-                        <>
-                          <span className="mx-2">•</span>
-                          <Euro className="h-4 w-4 mr-1" />
-                          {event.price}
-                        </>
-                      )}
-                    </div>
-                    
-                    <Button 
-                      variant="link" 
-                      size="sm"
-                      onClick={() => setSelectedEvent(event)}
-                      className="text-purple-600 p-0 h-auto"
-                    >
-                      Détails →
-                    </Button>
-                  </div>
+                      <div className="space-y-1 text-sm text-gray-600">
+                        <div className="flex items-center">
+                          <MapPin className="h-3 w-3 mr-1" />
+                          {event.venue}
+                        </div>
+                        <div className="flex items-center">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          {formatDate(event.date)}
+                        </div>
+                        <div className="flex items-center">
+                          <Users className="h-3 w-3 mr-1" />
+                          {event.participants} participants
+                        </div>
+                      </div>
 
-                  <div className="flex justify-center space-x-3 mt-4 pt-3 border-t">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 border-green-400 text-green-600 hover:bg-green-50"
-                      onClick={() => handleLike(event.id)}
-                      disabled={likedEvents.includes(event.id)}
-                    >
-                      <Heart className="h-4 w-4 mr-1" />
-                      {likedEvents.includes(event.id) ? 'Aimé' : 'Aimer'}
-                    </Button>
-                    
-                    <Button
-                      className="flex-1"
-                      onClick={() => handleParticipate(event.id)}
-                      disabled={participatingEvents.includes(event.id)}
-                    >
-                      <Calendar className="h-4 w-4 mr-1" />
-                      {participatingEvents.includes(event.id) ? 'Inscrit' : 'Participer'}
-                    </Button>
-                  </div>
+                      <div className="flex justify-between items-center pt-2">
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleLike(event.id)}
+                            disabled={likedEvents.includes(event.id)}
+                            className="h-8"
+                          >
+                            <Heart className="h-3 w-3 mr-1" />
+                            {likedEvents.includes(event.id) ? 'Aimé' : 'J\'aime'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleParticipate(event.id)}
+                            disabled={participatingEvents.includes(event.id)}
+                            className="h-8"
+                          >
+                            {participatingEvents.includes(event.id) ? '✅ Inscrit' : 'Participer'}
+                          </Button>
+                        </div>
+                        {event.price && (
+                          <Badge variant="secondary" className="text-green-600">
+                            {event.price}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         ) : (
           <div className="text-center py-12">
-            <div className="text-gray-400 mb-4">
-              <SearchIcon className="h-16 w-16 mx-auto" />
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun événement trouvé</h3>
-            <p className="text-gray-500 mb-4">
-              Essayez de modifier vos critères de recherche
+            <SearchIcon className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900">Aucun événement trouvé</h3>
+            <p className="text-gray-500 mt-2">
+              {searchTerm 
+                ? `Aucun résultat pour "${searchTerm}"`
+                : "Essayez de modifier vos critères de recherche"
+              }
             </p>
-            {hasActiveFilters && (
-              <Button
-                variant="outline"
-                onClick={clearFilters}
-              >
-                Effacer tous les filtres
-              </Button>
-            )}
+            <Button variant="outline" onClick={clearFilters} className="mt-4">
+              Afficher tous les événements
+            </Button>
           </div>
         )}
       </div>
+
+      <BottomNavigation />
     </div>
   );
 };
