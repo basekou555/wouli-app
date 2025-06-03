@@ -8,6 +8,7 @@ import Home from "./pages/Home";
 import UserApp from "./pages/UserApp";
 import Search from "./pages/Search";
 import BusinessDashboard from "./pages/BusinessDashboard";
+import UserProfile from "./pages/UserProfile";
 import UserHistory from "./pages/UserHistory";
 
 const queryClient = new QueryClient();
@@ -22,7 +23,8 @@ const App = () => (
         <Route path="/app" element={<UserApp />} />
         <Route path="/search" element={<Search />} />
         <Route path="/business" element={<BusinessDashboard />} />
-        <Route path="/mes-evenements" element={<UserHistory />} />
+        <Route path="/mes-evenements" element={<UserProfile />} />
+        <Route path="/historique" element={<UserHistory />} />
       </Routes>
     </BrowserRouter>
   </QueryClientProvider>

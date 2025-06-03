@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Heart, Search, Calendar, User } from 'lucide-react';
+import { Heart, Search, User } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const BottomNavigation = () => {
@@ -22,8 +22,8 @@ const BottomNavigation = () => {
       isActive: location.pathname === '/search'
     },
     {
-      icon: Calendar,
-      label: 'Mes événements',
+      icon: User,
+      label: 'Profil',
       path: '/mes-evenements',
       isActive: location.pathname === '/mes-evenements'
     }
