@@ -1,62 +1,109 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { Users, Building2 } from 'lucide-react';
+import { Users, Building2, Heart, Search, Calendar, Building, Plus, BarChart3, Target } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Home = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
-      <div className="container mx-auto px-4 py-20">
-        <div className="text-center mb-16">
-          <h1 className="text-5xl font-bold text-gray-900 mb-6">
-            <span className="text-gradient">Wouli</span>
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
+            Wouli
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            La plateforme qui connecte les amis aux meilleurs événements de leur ville
+            Découvre les meilleures sorties de Lyon et rencontre de nouvelles personnes qui partagent tes passions
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          {/* Utilisateurs */}
-          <div className="bg-white rounded-2xl p-8 shadow-lg">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Users className="h-8 w-8 text-white" />
+        {/* Choice Cards */}
+        <div className="max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8 mb-8">
+            {/* User Card */}
+            <div className="bg-white rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+              <div className="bg-gradient-to-br from-purple-500 to-pink-500 p-6">
+                <div className="text-white text-center">
+                  <Users className="h-16 w-16 mx-auto mb-4" />
+                  <h2 className="text-2xl font-bold mb-2">Je cherche des sorties</h2>
+                  <p className="text-purple-100">Découvre des événements près de toi</p>
+                </div>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Je cherche des événements
-              </h2>
-              <p className="text-gray-600 mb-6">
-                Découvre les meilleures sorties près de chez toi et connecte-toi avec tes amis
-              </p>
-              <Link to="/app">
-                <Button className="w-full bg-gradient-to-r from-purple-500 to-pink-500">
+              <div className="p-6">
+                <ul className="space-y-3 mb-6">
+                  <li className="flex items-center text-gray-700">
+                    <Heart className="h-5 w-5 text-pink-500 mr-3" />
+                    Swipe tes événements préférés
+                  </li>
+                  <li className="flex items-center text-gray-700">
+                    <Search className="h-5 w-5 text-pink-500 mr-3" />
+                    Recherche par catégorie ou lieu
+                  </li>
+                  <li className="flex items-center text-gray-700">
+                    <Calendar className="h-5 w-5 text-pink-500 mr-3" />
+                    Participe en un clic
+                  </li>
+                </ul>
+                <Button 
+                  className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                  size="lg"
+                  onClick={() => navigate('/app')}
+                >
                   Découvrir les événements
                 </Button>
-              </Link>
-            </div>
-          </div>
-
-          {/* Entreprises */}
-          <div className="bg-white rounded-2xl p-8 shadow-lg">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Building2 className="h-8 w-8 text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Je suis un établissement
-              </h2>
-              <p className="text-gray-600 mb-6">
-                Publie tes événements et attire plus de clients dans ton établissement
-              </p>
-              <Link to="/business">
-                <Button className="w-full bg-gradient-to-r from-blue-500 to-purple-500">
-                  Gérer mes événements
+            </div>
+
+            {/* Business Card */}
+            <div className="bg-white rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+              <div className="bg-gradient-to-br from-blue-500 to-indigo-500 p-6">
+                <div className="text-white text-center">
+                  <Building className="h-16 w-16 mx-auto mb-4" />
+                  <h2 className="text-2xl font-bold mb-2">Je gère un établissement</h2>
+                  <p className="text-blue-100">Publie tes événements et attire de nouveaux clients</p>
+                </div>
+              </div>
+              <div className="p-6">
+                <ul className="space-y-3 mb-6">
+                  <li className="flex items-center text-gray-700">
+                    <Plus className="h-5 w-5 text-blue-500 mr-3" />
+                    Crée tes événements facilement
+                  </li>
+                  <li className="flex items-center text-gray-700">
+                    <BarChart3 className="h-5 w-5 text-blue-500 mr-3" />
+                    Suis tes statistiques en temps réel
+                  </li>
+                  <li className="flex items-center text-gray-700">
+                    <Target className="h-5 w-5 text-blue-500 mr-3" />
+                    Touche une audience jeune et locale
+                  </li>
+                </ul>
+                <Button 
+                  className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600"
+                  size="lg"
+                  onClick={() => navigate('/business')}
+                >
+                  Accéder au dashboard
                 </Button>
-              </Link>
+              </div>
             </div>
           </div>
+        </div>
+
+        {/* Footer avec lien admin */}
+        <div className="text-center mt-16 text-gray-500">
+          <p className="mb-4">Wouli - Connecte Lyon depuis 2024</p>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => navigate('/admin')}
+            className="text-xs text-gray-400 hover:text-gray-600"
+          >
+            Mode Admin
+          </Button>
         </div>
       </div>
     </div>

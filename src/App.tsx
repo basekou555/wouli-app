@@ -10,6 +10,7 @@ import Search from "./pages/Search";
 import BusinessDashboard from "./pages/BusinessDashboard";
 import UserProfile from "./pages/UserProfile";
 import UserHistory from "./pages/UserHistory";
+import AdminDashboard from "./pages/AdminDashboard";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ const App = () => (
         <Route path="/business" element={<BusinessDashboard />} />
         <Route path="/mes-evenements" element={<UserProfile />} />
         <Route path="/historique" element={<UserHistory />} />
+        <Route path="/admin" element={<AdminDashboard />} />
       </Routes>
     </BrowserRouter>
   </QueryClientProvider>
