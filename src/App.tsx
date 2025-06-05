@@ -8,7 +8,6 @@ import Home from "./pages/Home";
 import UserApp from "./pages/UserApp";
 import Search from "./pages/Search";
 import BusinessDashboard from "./pages/BusinessDashboard";
-import BusinessEventDetails from "./pages/BusinessEventDetails";
 import UserProfile from "./pages/UserProfile";
 import UserHistory from "./pages/UserHistory";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -25,7 +24,6 @@ const App = () => (
         <Route path="/app" element={<UserApp />} />
         <Route path="/search" element={<Search />} />
         <Route path="/business" element={<BusinessDashboard />} />
-        <Route path="/business/event/:id" element={<BusinessEventDetails />} />
         <Route path="/mes-evenements" element={<UserProfile />} />
         <Route path="/historique" element={<UserHistory />} />
         <Route path="/admin" element={<AdminDashboard />} />
