@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Calendar, Users, MapPin, Trash2, Edit3, Eye, Heart, TrendingUp, Copy, Search } from 'lucide-react';
+import { PlusCircle, Calendar, Users, MapPin, Trash2, Edit3, Eye, Heart, TrendingUp, Copy, Search, ExternalLink } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
+import { useNavigate } from 'react-router-dom';
 import { categories } from '../data/mockEvents';
 
 interface BusinessEvent {
@@ -23,6 +24,7 @@ interface BusinessEvent {
 }
 
 const BusinessDashboard = () => {
+  const navigate = useNavigate();
   const [events, setEvents] = useState<BusinessEvent[]>([
     {
       id: 1,
@@ -184,6 +186,12 @@ const BusinessDashboard = () => {
       title: "🗑️ Événement supprimé",
       description: "L'événement a été retiré de votre liste",
     });
+  };
+
+  const handleViewDetails = (eventId: number) => {
+    // Pour ce MVP, on utilise l'ID mockEvent correspondant
+    const mockEventId = eventId.toString();
+    navigate(`/business/event/${mockEventId}`);
   };
 
   const totalViews = events.reduce((sum, event) => sum + event.views, 0);
@@ -449,6 +457,15 @@ const BusinessDashboard = () => {
                           </div>
                         </div>
                         <div className="flex flex-col space-y-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewDetails(event.id)}
+                            className="text-blue-500 hover:bg-blue-50"
+                          >
+                            <ExternalLink className="h-4 w-4 mr-1" />
+                            Détails
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
