@@ -1,25 +1,57 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { ChatList } from '@/components/chat/ChatList';
 import { ChatView } from '@/components/chat/ChatView';
 import { NewChatDialog } from '@/components/chat/NewChatDialog';
 import { Chat } from '@/types/chat';
 import { MessageSquare } from 'lucide-react';
+import { db } from '../../firebase.config';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { useAuth } from '../context/AuthContext';
 
 const Messages = () => {
   const [activeChat, setActiveChat] = useState<Chat | null>(null);
   const [isNewChatDialogOpen, setIsNewChatDialogOpen] = useState(false);
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  
+  useEffect(() => {
+    if (!user) return;
+
+    const chatsRef = collection(db, 'chats');
+    const q = query(chatsRef, where('participants', 'array-contains', user.uid));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const chatsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Chat));
+      
+      setChats(chatsData);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
   
   return (
     <AppLayout>
       <div className="flex h-[calc(100vh-72px)] md:h-[calc(100vh-24px)] -mt-4 md:mt-0">
         <div className={`${activeChat ? 'hidden md:block' : ''} w-full md:w-96 border-r border-gray-200 overflow-hidden`}>
-          <ChatList 
-            activeChat={activeChat} 
-            setActiveChat={setActiveChat}
-            onNewChat={() => setIsNewChatDialogOpen(true)}
-          />
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <p>Chargement des conversations...</p>
+            </div>
+          ) : (
+            <ChatList 
+              chats={chats}
+              activeChat={activeChat} 
+              setActiveChat={setActiveChat}
+              onNewChat={() => setIsNewChatDialogOpen(true)}
+            />
+          )}
         </div>
         
         <div className={`${!activeChat ? 'hidden md:flex' : 'flex'} flex-col flex-1 w-full`}>

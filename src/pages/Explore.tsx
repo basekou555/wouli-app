@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,104 +6,145 @@ import { Calendar, MapPin, Search, Users, Filter, Heart, X, Star } from 'lucide-
 import { Link } from 'react-router-dom';
 import { motion, PanInfo, useAnimation } from "framer-motion";
 import { useToast } from "@/components/ui/use-toast";
+import { db } from '../../firebase.config';
+import { collection, query, getDocs, where, orderBy, Timestamp, DocumentData } from 'firebase/firestore';
+import { useAuth } from '../context/AuthContext';
+import { mockEvents } from '../components/chat/data/events';
 
-// Exemple d'événements à explorer
-const exploreEvents = [
-  {
-    id: '5',
-    title: 'Festival de Musique Électronique',
-    date: '2024-06-15T20:00:00',
-    location: 'Parc des Expositions, Paris',
-    participants: 120,
-    image: 'https://picsum.photos/400/200?random=10',
-    type: 'public'
-  },
-  {
-    id: '6',
-    title: 'Séance de Yoga en Plein Air',
-    date: '2024-05-22T09:00:00',
-    location: 'Parc Monceau, Paris',
-    participants: 15,
-    image: 'https://picsum.photos/400/200?random=11',
-    type: 'public'
-  },
-  {
-    id: '7',
-    title: 'Atelier Cuisine Italienne',
-    date: '2024-05-28T18:30:00',
-    location: 'École de Cuisine, Lyon',
-    participants: 8,
-    image: 'https://picsum.photos/400/200?random=12',
-    type: 'public'
-  },
-  {
-    id: '8',
-    title: 'Tournoi de Pétanque Amateur',
-    date: '2024-06-02T14:00:00',
-    location: 'Place du village, Marseille',
-    participants: 24,
-    image: 'https://picsum.photos/400/200?random=13',
-    type: 'public'
-  },
-  {
-    id: '9',
-    title: 'Soirée Jeux de Société',
-    date: '2024-05-30T19:00:00',
-    location: 'Bar à Jeux, Bordeaux',
-    participants: 12,
-    image: 'https://picsum.photos/400/200?random=14',
-    type: 'friends'
-  },
-  {
-    id: '10',
-    title: 'Randonnée en Montagne',
-    date: '2024-06-08T08:00:00',
-    location: 'Mont Blanc, Chamonix',
-    participants: 8,
-    image: 'https://picsum.photos/400/200?random=15',
-    type: 'friends'
-  },
-];
-
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat('fr-FR', {
-    day: 'numeric',
-    month: 'long',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(date);
-};
+interface EventData {
+  id: string;
+  title: string;
+  location: string;
+  date: Timestamp;
+  image?: string;
+  participants?: string[];
+  type?: string;
+  [key: string]: any; // Allow for additional properties
+}
 
 const Explore = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [filteredEvents, setFilteredEvents] = useState(exploreEvents);
+  const [events, setEvents] = useState<EventData[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState('all'); // 'all', 'public', 'friends'
+  const [filter, setFilter] = useState('all');
   const [showSearch, setShowSearch] = useState(false);
+  const [usingMockData, setUsingMockData] = useState(false);
   const controls = useAnimation();
   const { toast } = useToast();
+  const { user } = useAuth();
 
-  const handleFilter = (filterType: string) => {
-    setFilter(filterType);
-    if (filterType === 'all') {
-      setFilteredEvents(exploreEvents);
-    } else {
-      setFilteredEvents(exploreEvents.filter(event => event.type === filterType));
-    }
-    setCurrentIndex(0);
-  };
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        setLoading(true);
+        
+        // Try to fetch from Firestore first
+        if (user) {
+          const eventsRef = collection(db, 'events');
+          let q = query(eventsRef, where('date', '>=', new Date()), orderBy('date', 'asc'));
 
-  const performSearch = () => {
-    const results = exploreEvents.filter(event => {
-      const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                        event.location.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesFilter = filter === 'all' || event.type === filter;
+          if (filter !== 'all') {
+            q = query(q, where('type', '==', filter));
+          }
+
+          try {
+            const querySnapshot = await getDocs(q);
+            const eventsData: EventData[] = [];
+            
+            querySnapshot.forEach((doc) => {
+              const data = doc.data();
+              eventsData.push({
+                id: doc.id,
+                title: data.title || 'Sans titre',
+                location: data.location || 'Non spécifié',
+                date: data.date,
+                image: data.image || '',
+                participants: data.participants || [],
+                type: data.type || 'public',
+                ...data
+              });
+            });
+            
+            const filteredEvents = eventsData.filter(event => 
+              searchTerm === '' || 
+              event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              event.location.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            if (filteredEvents.length > 0) {
+              setEvents(filteredEvents);
+              setUsingMockData(false);
+            } else {
+              // Fall back to mock data if no events found in Firestore
+              useMockEvents();
+            }
+          } catch (error) {
+            console.error('Error fetching events from Firestore:', error);
+            useMockEvents();
+          }
+        } else {
+          useMockEvents();
+        }
+      } catch (error) {
+        console.error('Error in fetchEvents:', error);
+        useMockEvents();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const useMockEvents = () => {
+      // Convert mock events to EventData format
+      const formattedMockEvents: EventData[] = mockEvents.map(event => ({
+        id: event.id,
+        title: event.title,
+        location: event.location,
+        // Convert Date object to Firestore Timestamp
+        date: {
+          toDate: () => event.date,
+          seconds: Math.floor(event.date.getTime() / 1000),
+          nanoseconds: (event.date.getTime() % 1000) * 1000000
+        } as Timestamp,
+        image: event.image,
+        participants: event.participants || [],
+        type: event.type || 'public',
+        description: event.description,
+        organizerId: event.organizerId,
+        organizerName: event.organizerName,
+        organizerAvatar: event.organizerAvatar,
+        price: event.price,
+        capacity: event.capacity,
+        category: event.category
+      }));
+
+      const filteredEvents = formattedMockEvents.filter(event => 
+        searchTerm === '' || 
+        event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        event.location.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+
+      if (!usingMockData) {
+        toast({
+          title: "Données de démonstration",
+          description: "Affichage des événements fictifs pour la démonstration",
+        });
+        setUsingMockData(true);
+      }
       
-      return matchesSearch && matchesFilter;
-    });
-    setFilteredEvents(results);
-    setCurrentIndex(0);
+      setEvents(filteredEvents);
+    };
+
+    fetchEvents();
+  }, [user, filter, searchTerm, toast, usingMockData]);
+
+  const formatDate = (date: Date) => {
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
   };
 
   const handleSwipe = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
@@ -130,7 +170,7 @@ const Explore = () => {
     }).then(() => {
       toast({
         title: "J'aime !",
-        description: `Vous avez aimé "${filteredEvents[currentIndex]?.title}"`,
+        description: `Vous avez aimé "${events[currentIndex]?.title}"`,
       });
       moveToNextCard();
     });
@@ -149,12 +189,12 @@ const Explore = () => {
   const handleSave = () => {
     toast({
       title: "Sauvegardé",
-      description: `${filteredEvents[currentIndex]?.title} a été ajouté à vos favoris`,
+      description: `${events[currentIndex]?.title} a été ajouté à vos favoris`,
     });
   };
 
   const moveToNextCard = () => {
-    if (currentIndex < filteredEvents.length - 1) {
+    if (currentIndex < events.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
       // Reached the end of the cards
@@ -168,7 +208,7 @@ const Explore = () => {
     controls.start({ x: 0, opacity: 1 });
   };
 
-  const currentEvent = filteredEvents[currentIndex];
+  const currentEvent = events[currentIndex];
 
   return (
     <AppLayout>
@@ -176,6 +216,11 @@ const Explore = () => {
         <div className="flex flex-col space-y-2">
           <h1 className="text-2xl font-bold text-gray-900">Découvrir</h1>
           <p className="text-gray-500">Trouvez de nouvelles activités qui pourraient vous plaire</p>
+          {usingMockData && (
+            <div className="text-amber-500 text-sm font-medium">
+              Mode démo: Données fictives
+            </div>
+          )}
         </div>
         
         {/* Barre de recherche et filtres */}
@@ -192,7 +237,7 @@ const Explore = () => {
           <div className="flex space-x-2">
             <Button 
               variant={filter === 'all' ? 'default' : 'outline'} 
-              onClick={() => handleFilter('all')}
+              onClick={() => setFilter('all')}
               size="sm"
               className="rounded-full"
             >
@@ -200,7 +245,7 @@ const Explore = () => {
             </Button>
             <Button 
               variant={filter === 'public' ? 'default' : 'outline'} 
-              onClick={() => handleFilter('public')}
+              onClick={() => setFilter('public')}
               size="sm"
               className="rounded-full"
             >
@@ -208,7 +253,7 @@ const Explore = () => {
             </Button>
             <Button 
               variant={filter === 'friends' ? 'default' : 'outline'} 
-              onClick={() => handleFilter('friends')}
+              onClick={() => setFilter('friends')}
               size="sm"
               className="rounded-full"
             >
@@ -229,12 +274,15 @@ const Explore = () => {
                 className="pl-10"
               />
             </div>
-            <Button onClick={performSearch}>Chercher</Button>
+            <Button onClick={() => {}}>Chercher</Button>
           </div>
         )}
-        
-        {/* Card swiper */}
-        {filteredEvents.length > 0 ? (
+
+        {loading ? (
+          <div className="text-center py-10">
+            <p>Chargement des événements...</p>
+          </div>
+        ) : events.length > 0 ? (
           <div className="relative h-[70vh] flex items-center justify-center">
             <motion.div
               className="absolute w-full max-w-md"
@@ -246,10 +294,9 @@ const Explore = () => {
               whileTap={{ scale: 1.05 }}
             >
               <div className="bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100">
-                {/* Card Image */}
                 <div className="relative w-full h-96">
                   <img
-                    src={currentEvent?.image}
+                    src={currentEvent?.image || 'https://picsum.photos/400/300'}
                     alt={currentEvent?.title}
                     className="w-full h-full object-cover"
                   />
@@ -262,11 +309,11 @@ const Explore = () => {
                     </div>
                     <div className="flex items-center mt-1">
                       <Calendar className="h-4 w-4 mr-1" />
-                      <span className="text-sm">{formatDate(currentEvent?.date)}</span>
+                      <span className="text-sm">{currentEvent?.date && formatDate(currentEvent.date.toDate())}</span>
                     </div>
                     <div className="flex items-center mt-1">
                       <Users className="h-4 w-4 mr-1" />
-                      <span className="text-sm">{currentEvent?.participants} participants</span>
+                      <span className="text-sm">{currentEvent?.participants?.length || 0} participants</span>
                     </div>
                   </div>
                 </div>
@@ -316,10 +363,9 @@ const Explore = () => {
           </div>
         )}
         
-        {/* Card counter */}
         <div className="text-center text-gray-500 text-sm">
-          {filteredEvents.length > 0 ? 
-            `${currentIndex + 1} / ${filteredEvents.length}` : 
+          {events.length > 0 ? 
+            `${currentIndex + 1} / ${events.length}` : 
             "0 événements"
           }
         </div>

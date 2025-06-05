@@ -2,6 +2,30 @@
 export type ChatType = 'event' | 'group' | 'one-to-one';
 export type ChatVisibility = 'public' | 'friends' | 'private';
 
+export interface User {
+  id: string;
+  name: string;
+  username: string;
+  avatar: string;
+}
+
+export interface Event {
+  id: string;
+  title: string;
+  description: string;
+  date: Date;
+  location: string;
+  image: string;
+  organizerId: string;
+  organizerName: string;
+  organizerAvatar: string;
+  participants: string[];
+  type: string;
+  price: string;
+  capacity: number;
+  category: string;
+}
+
 export interface Chat {
   id: string;
   type: ChatType;

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { MessageSquare, Plus, Search, Users, UserPlus, Calendar, PlusCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -6,19 +5,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Chat, ChatType } from '@/types/chat';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { mockChats } from './mockData';
+import { mockChats } from './data/chats';
 
 interface ChatListProps {
+  chats: Chat[];
   activeChat: Chat | null;
   setActiveChat: (chat: Chat) => void;
   onNewChat: () => void;
 }
 
-export function ChatList({ activeChat, setActiveChat, onNewChat }: ChatListProps) {
+export function ChatList({ chats, activeChat, setActiveChat, onNewChat }: ChatListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<ChatType | 'all'>('all');
   
-  const filteredChats = mockChats.filter(chat => {
+  const filteredChats = chats.filter(chat => {
     const matchesSearch = chat.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter = filter === 'all' || chat.type === filter;
     return matchesSearch && matchesFilter;
