@@ -1,41 +1,11 @@
+
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Calendar, Compass, Home, PlusCircle, User, Search, MessageSquare } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { db } from '../../firebase.config';
-import { doc, getDoc } from 'firebase/firestore';
-import { useEffect } from 'react';
-
-interface UserData {
-  name: string;
-  username: string;
-  avatar: string;
-}
 
 const AppNavbar = () => {
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user } = useAuth();
-  const [userData, setUserData] = useState<UserData | null>(null);
-
-  useEffect(() => {
-    const fetchUserData = async () => {
-      if (user) {
-        const userRef = doc(db, 'users', user.uid);
-        const userSnap = await getDoc(userRef);
-        
-        if (userSnap.exists()) {
-          setUserData({
-            name: userSnap.data().name || 'Utilisateur',
-            username: userSnap.data().username || '@user',
-            avatar: userSnap.data().avatar || 'https://picsum.photos/200?random=profile'
-          });
-        }
-      }
-    };
-
-    fetchUserData();
-  }, [user]);
 
   const navItems = [
     { name: 'Accueil', path: '/dashboard', icon: Home },
@@ -108,17 +78,13 @@ const AppNavbar = () => {
             <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-purple-600 via-pink-500 to-orange-400 p-0.5">
               <div className="h-full w-full rounded-full bg-white p-0.5">
                 <div className="h-full w-full rounded-full bg-gray-200 overflow-hidden">
-                  <img 
-                    src={userData?.avatar || 'https://picsum.photos/200?random=profile'} 
-                    alt="Profile" 
-                    className="h-full w-full object-cover"
-                  />
+                  <img src="https://picsum.photos/200?random=profile" alt="Profile" className="h-full w-full object-cover" />
                 </div>
               </div>
             </div>
             <div>
-              <p className="font-medium text-sm">{userData?.name || 'Chargement...'}</p>
-              <p className="text-xs text-gray-500">{userData?.username || '@user'}</p>
+              <p className="font-medium text-sm">Marie Dupont</p>
+              <p className="text-xs text-gray-500">@mariedupont</p>
             </div>
           </div>
         </div>
