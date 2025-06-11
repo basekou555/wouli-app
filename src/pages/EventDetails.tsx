@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
@@ -60,11 +59,20 @@ const EventDetails = () => {
         if (error) throw error;
         setEvent(data);
 
-        // Increment views directly
-        await supabase
+        // Increment views - first get current views, then increment
+        const { data: currentEvent, error: fetchError } = await supabase
           .from('events')
-          .update({ views: supabase.raw('views + 1') })
-          .eq('id', id);
+          .select('views')
+          .eq('id', id)
+          .single();
+        
+        if (!fetchError && currentEvent) {
+          const newViews = (currentEvent.views || 0) + 1;
+          await supabase
+            .from('events')
+            .update({ views: newViews })
+            .eq('id', id);
+        }
 
         // Check if user has liked or participated
         if (user) {

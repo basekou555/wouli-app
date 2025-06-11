@@ -38,10 +38,20 @@ export const useEvents = () => {
 
   const incrementViews = async (eventId: string) => {
     try {
-      // Update views directly since the RPC function expects a different type
+      // First get the current views count
+      const { data: currentEvent, error: fetchError } = await supabase
+        .from('events')
+        .select('views')
+        .eq('id', eventId)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      // Then update with incremented value
+      const newViews = (currentEvent?.views || 0) + 1;
       const { error } = await supabase
         .from('events')
-        .update({ views: supabase.raw('views + 1') })
+        .update({ views: newViews })
         .eq('id', eventId);
       
       if (error) throw error;
