@@ -60,8 +60,11 @@ const EventDetails = () => {
         if (error) throw error;
         setEvent(data);
 
-        // Increment views
-        await supabase.rpc('increment_event_views', { event_id: id });
+        // Increment views directly
+        await supabase
+          .from('events')
+          .update({ views: supabase.raw('views + 1') })
+          .eq('id', id);
 
         // Check if user has liked or participated
         if (user) {
