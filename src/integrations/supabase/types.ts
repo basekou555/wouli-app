@@ -9,81 +9,232 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      event_likes: {
+      admin_events_import: {
         Row: {
-          created_at: string
-          id: number
+          admin_notes: string | null
+          event_id: string
+          id: string
+          import_date: string | null
+          source: string | null
         }
         Insert: {
-          created_at?: string
-          id?: number
+          admin_notes?: string | null
+          event_id: string
+          id?: string
+          import_date?: string | null
+          source?: string | null
         }
         Update: {
-          created_at?: string
-          id?: number
+          admin_notes?: string | null
+          event_id?: string
+          id?: string
+          import_date?: string | null
+          source?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "admin_events_import_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_likes: {
+        Row: {
+          created_at: string | null
+          event_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          event_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          event_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_likes_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_likes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       event_participants: {
         Row: {
-          created_at: string
-          id: number
+          created_at: string | null
+          event_id: string
+          id: string
+          status: Database["public"]["Enums"]["participant_status"]
+          user_id: string
         }
         Insert: {
-          created_at?: string
-          id?: number
+          created_at?: string | null
+          event_id: string
+          id?: string
+          status?: Database["public"]["Enums"]["participant_status"]
+          user_id: string
         }
         Update: {
-          created_at?: string
-          id?: number
+          created_at?: string | null
+          event_id?: string
+          id?: string
+          status?: Database["public"]["Enums"]["participant_status"]
+          user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "event_participants_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       events: {
         Row: {
-          created_at: string
-          id: number
+          address: string | null
+          category: Database["public"]["Enums"]["event_category"]
+          created_at: string | null
+          created_by: string
+          created_by_type: Database["public"]["Enums"]["event_creator_type"]
+          date: string
+          description: string | null
+          end_date: string | null
+          external_url: string | null
+          id: string
+          image_url: string | null
+          likes: number | null
+          location: string
+          max_participants: number | null
+          participants: number | null
+          price: number | null
+          search_appearances: number | null
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+          views: number | null
         }
         Insert: {
-          created_at?: string
-          id?: number
+          address?: string | null
+          category: Database["public"]["Enums"]["event_category"]
+          created_at?: string | null
+          created_by: string
+          created_by_type?: Database["public"]["Enums"]["event_creator_type"]
+          date: string
+          description?: string | null
+          end_date?: string | null
+          external_url?: string | null
+          id?: string
+          image_url?: string | null
+          likes?: number | null
+          location: string
+          max_participants?: number | null
+          participants?: number | null
+          price?: number | null
+          search_appearances?: number | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+          views?: number | null
         }
         Update: {
-          created_at?: string
-          id?: number
+          address?: string | null
+          category?: Database["public"]["Enums"]["event_category"]
+          created_at?: string | null
+          created_by?: string
+          created_by_type?: Database["public"]["Enums"]["event_creator_type"]
+          date?: string
+          description?: string | null
+          end_date?: string | null
+          external_url?: string | null
+          id?: string
+          image_url?: string | null
+          likes?: number | null
+          location?: string
+          max_participants?: number | null
+          participants?: number | null
+          price?: number | null
+          search_appearances?: number | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+          views?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
-      Profiles: {
+      profiles: {
         Row: {
-          created_at: string
-          id: number
+          address: string | null
+          avatar_url: string | null
+          bio: string | null
+          city: string | null
+          created_at: string | null
+          id: string
+          phone: string | null
+          type: Database["public"]["Enums"]["user_type"]
+          updated_at: string | null
+          username: string
+          website: string | null
         }
         Insert: {
-          created_at?: string
-          id?: number
+          address?: string | null
+          avatar_url?: string | null
+          bio?: string | null
+          city?: string | null
+          created_at?: string | null
+          id: string
+          phone?: string | null
+          type?: Database["public"]["Enums"]["user_type"]
+          updated_at?: string | null
+          username: string
+          website?: string | null
         }
         Update: {
-          created_at?: string
-          id?: number
-        }
-        Relationships: []
-      }
-      "Wouli app": {
-        Row: {
-          created_at: string
-          id: number
-          "titre de l'évènement": string | null
-        }
-        Insert: {
-          created_at?: string
-          id?: number
-          "titre de l'évènement"?: string | null
-        }
-        Update: {
-          created_at?: string
-          id?: number
-          "titre de l'évènement"?: string | null
+          address?: string | null
+          avatar_url?: string | null
+          bio?: string | null
+          city?: string | null
+          created_at?: string | null
+          id?: string
+          phone?: string | null
+          type?: Database["public"]["Enums"]["user_type"]
+          updated_at?: string | null
+          username?: string
+          website?: string | null
         }
         Relationships: []
       }
@@ -92,10 +243,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      increment_event_views: {
+        Args: { event_id: number }
+        Returns: undefined
+      }
     }
     Enums: {
-      [_ in never]: never
+      event_category:
+        | "bar"
+        | "restaurant"
+        | "club"
+        | "concert"
+        | "sport"
+        | "culture"
+        | "festival"
+        | "autre"
+      event_creator_type: "user" | "business" | "admin"
+      participant_status: "going" | "interested"
+      user_type: "user" | "business"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -210,6 +375,20 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      event_category: [
+        "bar",
+        "restaurant",
+        "club",
+        "concert",
+        "sport",
+        "culture",
+        "festival",
+        "autre",
+      ],
+      event_creator_type: ["user", "business", "admin"],
+      participant_status: ["going", "interested"],
+      user_type: ["user", "business"],
+    },
   },
 } as const
