@@ -55,6 +55,13 @@ export const useEvents = () => {
         .eq('id', eventId);
       
       if (error) throw error;
+
+      // Update local state
+      setEvents(prev => prev.map(event => 
+        event.id === eventId 
+          ? { ...event, views: newViews }
+          : event
+      ));
     } catch (error) {
       console.error('Error incrementing views:', error);
     }
@@ -67,6 +74,13 @@ export const useEvents = () => {
         .insert({ event_id: eventId, user_id: userId });
 
       if (error) throw error;
+      
+      // Update local state
+      setEvents(prev => prev.map(event => 
+        event.id === eventId 
+          ? { ...event, likes: (event.likes || 0) + 1 }
+          : event
+      ));
       
       toast({
         title: "❤️ Événement aimé !",
@@ -89,6 +103,13 @@ export const useEvents = () => {
         .insert({ event_id: eventId, user_id: userId, status });
 
       if (error) throw error;
+      
+      // Update local state
+      setEvents(prev => prev.map(event => 
+        event.id === eventId 
+          ? { ...event, participants: (event.participants || 0) + 1 }
+          : event
+      ));
       
       toast({
         title: "🎉 Participation confirmée !",

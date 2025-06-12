@@ -243,6 +243,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_stats: {
+        Args: { user_uuid: string }
+        Returns: {
+          events_liked: number
+          events_participated: number
+          events_created: number
+        }[]
+      }
       increment_event_views: {
         Args: { event_id: number }
         Returns: undefined

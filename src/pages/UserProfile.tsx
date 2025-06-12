@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,60 +12,21 @@ import {
   Heart, 
   Star, 
   Edit3, 
-  Settings, 
   TrendingUp,
   Activity,
   Award,
   LogOut
 } from 'lucide-react';
-import { useToast } from "@/components/ui/use-toast";
 import { Link, useNavigate } from 'react-router-dom';
 import BottomNavigation from '../components/BottomNavigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { useUserProfile } from '../hooks/useUserProfile';
+import { PageSkeleton } from '../components/LoadingSkeleton';
 
 const UserProfile = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  
-  const [userStats, setUserStats] = useState({
-    eventsParticipated: 0,
-    eventsLiked: 0,
-    friendsMet: 0,
-    weeklyActivity: 0
-  });
-
-  const [recentActivities] = useState([
-    {
-      id: '1',
-      type: 'participation',
-      event: 'Concert Jazz au Sunset',
-      date: '2024-06-15',
-      venue: 'Sunset Jazz Club'
-    },
-    {
-      id: '2',
-      type: 'like',
-      event: 'Atelier Cuisine Italienne',
-      date: '2024-06-14',
-      venue: 'École de Cuisine'
-    },
-    {
-      id: '3',
-      type: 'participation',
-      event: 'Afterwork Startup',
-      date: '2024-06-10',
-      venue: 'La Défense'
-    }
-  ]);
-
-  const [favoriteCategories] = useState([
-    { name: 'Concerts', count: 8, icon: '🎵' },
-    { name: 'Restaurants', count: 6, icon: '🍽️' },
-    { name: 'Bars', count: 4, icon: '🍺' },
-    { name: 'Sport', count: 2, icon: '⚽' }
-  ]);
+  const { profile, userStats, recentActivities, loading } = useUserProfile();
 
   // Rediriger vers l'authentification si pas connecté
   useEffect(() => {
@@ -73,38 +34,6 @@ const UserProfile = () => {
       navigate('/auth');
     }
   }, [user, navigate]);
-
-  // Charger les statistiques de l'utilisateur
-  useEffect(() => {
-    const fetchUserStats = async () => {
-      if (!user) return;
-
-      try {
-        // Récupérer le nombre d'événements likés
-        const { count: likesCount } = await supabase
-          .from('event_likes')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id);
-
-        // Récupérer le nombre d'événements auxquels l'utilisateur participe
-        const { count: participationsCount } = await supabase
-          .from('event_participants')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id);
-
-        setUserStats({
-          eventsParticipated: participationsCount || 0,
-          eventsLiked: likesCount || 0,
-          friendsMet: 45, // Mock data pour le moment
-          weeklyActivity: 3 // Mock data pour le moment
-        });
-      } catch (error) {
-        console.error('Error fetching user stats:', error);
-      }
-    };
-
-    fetchUserStats();
-  }, [user]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -133,8 +62,15 @@ const UserProfile = () => {
     }
   };
 
-  if (!user) {
-    return null; // ou un loader
+  const favoriteCategories = [
+    { name: 'Concerts', count: 8, icon: '🎵' },
+    { name: 'Restaurants', count: 6, icon: '🍽️' },
+    { name: 'Bars', count: 4, icon: '🍺' },
+    { name: 'Sport', count: 2, icon: '⚽' }
+  ];
+
+  if (loading || !user) {
+    return <PageSkeleton />;
   }
 
   return (
@@ -146,16 +82,16 @@ const UserProfile = () => {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-4">
                 <div className="h-16 w-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-xl font-bold">
-                  {user.email?.charAt(0).toUpperCase() || 'U'}
+                  {profile?.username?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U'}
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">
-                    {user.user_metadata?.username || user.email?.split('@')[0] || 'Utilisateur'}
+                    {profile?.username || user.email?.split('@')[0] || 'Utilisateur'}
                   </h1>
                   <p className="text-gray-500">Membre depuis {new Date(user.created_at).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</p>
                   <Badge variant="secondary" className="mt-1">
                     <MapPin className="h-3 w-3 mr-1" />
-                    Lyon, France
+                    {profile?.city || 'Lyon, France'}
                   </Badge>
                 </div>
               </div>
@@ -197,7 +133,7 @@ const UserProfile = () => {
                 <div className="flex items-center justify-center mb-2">
                   <Users className="h-5 w-5 text-green-500" />
                 </div>
-                <div className="text-2xl font-bold text-gray-900">{userStats.friendsMet}</div>
+                <div className="text-2xl font-bold text-gray-900">45</div>
                 <p className="text-sm text-gray-500">Rencontres</p>
               </CardContent>
             </Card>
@@ -235,20 +171,28 @@ const UserProfile = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {recentActivities.map((activity) => (
-                      <div key={activity.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                        {getActivityIcon(activity.type)}
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">
-                            {getActivityText(activity)}
-                          </p>
-                          <div className="flex items-center text-xs text-gray-500 mt-1">
-                            <MapPin className="h-3 w-3 mr-1" />
-                            {activity.venue} • {new Date(activity.date).toLocaleDateString('fr-FR')}
+                    {recentActivities.length > 0 ? (
+                      recentActivities.map((activity) => (
+                        <div key={activity.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                          {getActivityIcon(activity.type)}
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">
+                              {getActivityText(activity)}
+                            </p>
+                            <div className="flex items-center text-xs text-gray-500 mt-1">
+                              <MapPin className="h-3 w-3 mr-1" />
+                              {activity.venue} • {new Date(activity.date).toLocaleDateString('fr-FR')}
+                            </div>
                           </div>
                         </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <Activity className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                        <p>Aucune activité récente</p>
+                        <p className="text-sm">Découvrez des événements pour voir votre activité ici !</p>
                       </div>
-                    ))}
+                    )}
                   </div>
                   <div className="mt-4 text-center">
                     <Link to="/historique">

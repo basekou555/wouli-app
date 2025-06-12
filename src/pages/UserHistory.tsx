@@ -1,51 +1,17 @@
-import React, { useState, useEffect } from 'react';
+
+import React from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, MapPin, Users, Heart, X, Trash2 } from 'lucide-react';
-import { useToast } from "@/components/ui/use-toast";
 import { Link } from 'react-router-dom';
 import BottomNavigation from '../components/BottomNavigation';
+import { useUserHistory } from '../hooks/useUserHistory';
+import { PageSkeleton } from '../components/LoadingSkeleton';
+import { Tables } from '@/integrations/supabase/types';
 
-// Mock data pour l'historique - en production, cela viendrait du localStorage ou d'une base de données
-const mockLikedEvents = [
-  {
-    id: '1',
-    title: 'Concert Jazz au Sunset',
-    date: '2024-06-15T20:00:00',
-    location: 'Sunset Jazz Club, Paris',
-    image: 'https://picsum.photos/400/200?random=1',
-    participants: 45
-  },
-  {
-    id: '2', 
-    title: 'Atelier Cuisine Italienne',
-    date: '2024-06-20T18:30:00',
-    location: 'École de Cuisine, Lyon',
-    image: 'https://picsum.photos/400/200?random=2',
-    participants: 12
-  }
-];
-
-const mockParticipatingEvents = [
-  {
-    id: '3',
-    title: 'Afterwork Startup',
-    date: '2024-06-10T18:00:00',
-    location: 'La Défense, Paris',
-    image: 'https://picsum.photos/400/200?random=3',
-    participants: 28
-  },
-  {
-    id: '4',
-    title: 'Randonnée Mont Blanc',
-    date: '2024-06-25T08:00:00',
-    location: 'Chamonix',
-    image: 'https://picsum.photos/400/200?random=4',
-    participants: 8
-  }
-];
+type Event = Tables<'events'>;
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
@@ -58,31 +24,18 @@ const formatDate = (dateString: string) => {
 };
 
 const UserHistory = () => {
-  const [likedEvents, setLikedEvents] = useState(mockLikedEvents);
-  const [participatingEvents, setParticipatingEvents] = useState(mockParticipatingEvents);
-  const { toast } = useToast();
+  const { likedEvents, participatingEvents, loading, removeLikedEvent, removeParticipation } = useUserHistory();
 
-  const removeLikedEvent = (eventId: string) => {
-    setLikedEvents(prev => prev.filter(event => event.id !== eventId));
-    toast({
-      title: "Retiré des favoris",
-      description: "L'événement a été retiré de vos favoris",
-    });
-  };
-
-  const removeParticipation = (eventId: string) => {
-    setParticipatingEvents(prev => prev.filter(event => event.id !== eventId));
-    toast({
-      title: "Participation annulée",
-      description: "Votre participation a été annulée",
-    });
-  };
-
-  const EventCard = ({ event, onRemove, removeText, removeIcon }: any) => (
+  const EventCard = ({ event, onRemove, removeText, removeIcon }: {
+    event: Event;
+    onRemove: (eventId: string) => void;
+    removeText: string;
+    removeIcon: React.ReactNode;
+  }) => (
     <Card className="overflow-hidden">
       <div className="relative h-48">
         <img
-          src={event.image}
+          src={event.image_url || `https://picsum.photos/400/200?random=${event.id}`}
           alt={event.title}
           className="w-full h-full object-cover"
         />
@@ -108,7 +61,7 @@ const UserHistory = () => {
           </div>
           <div className="flex items-center">
             <Users className="h-4 w-4 mr-2" />
-            {event.participants} participants
+            {event.participants || 0} participants
           </div>
         </div>
         <div className="flex justify-between mt-4">
@@ -124,6 +77,8 @@ const UserHistory = () => {
       </CardContent>
     </Card>
   );
+
+  if (loading) return <PageSkeleton />;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
