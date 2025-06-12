@@ -24,8 +24,8 @@ const BottomNavigation = () => {
     {
       icon: User,
       label: 'Profil',
-      path: '/mes-evenements',
-      isActive: location.pathname === '/mes-evenements'
+      path: '/profil',
+      isActive: location.pathname === '/profil'
     }
   ];
 

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,18 +15,25 @@ import {
   Settings, 
   TrendingUp,
   Activity,
-  Award
+  Award,
+  LogOut
 } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import BottomNavigation from '../components/BottomNavigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 const UserProfile = () => {
-  const [userStats] = useState({
-    eventsParticipated: 12,
-    eventsLiked: 28,
-    friendsMet: 45,
-    weeklyActivity: 3
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  const [userStats, setUserStats] = useState({
+    eventsParticipated: 0,
+    eventsLiked: 0,
+    friendsMet: 0,
+    weeklyActivity: 0
   });
 
   const [recentActivities] = useState([
@@ -60,7 +67,49 @@ const UserProfile = () => {
     { name: 'Sport', count: 2, icon: '⚽' }
   ]);
 
-  const { toast } = useToast();
+  // Rediriger vers l'authentification si pas connecté
+  useEffect(() => {
+    if (!user) {
+      navigate('/auth');
+    }
+  }, [user, navigate]);
+
+  // Charger les statistiques de l'utilisateur
+  useEffect(() => {
+    const fetchUserStats = async () => {
+      if (!user) return;
+
+      try {
+        // Récupérer le nombre d'événements likés
+        const { count: likesCount } = await supabase
+          .from('event_likes')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+
+        // Récupérer le nombre d'événements auxquels l'utilisateur participe
+        const { count: participationsCount } = await supabase
+          .from('event_participants')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+
+        setUserStats({
+          eventsParticipated: participationsCount || 0,
+          eventsLiked: likesCount || 0,
+          friendsMet: 45, // Mock data pour le moment
+          weeklyActivity: 3 // Mock data pour le moment
+        });
+      } catch (error) {
+        console.error('Error fetching user stats:', error);
+      }
+    };
+
+    fetchUserStats();
+  }, [user]);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
 
   const getActivityIcon = (type: string) => {
     switch (type) {
@@ -84,6 +133,10 @@ const UserProfile = () => {
     }
   };
 
+  if (!user) {
+    return null; // ou un loader
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       <AppLayout>
@@ -93,21 +146,29 @@ const UserProfile = () => {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-4">
                 <div className="h-16 w-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-xl font-bold">
-                  M
+                  {user.email?.charAt(0).toUpperCase() || 'U'}
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Marie Dubois</h1>
-                  <p className="text-gray-500">Membre depuis janvier 2024</p>
+                  <h1 className="text-2xl font-bold text-gray-900">
+                    {user.user_metadata?.username || user.email?.split('@')[0] || 'Utilisateur'}
+                  </h1>
+                  <p className="text-gray-500">Membre depuis {new Date(user.created_at).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</p>
                   <Badge variant="secondary" className="mt-1">
                     <MapPin className="h-3 w-3 mr-1" />
                     Lyon, France
                   </Badge>
                 </div>
               </div>
-              <Button variant="outline" size="sm">
-                <Edit3 className="h-4 w-4 mr-2" />
-                Modifier
-              </Button>
+              <div className="flex flex-col space-y-2">
+                <Button variant="outline" size="sm">
+                  <Edit3 className="h-4 w-4 mr-2" />
+                  Modifier
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Déconnexion
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -190,9 +251,9 @@ const UserProfile = () => {
                     ))}
                   </div>
                   <div className="mt-4 text-center">
-                    <Link to="/mes-evenements">
+                    <Link to="/historique">
                       <Button variant="outline" size="sm">
-                        Voir mes événements
+                        Voir l'historique complet
                       </Button>
                     </Link>
                   </div>
