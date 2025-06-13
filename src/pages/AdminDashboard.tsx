@@ -2,431 +2,278 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useForm } from "react-hook-form";
+import { Settings, Users, MapPin, Palette, Globe, Save, Eye } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
-import { Calendar, MapPin, Users, Eye, Heart, Search, Building, Plus, Trash2 } from 'lucide-react';
-import { categories } from '../data/mockEvents';
+import { useNavigate } from 'react-router-dom';
 
-interface AdminEvent {
-  id: string;
-  title: string;
-  date: string;
-  time: string;
-  venue: string;
-  description: string;
-  image: string;
-  category: string;
-  organizer: string;
-  tags: string[];
-  price?: string;
-  maxParticipants?: number;
-  views: number;
-  likes: number;
-  participants: number;
-  searchAppearances: number;
+interface DemoConfig {
+  clientName: string;
+  clientType: string;
+  location: string;
+  brandColor: string;
+  sampleEvents: number;
+  features: string[];
 }
 
 const AdminDashboard = () => {
-  const [adminEvents, setAdminEvents] = useState<AdminEvent[]>([
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  const [config, setConfig] = useState<DemoConfig>({
+    clientName: 'Blue Note Bar',
+    clientType: 'Bar/Restaurant',
+    location: 'Lyon',
+    brandColor: '#FF7A1F',
+    sampleEvents: 3,
+    features: ['events', 'stats', 'participants']
+  });
+
+  const [presetConfigs] = useState([
     {
-      id: '1',
-      title: 'Olympique Lyonnais vs PSG',
-      date: '2024-06-20',
-      time: '21:00',
-      venue: 'Groupama Stadium',
-      description: 'Choc au sommet de la Ligue 1 ! Venez supporter les Gones dans une ambiance électrique au Groupama Stadium.',
-      image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&h=600&fit=crop',
-      category: 'sport',
-      organizer: 'Olympique Lyonnais',
-      tags: ['football', 'OL', 'PSG', 'stade'],
-      price: '25€',
-      maxParticipants: 500,
-      views: 1247,
-      likes: 89,
-      participants: 156,
-      searchAppearances: 234
+      name: 'Bar/Restaurant',
+      config: {
+        clientName: 'Blue Note Bar',
+        clientType: 'Bar/Restaurant',
+        location: 'Lyon',
+        brandColor: '#FF7A1F',
+        sampleEvents: 3,
+        features: ['events', 'stats', 'participants']
+      }
     },
     {
-      id: '2',
-      title: 'Nuits Sonores 2024',
-      date: '2024-05-28',
-      time: '18:00',
-      venue: 'Musée des Confluences',
-      description: 'Festival emblématique de musiques électroniques et cultures digitales. Découvrez les talents émergents et confirmés.',
-      image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&h=600&fit=crop',
-      category: 'concert',
-      organizer: 'Nuits Sonores',
-      tags: ['électro', 'festival', 'musique', 'confluence'],
-      price: '45€',
-      maxParticipants: 200,
-      views: 2156,
-      likes: 178,
-      participants: 89,
-      searchAppearances: 567
+      name: 'Salle de Sport',
+      config: {
+        clientName: 'FitMax Gym',
+        clientType: 'Salle de Sport',
+        location: 'Lyon',
+        brandColor: '#10B981',
+        sampleEvents: 5,
+        features: ['events', 'stats', 'participants', 'classes']
+      }
     },
     {
-      id: '3',
-      title: 'Fête des Lumières - Presqu\'île',
-      date: '2024-12-08',
-      time: '19:00',
-      venue: 'Place Bellecour',
-      description: 'Événement magique unique au monde ! Déambulation nocturne à travers les installations lumineuses du centre-ville.',
-      image: 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=800&h=600&fit=crop',
-      category: 'culture',
-      organizer: 'Ville de Lyon',
-      tags: ['lumières', 'spectacle', 'lyon', 'tradition'],
-      views: 3421,
-      likes: 267,
-      participants: 324,
-      searchAppearances: 892
+      name: 'Centre Commercial',
+      config: {
+        clientName: 'Confluence Shopping',
+        clientType: 'Centre Commercial',
+        location: 'Lyon',
+        brandColor: '#3B82F6',
+        sampleEvents: 8,
+        features: ['events', 'stats', 'participants', 'stores']
+      }
     }
   ]);
 
-  const form = useForm({
-    defaultValues: {
-      title: '',
-      date: '',
-      time: '',
-      venue: '',
-      description: '',
-      image: '',
-      category: '',
-      organizer: '',
-      tags: '',
-      price: '',
-      maxParticipants: ''
-    }
-  });
-
-  const { toast } = useToast();
-
-  const onSubmit = (data: any) => {
-    const newEvent: AdminEvent = {
-      id: Date.now().toString(),
-      title: data.title,
-      date: data.date,
-      time: data.time,
-      venue: data.venue,
-      description: data.description,
-      image: data.image,
-      category: data.category,
-      organizer: data.organizer,
-      tags: data.tags.split(',').map((tag: string) => tag.trim()),
-      price: data.price || undefined,
-      maxParticipants: data.maxParticipants ? parseInt(data.maxParticipants) : undefined,
-      views: 0,
-      likes: 0,
-      participants: 0,
-      searchAppearances: 0
-    };
-
-    setAdminEvents([...adminEvents, newEvent]);
-    form.reset();
-    
+  const handleSaveConfig = () => {
+    // En production, ceci serait sauvegardé en base
+    localStorage.setItem('demoConfig', JSON.stringify(config));
     toast({
-      title: "✅ Événement créé !",
-      description: `"${data.title}" a été ajouté avec succès`,
+      title: "✅ Configuration sauvegardée",
+      description: "La configuration de démo a été mise à jour",
     });
   };
 
-  const deleteEvent = (eventId: string) => {
-    setAdminEvents(adminEvents.filter(event => event.id !== eventId));
+  const loadPreset = (preset: any) => {
+    setConfig(preset.config);
     toast({
-      title: "🗑️ Événement supprimé",
-      description: "L'événement a été retiré du système",
+      title: "📋 Preset chargé",
+      description: `Configuration "${preset.name}" appliquée`,
     });
+  };
+
+  const handlePreviewDemo = () => {
+    handleSaveConfig();
+    navigate('/business');
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Admin Wouli</h1>
-              <p className="text-gray-600">Gestion des événements publics lyonnais</p>
-            </div>
-            <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-              Mode Administrateur
-            </Badge>
+      {/* Header */}
+      <div className="bg-white shadow-sm p-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Admin - Configuration Démo</h1>
+            <p className="text-gray-600 mt-2">Configurez l'app pour vos démonstrations client</p>
+          </div>
+          <div className="flex space-x-3">
+            <Button variant="outline" onClick={() => navigate('/business')}>
+              Retour Business
+            </Button>
+            <Button onClick={handlePreviewDemo} className="bg-green-600 hover:bg-green-700">
+              <Eye className="h-4 w-4 mr-2" />
+              Prévisualiser
+            </Button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Formulaire d'ajout */}
-          <div className="lg:col-span-1">
+      <div className="container mx-auto p-6">
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Configuration principale */}
+          <div className="lg:col-span-2 space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <Plus className="h-5 w-5 mr-2 text-purple-600" />
-                  Ajouter un événement
+                  <Settings className="h-5 w-5 mr-2" />
+                  Configuration Client
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="title"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Titre de l'événement</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ex: Concert de..." {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nom du client
+                  </label>
+                  <Input
+                    value={config.clientName}
+                    onChange={(e) => setConfig({ ...config, clientName: e.target.value })}
+                    placeholder="Ex: Blue Note Bar"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Type d'établissement
+                    </label>
+                    <select
+                      value={config.clientType}
+                      onChange={(e) => setConfig({ ...config, clientType: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="Bar/Restaurant">Bar/Restaurant</option>
+                      <option value="Salle de Sport">Salle de Sport</option>
+                      <option value="Centre Commercial">Centre Commercial</option>
+                      <option value="Cinéma">Cinéma</option>
+                      <option value="Autre">Autre</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Localisation
+                    </label>
+                    <Input
+                      value={config.location}
+                      onChange={(e) => setConfig({ ...config, location: e.target.value })}
+                      placeholder="Ex: Lyon"
                     />
+                  </div>
+                </div>
 
-                    <div className="grid grid-cols-2 gap-2">
-                      <FormField
-                        control={form.control}
-                        name="date"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Date</FormLabel>
-                            <FormControl>
-                              <Input type="date" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="time"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Heure</FormLabel>
-                            <FormControl>
-                              <Input type="time" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <FormField
-                      control={form.control}
-                      name="venue"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Lieu</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ex: Groupama Stadium" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Couleur de marque
+                    </label>
+                    <Input
+                      type="color"
+                      value={config.brandColor}
+                      onChange={(e) => setConfig({ ...config, brandColor: e.target.value })}
+                      className="h-10"
                     />
-
-                    <FormField
-                      control={form.control}
-                      name="organizer"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Organisateur</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ex: Ville de Lyon" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nombre d'événements exemple
+                    </label>
+                    <Input
+                      type="number"
+                      value={config.sampleEvents}
+                      onChange={(e) => setConfig({ ...config, sampleEvents: parseInt(e.target.value) })}
+                      min="1"
+                      max="10"
                     />
+                  </div>
+                </div>
 
-                    <FormField
-                      control={form.control}
-                      name="category"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Catégorie</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Choisir une catégorie" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {categories.filter(cat => cat.id !== 'all').map((category) => (
-                                <SelectItem key={category.id} value={category.id}>
-                                  {category.icon} {category.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Fonctionnalités à présenter
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {['events', 'stats', 'participants', 'classes', 'stores', 'analytics'].map((feature) => (
+                      <label key={feature} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={config.features.includes(feature)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setConfig({ ...config, features: [...config.features, feature] });
+                            } else {
+                              setConfig({ ...config, features: config.features.filter(f => f !== feature) });
+                            }
+                          }}
+                          className="mr-2"
+                        />
+                        <span className="text-sm capitalize">{feature}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
 
-                    <FormField
-                      control={form.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Description</FormLabel>
-                          <FormControl>
-                            <Textarea placeholder="Description de l'événement..." rows={3} {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="image"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>URL de l'image</FormLabel>
-                          <FormControl>
-                            <Input placeholder="https://..." {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="tags"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tags (séparés par des virgules)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="musique, concert, lyon" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <FormField
-                        control={form.control}
-                        name="price"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Prix (optionnel)</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Ex: 15€" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="maxParticipants"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Places max</FormLabel>
-                            <FormControl>
-                              <Input type="number" placeholder="100" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <Button type="submit" className="w-full">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Créer l'événement
-                    </Button>
-                  </form>
-                </Form>
+                <Button onClick={handleSaveConfig} className="w-full">
+                  <Save className="h-4 w-4 mr-2" />
+                  Sauvegarder Configuration
+                </Button>
               </CardContent>
             </Card>
           </div>
 
-          {/* Liste des événements */}
-          <div className="lg:col-span-2">
+          {/* Presets et aperçu */}
+          <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Événements Lyon ({adminEvents.length})</CardTitle>
+                <CardTitle>Presets Rapides</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {presetConfigs.map((preset, index) => (
+                  <Button
+                    key={index}
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={() => loadPreset(preset)}
+                  >
+                    <Globe className="h-4 w-4 mr-2" />
+                    {preset.name}
+                  </Button>
+                ))}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Aperçu Configuration</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="p-3 bg-gray-50 rounded">
+                  <p className="text-sm"><strong>Client:</strong> {config.clientName}</p>
+                  <p className="text-sm"><strong>Type:</strong> {config.clientType}</p>
+                  <p className="text-sm"><strong>Lieu:</strong> {config.location}</p>
+                  <p className="text-sm"><strong>Événements:</strong> {config.sampleEvents}</p>
+                  <div className="flex items-center mt-2">
+                    <span className="text-sm mr-2"><strong>Couleur:</strong></span>
+                    <div 
+                      className="w-6 h-6 rounded border"
+                      style={{ backgroundColor: config.brandColor }}
+                    ></div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Users className="h-5 w-5 mr-2" />
+                  Données Démo
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {adminEvents.map((event) => (
-                    <div key={event.id} className="border rounded-lg p-4 bg-white">
-                      <div className="flex items-start justify-between">
-                        <div className="flex space-x-4 flex-1">
-                          <img
-                            src={event.image}
-                            alt={event.title}
-                            className="w-16 h-16 object-cover rounded-lg"
-                          />
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-lg">{event.title}</h3>
-                            <div className="flex items-center text-sm text-gray-600 mt-1">
-                              <Building className="h-3 w-3 mr-1" />
-                              <span className="font-medium">{event.organizer}</span>
-                            </div>
-                            <div className="flex items-center text-sm text-gray-500 mt-1">
-                              <MapPin className="h-3 w-3 mr-1" />
-                              {event.venue}
-                            </div>
-                            <div className="flex items-center text-sm text-gray-500">
-                              <Calendar className="h-3 w-3 mr-1" />
-                              {new Date(event.date).toLocaleDateString('fr-FR')} à {event.time}
-                            </div>
-                            <Badge variant="outline" className="mt-1">
-                              {categories.find(c => c.id === event.category)?.icon} {categories.find(c => c.id === event.category)?.name}
-                            </Badge>
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => deleteEvent(event.id)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      
-                      <div className="grid grid-cols-4 gap-4 mt-4 pt-4 border-t">
-                        <div className="text-center">
-                          <div className="flex items-center justify-center mb-1">
-                            <Eye className="h-4 w-4 text-blue-500" />
-                          </div>
-                          <div className="text-lg font-bold">{event.views}</div>
-                          <div className="text-xs text-gray-500">Vues</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="flex items-center justify-center mb-1">
-                            <Heart className="h-4 w-4 text-red-500" />
-                          </div>
-                          <div className="text-lg font-bold">{event.likes}</div>
-                          <div className="text-xs text-gray-500">Likes</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="flex items-center justify-center mb-1">
-                            <Users className="h-4 w-4 text-green-500" />
-                          </div>
-                          <div className="text-lg font-bold">{event.participants}</div>
-                          <div className="text-xs text-gray-500">Participants</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="flex items-center justify-center mb-1">
-                            <Search className="h-4 w-4 text-purple-500" />
-                          </div>
-                          <div className="text-lg font-bold">{event.searchAppearances}</div>
-                          <div className="text-xs text-gray-500">Recherches</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                <div className="space-y-2 text-sm text-gray-600">
+                  <p>📊 Stats simulées en temps réel</p>
+                  <p>👥 {Math.floor(Math.random() * 100) + 50} participants actifs</p>
+                  <p>👁️ {Math.floor(Math.random() * 500) + 200} vues cette semaine</p>
+                  <p>❤️ {Math.floor(Math.random() * 50) + 20} likes total</p>
                 </div>
               </CardContent>
             </Card>
