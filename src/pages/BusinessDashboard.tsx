@@ -7,7 +7,6 @@ import { PlusCircle, Calendar, Users, MapPin, Trash2, Edit3, Eye, Heart, Trendin
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from 'react-router-dom';
 import { categories } from '../data/mockEvents';
-
 interface BusinessEvent {
   id: number;
   title: string;
@@ -22,71 +21,65 @@ interface BusinessEvent {
   likes: number;
   searchAppearances: number;
 }
-
 const BusinessDashboard = () => {
   const navigate = useNavigate();
-  const [events, setEvents] = useState<BusinessEvent[]>([
-    {
-      id: 1,
-      title: "Soirée Jazz",
-      date: "2024-06-15",
-      time: "21:00",
-      participants: 45,
-      venue: "Blue Note Bar",
-      description: "Une soirée jazz intimiste",
-      category: "bar",
-      price: "15€",
-      views: 234,
-      likes: 18,
-      searchAppearances: 67
-    },
-    {
-      id: 2,
-      title: "Happy Hour",
-      date: "2024-06-16",
-      time: "18:00",
-      participants: 23,
-      venue: "Blue Note Bar",
-      description: "Cocktails à prix réduit",
-      category: "bar",
-      price: "8€",
-      views: 145,
-      likes: 12,
-      searchAppearances: 34
-    }
-  ]);
-
+  const [events, setEvents] = useState<BusinessEvent[]>([{
+    id: 1,
+    title: "Soirée Jazz",
+    date: "2024-06-15",
+    time: "21:00",
+    participants: 45,
+    venue: "Blue Note Bar",
+    description: "Une soirée jazz intimiste",
+    category: "bar",
+    price: "15€",
+    views: 234,
+    likes: 18,
+    searchAppearances: 67
+  }, {
+    id: 2,
+    title: "Happy Hour",
+    date: "2024-06-16",
+    time: "18:00",
+    participants: 23,
+    venue: "Blue Note Bar",
+    description: "Cocktails à prix réduit",
+    category: "bar",
+    price: "8€",
+    views: 145,
+    likes: 12,
+    searchAppearances: 34
+  }]);
   const [newEvent, setNewEvent] = useState({
     title: '',
     date: '',
     time: '',
-    venue: 'Blue Note Bar', // Pré-remplissage
+    venue: 'Blue Note Bar',
+    // Pré-remplissage
     description: '',
     category: 'bar',
     price: ''
   });
-
   const [editingEvent, setEditingEvent] = useState<BusinessEvent | null>(null);
   const [establishmentName, setEstablishmentName] = useState('Blue Note Bar');
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
 
   // Simulation de mise à jour des stats en temps réel
   useEffect(() => {
     const interval = setInterval(() => {
-      setEvents(prevEvents => 
-        prevEvents.map(event => ({
-          ...event,
-          views: event.views + Math.floor(Math.random() * 3),
-          likes: Math.random() > 0.8 ? event.likes + 1 : event.likes,
-          participants: Math.random() > 0.9 ? event.participants + 1 : event.participants,
-          searchAppearances: event.searchAppearances + Math.floor(Math.random() * 2)
-        }))
-      );
+      setEvents(prevEvents => prevEvents.map(event => ({
+        ...event,
+        views: event.views + Math.floor(Math.random() * 3),
+        likes: Math.random() > 0.8 ? event.likes + 1 : event.likes,
+        participants: Math.random() > 0.9 ? event.participants + 1 : event.participants,
+        searchAppearances: event.searchAppearances + Math.floor(Math.random() * 2)
+      })));
     }, 10000); // Mise à jour toutes les 10 secondes
 
     return () => clearInterval(interval);
   }, []);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEvent.title || !newEvent.date || !newEvent.time) {
@@ -97,26 +90,31 @@ const BusinessDashboard = () => {
       });
       return;
     }
-
     const event: BusinessEvent = {
       id: events.length + 1,
       ...newEvent,
-      venue: establishmentName, // Utiliser le nom d'établissement
+      venue: establishmentName,
+      // Utiliser le nom d'établissement
       participants: 0,
       views: 0,
       likes: 0,
       searchAppearances: 0
     };
-
     setEvents([...events, event]);
-    setNewEvent({ title: '', date: '', time: '', venue: establishmentName, description: '', category: 'bar', price: '' });
-    
+    setNewEvent({
+      title: '',
+      date: '',
+      time: '',
+      venue: establishmentName,
+      description: '',
+      category: 'bar',
+      price: ''
+    });
     toast({
       title: "✅ Événement créé !",
-      description: `"${newEvent.title}" a été publié avec succès`,
+      description: `"${newEvent.title}" a été publié avec succès`
     });
   };
-
   const handleDuplicate = (event: BusinessEvent) => {
     const duplicatedEvent: BusinessEvent = {
       ...event,
@@ -127,14 +125,12 @@ const BusinessDashboard = () => {
       likes: 0,
       searchAppearances: 0
     };
-
     setEvents([...events, duplicatedEvent]);
     toast({
       title: "📋 Événement dupliqué !",
-      description: `"${duplicatedEvent.title}" a été créé`,
+      description: `"${duplicatedEvent.title}" a été créé`
     });
   };
-
   const handleEdit = (event: BusinessEvent) => {
     setEditingEvent(event);
     setNewEvent({
@@ -147,7 +143,6 @@ const BusinessDashboard = () => {
       price: event.price || ''
     });
   };
-
   const handleUpdate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingEvent || !newEvent.title || !newEvent.date || !newEvent.time) {
@@ -158,49 +153,55 @@ const BusinessDashboard = () => {
       });
       return;
     }
-
-    const updatedEvents = events.map(event => 
-      event.id === editingEvent.id 
-        ? { ...event, ...newEvent }
-        : event
-    );
-
+    const updatedEvents = events.map(event => event.id === editingEvent.id ? {
+      ...event,
+      ...newEvent
+    } : event);
     setEvents(updatedEvents);
     setEditingEvent(null);
-    setNewEvent({ title: '', date: '', time: '', venue: '', description: '', category: 'bar', price: '' });
-    
+    setNewEvent({
+      title: '',
+      date: '',
+      time: '',
+      venue: '',
+      description: '',
+      category: 'bar',
+      price: ''
+    });
     toast({
       title: "✅ Événement modifié !",
-      description: `"${newEvent.title}" a été mis à jour`,
+      description: `"${newEvent.title}" a été mis à jour`
     });
   };
-
   const cancelEdit = () => {
     setEditingEvent(null);
-    setNewEvent({ title: '', date: '', time: '', venue: '', description: '', category: 'bar', price: '' });
+    setNewEvent({
+      title: '',
+      date: '',
+      time: '',
+      venue: '',
+      description: '',
+      category: 'bar',
+      price: ''
+    });
   };
-
   const deleteEvent = (id: number) => {
     setEvents(events.filter(event => event.id !== id));
     toast({
       title: "🗑️ Événement supprimé",
-      description: "L'événement a été retiré de votre liste",
+      description: "L'événement a été retiré de votre liste"
     });
   };
-
   const handleViewDetails = (eventId: number) => {
     // Pour ce MVP, on utilise l'ID mockEvent correspondant
     const mockEventId = eventId.toString();
     navigate(`/business/event/${mockEventId}`);
   };
-
   const totalViews = events.reduce((sum, event) => sum + event.views, 0);
   const totalLikes = events.reduce((sum, event) => sum + event.likes, 0);
   const totalParticipants = events.reduce((sum, event) => sum + event.participants, 0);
   const totalSearchAppearances = events.reduce((sum, event) => sum + event.searchAppearances, 0);
-
-  return (
-    <div className="min-h-screen bg-gray-50">
+  return <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm p-6">
         <div className="flex justify-between items-start">
@@ -211,15 +212,13 @@ const BusinessDashboard = () => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Nom de votre établissement
               </label>
-              <Input
-                value={establishmentName}
-                onChange={(e) => {
-                  setEstablishmentName(e.target.value);
-                  setNewEvent({ ...newEvent, venue: e.target.value });
-                }}
-                className="max-w-xs"
-                placeholder="Ex: Blue Note Bar"
-              />
+              <Input value={establishmentName} onChange={e => {
+              setEstablishmentName(e.target.value);
+              setNewEvent({
+                ...newEvent,
+                venue: e.target.value
+              });
+            }} className="max-w-xs" placeholder="Ex: Blue Note Bar" />
             </div>
           </div>
           <div className="text-right text-sm text-gray-500">
@@ -272,7 +271,7 @@ const BusinessDashboard = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Participants</p>
+                  <p className="text-sm text-gray-600">Redirection</p>
                   <p className="text-2xl font-bold">{totalParticipants}</p>
                 </div>
                 <Users className="h-8 w-8 text-green-500" />
@@ -308,11 +307,10 @@ const BusinessDashboard = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Titre de l'événement *
                   </label>
-                  <Input
-                    value={newEvent.title}
-                    onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-                    placeholder="Ex: Soirée Jazz, Happy Hour..."
-                  />
+                  <Input value={newEvent.title} onChange={e => setNewEvent({
+                  ...newEvent,
+                  title: e.target.value
+                })} placeholder="Ex: Soirée Jazz, Happy Hour..." />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -320,21 +318,19 @@ const BusinessDashboard = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Date *
                     </label>
-                    <Input
-                      type="date"
-                      value={newEvent.date}
-                      onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
-                    />
+                    <Input type="date" value={newEvent.date} onChange={e => setNewEvent({
+                    ...newEvent,
+                    date: e.target.value
+                  })} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Heure *
                     </label>
-                    <Input
-                      type="time"
-                      value={newEvent.time}
-                      onChange={(e) => setNewEvent({ ...newEvent, time: e.target.value })}
-                    />
+                    <Input type="time" value={newEvent.time} onChange={e => setNewEvent({
+                    ...newEvent,
+                    time: e.target.value
+                  })} />
                   </div>
                 </div>
 
@@ -342,16 +338,13 @@ const BusinessDashboard = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Catégorie
                   </label>
-                  <select
-                    value={newEvent.category}
-                    onChange={(e) => setNewEvent({ ...newEvent, category: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                    {categories.filter(cat => cat.id !== 'all').map((category) => (
-                      <option key={category.id} value={category.id}>
+                  <select value={newEvent.category} onChange={e => setNewEvent({
+                  ...newEvent,
+                  category: e.target.value
+                })} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    {categories.filter(cat => cat.id !== 'all').map(category => <option key={category.id} value={category.id}>
                         {category.icon} {category.name}
-                      </option>
-                    ))}
+                      </option>)}
                   </select>
                 </div>
 
@@ -360,21 +353,19 @@ const BusinessDashboard = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Lieu
                     </label>
-                    <Input
-                      value={newEvent.venue}
-                      onChange={(e) => setNewEvent({ ...newEvent, venue: e.target.value })}
-                      placeholder="Nom de votre établissement"
-                    />
+                    <Input value={newEvent.venue} onChange={e => setNewEvent({
+                    ...newEvent,
+                    venue: e.target.value
+                  })} placeholder="Nom de votre établissement" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Prix
                     </label>
-                    <Input
-                      value={newEvent.price}
-                      onChange={(e) => setNewEvent({ ...newEvent, price: e.target.value })}
-                      placeholder="Ex: 15€, Gratuit..."
-                    />
+                    <Input value={newEvent.price} onChange={e => setNewEvent({
+                    ...newEvent,
+                    price: e.target.value
+                  })} placeholder="Ex: 15€, Gratuit..." />
                   </div>
                 </div>
 
@@ -382,23 +373,19 @@ const BusinessDashboard = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Description
                   </label>
-                  <Textarea
-                    value={newEvent.description}
-                    onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
-                    placeholder="Décrivez votre événement..."
-                    rows={3}
-                  />
+                  <Textarea value={newEvent.description} onChange={e => setNewEvent({
+                  ...newEvent,
+                  description: e.target.value
+                })} placeholder="Décrivez votre événement..." rows={3} />
                 </div>
 
                 <div className="flex gap-2">
                   <Button type="submit" className="flex-1">
                     {editingEvent ? 'Mettre à jour' : 'Créer l\'événement'}
                   </Button>
-                  {editingEvent && (
-                    <Button type="button" variant="outline" onClick={cancelEdit}>
+                  {editingEvent && <Button type="button" variant="outline" onClick={cancelEdit}>
                       Annuler
-                    </Button>
-                  )}
+                    </Button>}
                 </div>
               </form>
             </CardContent>
@@ -411,13 +398,9 @@ const BusinessDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4 max-h-96 overflow-y-auto">
-                {events.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">
+                {events.length === 0 ? <p className="text-gray-500 text-center py-8">
                     Aucun événement créé pour le moment
-                  </p>
-                ) : (
-                  events.map((event) => (
-                    <div key={event.id} className="border rounded-lg p-4 bg-white shadow-sm">
+                  </p> : events.map(event => <div key={event.id} className="border rounded-lg p-4 bg-white shadow-sm">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <h3 className="font-semibold text-lg">{event.title}</h3>
@@ -448,63 +431,37 @@ const BusinessDashboard = () => {
                                 <span className="font-medium">{event.searchAppearances}</span>
                               </div>
                             </div>
-                            {event.price && (
-                              <p className="text-sm font-medium text-green-600">{event.price}</p>
-                            )}
+                            {event.price && <p className="text-sm font-medium text-green-600">{event.price}</p>}
                             <p className="text-xs text-gray-400 mt-2">
                               Vu par {Math.floor(event.views * 0.3)} jeunes à Lyon cette semaine
                             </p>
                           </div>
                         </div>
                         <div className="flex flex-col space-y-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleViewDetails(event.id)}
-                            className="text-blue-500 hover:bg-blue-50"
-                          >
+                          <Button variant="outline" size="sm" onClick={() => handleViewDetails(event.id)} className="text-blue-500 hover:bg-blue-50">
                             <ExternalLink className="h-4 w-4 mr-1" />
                             Détails
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDuplicate(event)}
-                            className="text-purple-500 hover:bg-purple-50"
-                          >
+                          <Button variant="outline" size="sm" onClick={() => handleDuplicate(event)} className="text-purple-500 hover:bg-purple-50">
                             <Copy className="h-4 w-4 mr-1" />
                             Dupliquer
                           </Button>
                           <div className="flex space-x-1">
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => handleEdit(event)}
-                              className="text-blue-500 hover:bg-blue-50"
-                            >
+                            <Button variant="outline" size="icon" onClick={() => handleEdit(event)} className="text-blue-500 hover:bg-blue-50">
                               <Edit3 className="h-4 w-4" />
                             </Button>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => deleteEvent(event.id)}
-                              className="text-red-500 hover:bg-red-50"
-                            >
+                            <Button variant="outline" size="icon" onClick={() => deleteEvent(event.id)} className="text-red-500 hover:bg-red-50">
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))
-                )}
+                    </div>)}
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default BusinessDashboard;
