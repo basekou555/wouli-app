@@ -26,7 +26,7 @@ const AdminDashboard = () => {
     location: 'Lyon',
     brandColor: '#FF7A1F',
     sampleEvents: 3,
-    features: ['events', 'stats', 'participants']
+    features: ['events', 'stats', 'redirections']
   });
 
   const [presetConfigs] = useState([
@@ -38,7 +38,18 @@ const AdminDashboard = () => {
         location: 'Lyon',
         brandColor: '#FF7A1F',
         sampleEvents: 3,
-        features: ['events', 'stats', 'participants']
+        features: ['events', 'stats', 'redirections']
+      }
+    },
+    {
+      name: 'Boîte de Nuit',
+      config: {
+        clientName: 'Club Nyx',
+        clientType: 'Boîte de Nuit',
+        location: 'Lyon',
+        brandColor: '#8B5CF6',
+        sampleEvents: 4,
+        features: ['events', 'stats', 'redirections', 'ranking']
       }
     },
     {
@@ -49,7 +60,7 @@ const AdminDashboard = () => {
         location: 'Lyon',
         brandColor: '#10B981',
         sampleEvents: 5,
-        features: ['events', 'stats', 'participants', 'classes']
+        features: ['events', 'stats', 'redirections', 'classes']
       }
     },
     {
@@ -60,7 +71,7 @@ const AdminDashboard = () => {
         location: 'Lyon',
         brandColor: '#3B82F6',
         sampleEvents: 8,
-        features: ['events', 'stats', 'participants', 'stores']
+        features: ['events', 'stats', 'redirections', 'stores']
       }
     }
   ]);
@@ -142,6 +153,7 @@ const AdminDashboard = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="Bar/Restaurant">Bar/Restaurant</option>
+                      <option value="Boîte de Nuit">Boîte de Nuit</option>
                       <option value="Salle de Sport">Salle de Sport</option>
                       <option value="Centre Commercial">Centre Commercial</option>
                       <option value="Cinéma">Cinéma</option>
@@ -191,7 +203,7 @@ const AdminDashboard = () => {
                     Fonctionnalités à présenter
                   </label>
                   <div className="grid grid-cols-2 gap-2">
-                    {['events', 'stats', 'participants', 'classes', 'stores', 'analytics'].map((feature) => (
+                    {['events', 'stats', 'redirections', 'ranking', 'classes', 'stores', 'analytics'].map((feature) => (
                       <label key={feature} className="flex items-center">
                         <input
                           type="checkbox"

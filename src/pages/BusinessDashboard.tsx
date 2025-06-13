@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Calendar, Users, MapPin, Trash2, Edit3, Eye, Heart, TrendingUp } from 'lucide-react';
+import { PlusCircle, Calendar, Users, MapPin, Trash2, Edit3, Eye, Heart, TrendingUp, ExternalLink, Trophy, Star, Building } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from 'react-router-dom';
+import ImageUpload from '@/components/ImageUpload';
 
 interface BusinessEvent {
   id: number;
@@ -20,6 +21,7 @@ interface BusinessEvent {
   price?: string;
   views: number;
   likes: number;
+  imageUrl?: string;
 }
 
 interface DemoConfig {
@@ -68,6 +70,12 @@ const BusinessDashboard = () => {
         { title: 'Happy Hour', description: 'Cocktails à prix réduit', category: 'bar', price: '8€' },
         { title: 'Dégustation Vins', description: 'Découverte de vins locaux', category: 'bar', price: '25€' },
         { title: 'Concert Live', description: 'Groupe local en acoustique', category: 'bar', price: '12€' }
+      ],
+      'Boîte de Nuit': [
+        { title: 'Soirée House', description: 'DJ international en live', category: 'nightclub', price: '20€' },
+        { title: 'Ladies Night', description: 'Entrée gratuite pour les femmes', category: 'nightclub', price: '15€' },
+        { title: 'Techno Night', description: 'Les meilleurs DJs techno', category: 'nightclub', price: '25€' },
+        { title: 'Student Party', description: 'Soirée étudiante avec tarifs réduits', category: 'nightclub', price: '10€' }
       ],
       'Salle de Sport': [
         { title: 'Cours de Yoga', description: 'Séance détente et bien-être', category: 'sport', price: '20€' },
@@ -120,7 +128,8 @@ const BusinessDashboard = () => {
     venue: config.clientName,
     description: '',
     category: 'bar',
-    price: ''
+    price: '',
+    imageUrl: ''
   });
 
   // Mettre à jour le venue quand le nom du client change
@@ -149,7 +158,7 @@ const BusinessDashboard = () => {
     };
 
     setEvents([...events, event]);
-    setNewEvent({ title: '', date: '', time: '', venue: config.clientName, description: '', category: 'bar', price: '' });
+    setNewEvent({ title: '', date: '', time: '', venue: config.clientName, description: '', category: 'bar', price: '', imageUrl: '' });
     
     toast({
       title: "✅ Événement créé !",
@@ -167,46 +176,77 @@ const BusinessDashboard = () => {
 
   const totalViews = events.reduce((sum, event) => sum + event.views, 0);
   const totalLikes = events.reduce((sum, event) => sum + event.likes, 0);
-  const totalParticipants = events.reduce((sum, event) => sum + event.participants, 0);
+  const totalRedirections = Math.floor(totalViews * 0.15); // 15% des vues convertissent en redirections
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header avec couleur de marque dynamique */}
-      <div className="bg-white shadow-sm p-6 border-l-4" style={{ borderLeftColor: config.brandColor }}>
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard {config.clientType}</h1>
-            <p className="text-gray-600 mt-2">Gérez vos événements et suivez vos performances</p>
-            <div className="mt-4">
-              <div className="flex items-center space-x-4">
-                <div className="bg-gray-100 px-4 py-2 rounded-lg">
-                  <span className="text-sm font-medium text-gray-700">{config.clientName}</span>
+      {/* Section Profil Professionnel */}
+      <div className="bg-white shadow-sm">
+        <div className="container mx-auto px-6 py-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            {/* Informations principales */}
+            <div className="flex items-start gap-6">
+              <div 
+                className="w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl shadow-lg"
+                style={{ backgroundColor: config.brandColor }}
+              >
+                <Building className="h-10 w-10" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">{config.clientName}</h1>
+                <p className="text-lg text-gray-600 mt-1">{config.clientType}</p>
+                <div className="flex items-center mt-2 text-gray-500">
+                  <MapPin className="h-4 w-4 mr-1" />
+                  <span>{config.location}, France</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <div 
-                    className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
-                    style={{ backgroundColor: config.brandColor }}
-                  ></div>
-                  <span className="text-sm text-gray-600">Couleur de marque</span>
+                <div className="flex items-center mt-2">
+                  <Star className="h-4 w-4 text-yellow-500 mr-1" />
+                  <span className="text-sm font-medium">4.8/5</span>
+                  <span className="text-sm text-gray-500 ml-2">(247 avis)</span>
                 </div>
               </div>
             </div>
+
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/admin')}
+                className="flex items-center"
+              >
+                <Edit3 className="h-4 w-4 mr-2" />
+                Configuration
+              </Button>
+              <Button 
+                style={{ backgroundColor: config.brandColor }}
+                className="text-white"
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                Voir profil public
+              </Button>
+            </div>
           </div>
-          <div className="text-right">
-            <Button 
-              variant="outline" 
-              onClick={() => navigate('/admin')}
-              className="mb-2"
+
+          {/* Badges et statuts */}
+          <div className="flex flex-wrap gap-2 mt-6">
+            <span 
+              className="px-3 py-1 rounded-full text-sm font-medium text-white"
+              style={{ backgroundColor: config.brandColor }}
             >
-              Configuration Admin
-            </Button>
-            <p className="text-sm text-gray-500">🏙️ {config.location}, France</p>
+              Partenaire Wouli
+            </span>
+            <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+              Actif
+            </span>
+            <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+              {events.length} événement{events.length > 1 ? 's' : ''} actif{events.length > 1 ? 's' : ''}
+            </span>
           </div>
         </div>
       </div>
 
       <div className="container mx-auto p-6">
-        {/* Statistics Cards - conditionnelles selon les features */}
+        {/* Statistics Cards */}
         {config.features.includes('stats') && (
           <div className="grid md:grid-cols-4 gap-4 mb-8">
             <Card>
@@ -245,15 +285,15 @@ const BusinessDashboard = () => {
               </CardContent>
             </Card>
             
-            {config.features.includes('participants') && (
+            {config.features.includes('redirections') && (
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-600">Participants</p>
-                      <p className="text-2xl font-bold">{totalParticipants}</p>
+                      <p className="text-sm text-gray-600">Redirections</p>
+                      <p className="text-2xl font-bold">{totalRedirections}</p>
                     </div>
-                    <Users className="h-8 w-8 text-green-500" />
+                    <ExternalLink className="h-8 w-8 text-green-500" />
                   </div>
                 </CardContent>
               </Card>
@@ -262,7 +302,7 @@ const BusinessDashboard = () => {
         )}
 
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Create Event Form - conditionnel selon les features */}
+          {/* Create Event Form */}
           {config.features.includes('events') && (
             <Card>
               <CardHeader>
@@ -273,6 +313,16 @@ const BusinessDashboard = () => {
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Image de l'événement
+                    </label>
+                    <ImageUpload
+                      onImageSelect={(imageUrl) => setNewEvent({ ...newEvent, imageUrl })}
+                      currentImage={newEvent.imageUrl}
+                    />
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Titre de l'événement *
@@ -358,6 +408,13 @@ const BusinessDashboard = () => {
                     <div key={event.id} className="border rounded-lg p-4 bg-white shadow-sm">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
+                          {event.imageUrl && (
+                            <img 
+                              src={event.imageUrl} 
+                              alt={event.title}
+                              className="w-full h-32 object-cover rounded-lg mb-3"
+                            />
+                          )}
                           <h3 className="font-semibold text-lg">{event.title}</h3>
                           <div className="mt-2 space-y-1 text-sm text-gray-600">
                             <div className="flex items-center">
@@ -370,12 +427,6 @@ const BusinessDashboard = () => {
                             </div>
                             {config.features.includes('stats') && (
                               <div className="grid grid-cols-3 gap-2 mt-2">
-                                {config.features.includes('participants') && (
-                                  <div className="flex items-center">
-                                    <Users className="h-4 w-4 mr-1 text-green-500" />
-                                    <span className="font-medium">{event.participants}</span>
-                                  </div>
-                                )}
                                 <div className="flex items-center">
                                   <Eye className="h-4 w-4 mr-1 text-blue-500" />
                                   <span className="font-medium">{event.views}</span>
@@ -384,6 +435,12 @@ const BusinessDashboard = () => {
                                   <Heart className="h-4 w-4 mr-1 text-red-500" />
                                   <span className="font-medium">{event.likes}</span>
                                 </div>
+                                {config.features.includes('redirections') && (
+                                  <div className="flex items-center">
+                                    <ExternalLink className="h-4 w-4 mr-1 text-green-500" />
+                                    <span className="font-medium">{Math.floor(event.views * 0.15)}</span>
+                                  </div>
+                                )}
                               </div>
                             )}
                             {event.price && (
@@ -391,10 +448,19 @@ const BusinessDashboard = () => {
                             )}
                           </div>
                         </div>
-                        <div className="flex space-x-1">
+                        <div className="flex flex-col space-y-1 ml-4">
                           <Button
                             variant="outline"
-                            size="icon"
+                            size="sm"
+                            onClick={() => navigate(`/business/event/${event.id}`)}
+                            className="text-blue-600 hover:bg-blue-50"
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Détails
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => deleteEvent(event.id)}
                             className="text-red-500 hover:bg-red-50"
                           >
@@ -410,8 +476,8 @@ const BusinessDashboard = () => {
           </Card>
         </div>
 
-        {/* Analytics - conditionnel selon les features */}
-        {config.features.includes('analytics') && (
+        {/* Performance Analytics avec Rankings */}
+        {(config.features.includes('analytics') || config.features.includes('ranking')) && (
           <Card className="mt-8">
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -420,7 +486,7 @@ const BusinessDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid md:grid-cols-3 gap-4">
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <h4 className="font-medium text-blue-900">Visibilité</h4>
                   <p className="text-sm text-blue-800 mt-1">
@@ -430,15 +496,31 @@ const BusinessDashboard = () => {
                 <div className="bg-green-50 p-4 rounded-lg">
                   <h4 className="font-medium text-green-900">Engagement</h4>
                   <p className="text-sm text-green-800 mt-1">
-                    Taux de participation: {totalViews > 0 ? Math.round((totalParticipants / totalViews) * 100) : 0}%
+                    Taux de redirection: {totalViews > 0 ? Math.round((totalRedirections / totalViews) * 100) : 0}%
                   </p>
                 </div>
-                <div className="bg-purple-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-purple-900">Portée</h4>
-                  <p className="text-sm text-purple-800 mt-1">
-                    Impact estimé: {Math.floor(totalViews * 1.3)} jeunes à {config.location}
-                  </p>
-                </div>
+                {config.features.includes('ranking') && (
+                  <>
+                    <div className="bg-yellow-50 p-4 rounded-lg">
+                      <h4 className="font-medium text-yellow-900 flex items-center">
+                        <Trophy className="h-4 w-4 mr-1" />
+                        Classement Local
+                      </h4>
+                      <p className="text-sm text-yellow-800 mt-1">
+                        #3 sur 24 {config.clientType.toLowerCase()}s à {config.location}
+                      </p>
+                    </div>
+                    <div className="bg-purple-50 p-4 rounded-lg">
+                      <h4 className="font-medium text-purple-900 flex items-center">
+                        <Star className="h-4 w-4 mr-1" />
+                        Événement Top
+                      </h4>
+                      <p className="text-sm text-purple-800 mt-1">
+                        "{events[0]?.title || 'Aucun événement'}" - #1 cette semaine
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>
