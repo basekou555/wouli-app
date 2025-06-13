@@ -1,32 +1,27 @@
-
 import React, { useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Calendar, 
-  MapPin, 
-  Users, 
-  Heart, 
-  Star, 
-  Edit3, 
-  TrendingUp,
-  Activity,
-  Award,
-  LogOut
-} from 'lucide-react';
+import { Calendar, MapPin, Users, Heart, Star, Edit3, TrendingUp, Activity, Award, LogOut } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import BottomNavigation from '../components/BottomNavigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { PageSkeleton } from '../components/LoadingSkeleton';
-
 const UserProfile = () => {
-  const { user, signOut } = useAuth();
+  const {
+    user,
+    signOut
+  } = useAuth();
   const navigate = useNavigate();
-  const { profile, userStats, recentActivities, loading } = useUserProfile();
+  const {
+    profile,
+    userStats,
+    recentActivities,
+    loading
+  } = useUserProfile();
 
   // Rediriger vers l'authentification si pas connecté
   useEffect(() => {
@@ -34,12 +29,10 @@ const UserProfile = () => {
       navigate('/auth');
     }
   }, [user, navigate]);
-
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
   };
-
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'participation':
@@ -50,7 +43,6 @@ const UserProfile = () => {
         return <Activity className="h-4 w-4 text-blue-500" />;
     }
   };
-
   const getActivityText = (activity: any) => {
     switch (activity.type) {
       case 'participation':
@@ -61,20 +53,27 @@ const UserProfile = () => {
         return `Activité sur "${activity.event}"`;
     }
   };
-
-  const favoriteCategories = [
-    { name: 'Concerts', count: 8, icon: '🎵' },
-    { name: 'Restaurants', count: 6, icon: '🍽️' },
-    { name: 'Bars', count: 4, icon: '🍺' },
-    { name: 'Sport', count: 2, icon: '⚽' }
-  ];
-
+  const favoriteCategories = [{
+    name: 'Concerts',
+    count: 8,
+    icon: '🎵'
+  }, {
+    name: 'Restaurants',
+    count: 6,
+    icon: '🍽️'
+  }, {
+    name: 'Bars',
+    count: 4,
+    icon: '🍺'
+  }, {
+    name: 'Sport',
+    count: 2,
+    icon: '⚽'
+  }];
   if (loading || !user) {
     return <PageSkeleton />;
   }
-
-  return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+  return <div className="min-h-screen bg-gray-50 pb-20">
       <AppLayout>
         <div className="py-6 space-y-6">
           {/* Header profil */}
@@ -88,7 +87,10 @@ const UserProfile = () => {
                   <h1 className="text-2xl font-bold text-gray-900">
                     {profile?.username || user.email?.split('@')[0] || 'Utilisateur'}
                   </h1>
-                  <p className="text-gray-500">Membre depuis {new Date(user.created_at).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</p>
+                  <p className="text-gray-500">Membre depuis {new Date(user.created_at).toLocaleDateString('fr-FR', {
+                    month: 'long',
+                    year: 'numeric'
+                  })}</p>
                   <Badge variant="secondary" className="mt-1">
                     <MapPin className="h-3 w-3 mr-1" />
                     {profile?.city || 'Lyon, France'}
@@ -128,15 +130,7 @@ const UserProfile = () => {
                 <p className="text-sm text-gray-500">Favoris</p>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="flex items-center justify-center mb-2">
-                  <Users className="h-5 w-5 text-green-500" />
-                </div>
-                <div className="text-2xl font-bold text-gray-900">45</div>
-                <p className="text-sm text-gray-500">Rencontres</p>
-              </CardContent>
-            </Card>
+            
             <Card>
               <CardContent className="p-4 text-center">
                 <div className="flex items-center justify-center mb-2">
@@ -171,9 +165,7 @@ const UserProfile = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {recentActivities.length > 0 ? (
-                      recentActivities.map((activity) => (
-                        <div key={activity.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    {recentActivities.length > 0 ? recentActivities.map(activity => <div key={activity.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                           {getActivityIcon(activity.type)}
                           <div className="flex-1">
                             <p className="text-sm font-medium text-gray-900">
@@ -184,15 +176,11 @@ const UserProfile = () => {
                               {activity.venue} • {new Date(activity.date).toLocaleDateString('fr-FR')}
                             </div>
                           </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-8 text-gray-500">
+                        </div>) : <div className="text-center py-8 text-gray-500">
                         <Activity className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                         <p>Aucune activité récente</p>
                         <p className="text-sm">Découvrez des événements pour voir votre activité ici !</p>
-                      </div>
-                    )}
+                      </div>}
                   </div>
                   <div className="mt-4 text-center">
                     <Link to="/historique">
@@ -212,15 +200,13 @@ const UserProfile = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {favoriteCategories.map((category, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    {favoriteCategories.map((category, index) => <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div className="flex items-center space-x-3">
                           <span className="text-lg">{category.icon}</span>
                           <span className="font-medium text-gray-900">{category.name}</span>
                         </div>
                         <Badge variant="secondary">{category.count} événements</Badge>
-                      </div>
-                    ))}
+                      </div>)}
                   </div>
                   <div className="mt-4 p-4 bg-blue-50 rounded-lg">
                     <p className="text-sm text-blue-800">
@@ -271,8 +257,6 @@ const UserProfile = () => {
         </div>
       </AppLayout>
       <BottomNavigation />
-    </div>
-  );
+    </div>;
 };
-
 export default UserProfile;
