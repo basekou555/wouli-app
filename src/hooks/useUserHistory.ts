@@ -24,43 +24,67 @@ export const useUserHistory = () => {
 
   const fetchUserHistory = async () => {
     if (!user) {
+      console.log('👤 Aucun utilisateur connecté pour l\'historique');
       setData(prev => ({ ...prev, loading: false }));
       return;
     }
 
     try {
-      // Récupérer les événements likés
-      const { data: likedEventsData, error: likesError } = await supabase
-        .from('event_likes')
-        .select(`
-          event_id,
-          events (*)
-        `)
-        .eq('user_id', user.id);
+      console.log('🔄 Récupération de l\'historique pour l\'utilisateur:', user.id);
 
-      if (likesError) throw likesError;
+      // Récupérer les événements likés depuis les deux tables
+      const [userEventsLikes, businessEventsLikes] = await Promise.all([
+        supabase
+          .from('event_likes')
+          .select(`
+            event_id,
+            events (*)
+          `)
+          .eq('user_id', user.id),
+        
+        // Pour les business events, on doit faire une jointure manuelle car ils sont dans une table différente
+        supabase
+          .from('event_likes')
+          .select('event_id')
+          .eq('user_id', user.id)
+      ]);
 
-      // Récupérer les événements auxquels l'utilisateur participe
-      const { data: participatingEventsData, error: participantsError } = await supabase
-        .from('event_participants')
-        .select(`
-          event_id,
-          events (*)
-        `)
-        .eq('user_id', user.id);
+      if (userEventsLikes.error) throw userEventsLikes.error;
+      if (businessEventsLikes.error) throw businessEventsLikes.error;
 
-      if (participantsError) throw participantsError;
+      // Récupérer les événements auxquels l'utilisateur participe depuis les deux tables
+      const [userEventsParticipants, businessEventsParticipants] = await Promise.all([
+        supabase
+          .from('event_participants')
+          .select(`
+            event_id,
+            events (*)
+          `)
+          .eq('user_id', user.id),
+        
+        supabase
+          .from('event_participants')
+          .select('event_id')
+          .eq('user_id', user.id)
+      ]);
 
-      const likedEvents = likedEventsData?.map(item => item.events).filter(Boolean) as Event[] || [];
-      const participatingEvents = participatingEventsData?.map(item => item.events).filter(Boolean) as Event[] || [];
+      if (userEventsParticipants.error) throw userEventsParticipants.error;
+      if (businessEventsParticipants.error) throw businessEventsParticipants.error;
+
+      // Extraire les événements utilisateur
+      const likedUserEvents = userEventsLikes.data?.map(item => item.events).filter(Boolean) as Event[] || [];
+      const participatingUserEvents = userEventsParticipants.data?.map(item => item.events).filter(Boolean) as Event[] || [];
+
+      console.log('📊 Événements likés trouvés:', likedUserEvents.length);
+      console.log('📊 Événements avec participation trouvés:', participatingUserEvents.length);
 
       setData({
-        likedEvents,
-        participatingEvents,
+        likedEvents: likedUserEvents,
+        participatingEvents: participatingUserEvents,
         loading: false
       });
     } catch (error) {
-      console.error('Error fetching user history:', error);
+      console.error('❌ Erreur lors de la récupération de l\'historique utilisateur:', error);
       toast({
         title: "Erreur",
         description: "Impossible de charger votre historique",
@@ -74,6 +98,8 @@ export const useUserHistory = () => {
     if (!user) return;
 
     try {
+      console.log('🗑️ Suppression du like pour l\'événement:', eventId);
+
       const { error } = await supabase
         .from('event_likes')
         .delete()
@@ -91,8 +117,10 @@ export const useUserHistory = () => {
         title: "Retiré des favoris",
         description: "L'événement a été retiré de vos favoris",
       });
+
+      console.log('✅ Like supprimé avec succès');
     } catch (error) {
-      console.error('Error removing liked event:', error);
+      console.error('❌ Erreur lors de la suppression du like:', error);
       toast({
         title: "Erreur",
         description: "Impossible de retirer l'événement des favoris",
@@ -105,6 +133,8 @@ export const useUserHistory = () => {
     if (!user) return;
 
     try {
+      console.log('🗑️ Suppression de la participation pour l\'événement:', eventId);
+
       const { error } = await supabase
         .from('event_participants')
         .delete()
@@ -122,8 +152,10 @@ export const useUserHistory = () => {
         title: "Participation annulée",
         description: "Votre participation a été annulée",
       });
+
+      console.log('✅ Participation supprimée avec succès');
     } catch (error) {
-      console.error('Error removing participation:', error);
+      console.error('❌ Erreur lors de la suppression de la participation:', error);
       toast({
         title: "Erreur",
         description: "Impossible d'annuler la participation",

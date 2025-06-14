@@ -32,16 +32,23 @@ export const incrementEventViews = async (eventId: string, source: 'user' | 'bus
 
 export const likeEventInDatabase = async (eventId: string, userId: string): Promise<boolean> => {
   try {
+    console.log('🔄 Tentative de like pour l\'événement:', eventId, 'par l\'utilisateur:', userId);
+
     // Check if already liked to prevent duplicates
-    const { data: existingLike } = await supabase
+    const { data: existingLike, error: checkError } = await supabase
       .from('event_likes')
       .select('id')
       .eq('event_id', eventId)
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('❌ Erreur lors de la vérification du like existant:', checkError);
+      throw checkError;
+    }
 
     if (existingLike) {
-      console.log('Event already liked by user');
+      console.log('⚠️ Événement déjà liké par cet utilisateur');
       return false;
     }
 
@@ -50,7 +57,12 @@ export const likeEventInDatabase = async (eventId: string, userId: string): Prom
       .from('event_likes')
       .insert({ event_id: eventId, user_id: userId });
 
-    if (likeError) throw likeError;
+    if (likeError) {
+      console.error('❌ Erreur lors de l\'insertion du like:', likeError);
+      throw likeError;
+    }
+
+    console.log('✅ Like ajouté avec succès');
 
     // Use RPC functions to update counters
     const { error: eventsRpcError } = await supabase
@@ -65,12 +77,13 @@ export const likeEventInDatabase = async (eventId: string, userId: string): Prom
         table_name: 'business_events' 
       });
 
-    if (eventsRpcError) console.warn('Error updating events likes:', eventsRpcError);
-    if (businessEventsRpcError) console.warn('Error updating business_events likes:', businessEventsRpcError);
+    if (eventsRpcError) console.warn('⚠️ Erreur lors de la mise à jour du compteur events:', eventsRpcError);
+    if (businessEventsRpcError) console.warn('⚠️ Erreur lors de la mise à jour du compteur business_events:', businessEventsRpcError);
 
+    console.log('✅ Compteurs mis à jour');
     return true;
   } catch (error) {
-    console.error('Error liking event:', error);
+    console.error('❌ Erreur générale lors du like:', error);
     return false;
   }
 };
@@ -81,16 +94,23 @@ export const participateInEventDatabase = async (
   status: 'going' | 'interested' = 'going'
 ): Promise<boolean> => {
   try {
+    console.log('🔄 Tentative de participation pour l\'événement:', eventId, 'par l\'utilisateur:', userId, 'statut:', status);
+
     // Check if already participating to prevent duplicates
-    const { data: existingParticipation } = await supabase
+    const { data: existingParticipation, error: checkError } = await supabase
       .from('event_participants')
       .select('id')
       .eq('event_id', eventId)
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('❌ Erreur lors de la vérification de la participation existante:', checkError);
+      throw checkError;
+    }
 
     if (existingParticipation) {
-      console.log('User already participating in event');
+      console.log('⚠️ L\'utilisateur participe déjà à cet événement');
       return false;
     }
 
@@ -99,7 +119,12 @@ export const participateInEventDatabase = async (
       .from('event_participants')
       .insert({ event_id: eventId, user_id: userId, status });
 
-    if (participationError) throw participationError;
+    if (participationError) {
+      console.error('❌ Erreur lors de l\'insertion de la participation:', participationError);
+      throw participationError;
+    }
+
+    console.log('✅ Participation ajoutée avec succès');
 
     // Use RPC functions to update counters
     const { error: eventsRpcError } = await supabase
@@ -114,18 +139,21 @@ export const participateInEventDatabase = async (
         table_name: 'business_events' 
       });
 
-    if (eventsRpcError) console.warn('Error updating events participants:', eventsRpcError);
-    if (businessEventsRpcError) console.warn('Error updating business_events participants:', businessEventsRpcError);
+    if (eventsRpcError) console.warn('⚠️ Erreur lors de la mise à jour du compteur de participants events:', eventsRpcError);
+    if (businessEventsRpcError) console.warn('⚠️ Erreur lors de la mise à jour du compteur de participants business_events:', businessEventsRpcError);
 
+    console.log('✅ Compteurs de participants mis à jour');
     return true;
   } catch (error) {
-    console.error('Error participating in event:', error);
+    console.error('❌ Erreur générale lors de la participation:', error);
     return false;
   }
 };
 
 export const getEventInteractionStatus = async (eventId: string, userId: string) => {
   try {
+    console.log('🔍 Vérification du statut d\'interaction pour l\'événement:', eventId, 'utilisateur:', userId);
+
     const [likesResult, participantsResult] = await Promise.all([
       supabase
         .from('event_likes')
@@ -141,12 +169,15 @@ export const getEventInteractionStatus = async (eventId: string, userId: string)
         .maybeSingle()
     ]);
 
-    return {
+    const status = {
       hasLiked: !!likesResult.data,
       hasParticipated: !!participantsResult.data
     };
+
+    console.log('📊 Statut d\'interaction:', status);
+    return status;
   } catch (error) {
-    console.error('Error getting interaction status:', error);
+    console.error('❌ Erreur lors de la récupération du statut d\'interaction:', error);
     return {
       hasLiked: false,
       hasParticipated: false

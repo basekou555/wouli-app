@@ -5,7 +5,7 @@ import { UnifiedEvent } from '@/types/unified';
 
 export const useEventActions = (
   events: UnifiedEvent[],
-  setEvents: React.Dispatch<React.SetStateAction<UnifiedEvent[]>>
+  refetch: () => Promise<void>
 ) => {
   const { toast } = useToast();
 
@@ -13,29 +13,33 @@ export const useEventActions = (
     const newViews = await incrementEventViews(eventId, source);
     
     if (newViews !== null) {
-      setEvents(prev => prev.map(event => 
-        event.id === eventId 
-          ? { ...event, views: newViews }
-          : event
-      ));
+      // Trigger a refetch to get updated data
+      await refetch();
     }
   };
 
   const likeEvent = async (eventId: string, userId: string): Promise<boolean> => {
+    console.log('🔄 Hook: Tentative de like pour l\'événement:', eventId);
+    
+    if (!userId) {
+      toast({
+        title: "Erreur d'authentification",
+        description: "Vous devez être connecté pour aimer un événement",
+        variant: "destructive"
+      });
+      return false;
+    }
+
     const success = await likeEventInDatabase(eventId, userId);
     
     if (success) {
-      // Update local state optimistically
-      setEvents(prev => prev.map(event => 
-        event.id === eventId 
-          ? { ...event, likes: (event.likes || 0) + 1 }
-          : event
-      ));
-      
       toast({
         title: "❤️ Événement aimé !",
         description: "L'événement a été ajouté à tes favoris"
       });
+      
+      // Trigger a refetch to get updated data
+      await refetch();
       return true;
     } else {
       toast({
@@ -48,20 +52,27 @@ export const useEventActions = (
   };
 
   const participateEvent = async (eventId: string, userId: string, status: 'going' | 'interested' = 'going'): Promise<boolean> => {
+    console.log('🔄 Hook: Tentative de participation pour l\'événement:', eventId);
+    
+    if (!userId) {
+      toast({
+        title: "Erreur d'authentification",
+        description: "Vous devez être connecté pour participer à un événement",
+        variant: "destructive"
+      });
+      return false;
+    }
+
     const success = await participateInEventDatabase(eventId, userId, status);
     
     if (success) {
-      // Update local state optimistically
-      setEvents(prev => prev.map(event => 
-        event.id === eventId 
-          ? { ...event, participants: (event.participants || 0) + 1 }
-          : event
-      ));
-      
       toast({
         title: "🎉 Participation confirmée !",
         description: status === 'going' ? "Tu participes à cet événement" : "Tu es intéressé par cet événement"
       });
+      
+      // Trigger a refetch to get updated data
+      await refetch();
       return true;
     } else {
       toast({
