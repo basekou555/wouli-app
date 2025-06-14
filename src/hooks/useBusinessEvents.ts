@@ -64,7 +64,7 @@ export const useBusinessEvents = () => {
       }
 
       const { data, error } = await supabase
-        .from('business_events')
+        .from('business_events' as any)
         .select('*')
         .eq('user_id', user.id)
         .order('date', { ascending: true });
@@ -104,7 +104,7 @@ export const useBusinessEvents = () => {
       }
 
       const { data, error } = await supabase
-        .from('business_events')
+        .from('business_events' as any)
         .insert({
           user_id: user.id,
           ...eventData,
@@ -146,7 +146,7 @@ export const useBusinessEvents = () => {
       }
 
       const { error } = await supabase
-        .from('business_events')
+        .from('business_events' as any)
         .delete()
         .eq('id', eventId);
 
