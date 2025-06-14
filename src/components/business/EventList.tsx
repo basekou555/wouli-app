@@ -2,50 +2,49 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, MapPin, Eye, Heart, ExternalLink, Trash2 } from 'lucide-react';
+import { Calendar, MapPin, Eye, Heart, ExternalLink, Trash2, Tag, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useToast } from "@/components/ui/use-toast";
 
-interface DemoConfig {
-  clientName: string;
-  clientType: string;
+interface BusinessEvent {
+  id?: string;
+  title: string;
+  description?: string;
+  date: string;
+  time: string;
+  venue: string;
+  category: string;
+  event_type: string;
+  price?: string;
+  image_url?: string;
+  views: number;
+  likes: number;
+  participants: number;
+}
+
+interface BusinessConfig {
+  client_name: string;
+  client_type: string;
   location: string;
-  brandColor: string;
-  sampleEvents: number;
+  brand_color: string;
   features: string[];
 }
 
-interface BusinessEvent {
-  id: number;
-  title: string;
-  date: string;
-  time: string;
-  participants: number;
-  venue: string;
-  description?: string;
-  category: string;
-  price?: string;
-  views: number;
-  likes: number;
-  imageUrl?: string;
-}
-
 interface EventListProps {
-  config: DemoConfig;
+  config: BusinessConfig;
   events: BusinessEvent[];
-  onDeleteEvent: (id: number) => void;
+  onDeleteEvent: (id: string) => void;
 }
 
 const EventList = ({ config, events, onDeleteEvent }: EventListProps) => {
   const navigate = useNavigate();
-  const { toast } = useToast();
 
-  const handleDeleteEvent = (id: number) => {
+  const handleDeleteEvent = (id: string) => {
     onDeleteEvent(id);
-    toast({
-      title: "🗑️ Événement supprimé",
-      description: "L'événement a été retiré de votre liste",
-    });
+  };
+
+  const handleViewDetails = (event: BusinessEvent) => {
+    // Navigate to event details with event data
+    navigate(`/business/event/${event.id}`, { state: { event } });
   };
 
   return (
@@ -61,70 +60,82 @@ const EventList = ({ config, events, onDeleteEvent }: EventListProps) => {
             </p>
           ) : (
             events.map((event) => (
-              <div key={event.id} className="border rounded-lg p-4 bg-white shadow-sm">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    {event.imageUrl && (
+              <Card key={event.id} className="border border-gray-200 hover:shadow-md transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex gap-4">
+                    {event.image_url && (
                       <img 
-                        src={event.imageUrl} 
+                        src={event.image_url} 
                         alt={event.title}
-                        className="w-full h-32 object-cover rounded-lg mb-3"
+                        className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
                       />
                     )}
-                    <h3 className="font-semibold text-lg">{event.title}</h3>
-                    <div className="mt-2 space-y-1 text-sm text-gray-600">
-                      <div className="flex items-center">
-                        <Calendar className="h-4 w-4 mr-2" />
-                        {new Date(event.date).toLocaleDateString('fr-FR')} à {event.time}
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-semibold text-lg truncate">{event.title}</h3>
+                        <div className="flex gap-1 ml-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewDetails(event)}
+                            className="text-blue-600 hover:bg-blue-50"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteEvent(event.id!)}
+                            className="text-red-500 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center">
-                        <MapPin className="h-4 w-4 mr-2" />
-                        {event.venue}
+                      
+                      <div className="space-y-1 text-sm text-gray-600">
+                        <div className="flex items-center">
+                          <Calendar className="h-4 w-4 mr-2" />
+                          {new Date(event.date).toLocaleDateString('fr-FR')}
+                          <Clock className="h-4 w-4 mr-1 ml-3" />
+                          {event.time}
+                        </div>
+                        <div className="flex items-center">
+                          <MapPin className="h-4 w-4 mr-2" />
+                          {event.venue}
+                        </div>
+                        <div className="flex items-center">
+                          <Tag className="h-4 w-4 mr-2" />
+                          {event.event_type}
+                        </div>
+                        {event.price && (
+                          <p className="text-sm font-medium text-green-600">{event.price}</p>
+                        )}
                       </div>
+                      
                       {config.features.includes('stats') && (
-                        <div className="grid grid-cols-3 gap-2 mt-2">
+                        <div className="flex gap-4 mt-3">
                           <div className="flex items-center">
                             <Eye className="h-4 w-4 mr-1 text-blue-500" />
-                            <span className="font-medium">{event.views}</span>
+                            <span className="font-medium text-sm">{event.views}</span>
                           </div>
                           <div className="flex items-center">
                             <Heart className="h-4 w-4 mr-1 text-red-500" />
-                            <span className="font-medium">{event.likes}</span>
+                            <span className="font-medium text-sm">{event.likes}</span>
                           </div>
                           {config.features.includes('redirections') && (
                             <div className="flex items-center">
                               <ExternalLink className="h-4 w-4 mr-1 text-green-500" />
-                              <span className="font-medium">{Math.floor(event.views * 0.15)}</span>
+                              <span className="font-medium text-sm">{Math.floor(event.views * 0.15)}</span>
                             </div>
                           )}
                         </div>
                       )}
-                      {event.price && (
-                        <p className="text-sm font-medium text-green-600">{event.price}</p>
-                      )}
                     </div>
                   </div>
-                  <div className="flex flex-col space-y-1 ml-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/business/event/${event.id}`)}
-                      className="text-blue-600 hover:bg-blue-50"
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      Détails
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteEvent(event.id)}
-                      className="text-red-500 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             ))
           )}
         </div>

@@ -3,32 +3,32 @@ import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, Eye, Heart, ExternalLink } from 'lucide-react';
 
-interface DemoConfig {
-  clientName: string;
-  clientType: string;
+interface BusinessEvent {
+  id?: string;
+  title: string;
+  description?: string;
+  date: string;
+  time: string;
+  venue: string;
+  category: string;
+  event_type: string;
+  price?: string;
+  image_url?: string;
+  views: number;
+  likes: number;
+  participants: number;
+}
+
+interface BusinessConfig {
+  client_name: string;
+  client_type: string;
   location: string;
-  brandColor: string;
-  sampleEvents: number;
+  brand_color: string;
   features: string[];
 }
 
-interface BusinessEvent {
-  id: number;
-  title: string;
-  date: string;
-  time: string;
-  participants: number;
-  venue: string;
-  description?: string;
-  category: string;
-  price?: string;
-  views: number;
-  likes: number;
-  imageUrl?: string;
-}
-
 interface StatisticsCardsProps {
-  config: DemoConfig;
+  config: BusinessConfig;
   events: BusinessEvent[];
 }
 
@@ -50,7 +50,7 @@ const StatisticsCards = ({ config, events }: StatisticsCardsProps) => {
               <p className="text-sm text-gray-600">Événements</p>
               <p className="text-2xl font-bold">{events.length}</p>
             </div>
-            <Calendar className="h-8 w-8" style={{ color: config.brandColor }} />
+            <Calendar className="h-8 w-8" style={{ color: config.brand_color }} />
           </div>
         </CardContent>
       </Card>

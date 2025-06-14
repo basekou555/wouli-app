@@ -1,91 +1,78 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle } from 'lucide-react';
-import { useToast } from "@/components/ui/use-toast";
 import ImageUpload from '@/components/ImageUpload';
 
-interface DemoConfig {
-  clientName: string;
-  clientType: string;
+interface BusinessEvent {
+  title: string;
+  description?: string;
+  date: string;
+  time: string;
+  venue: string;
+  category: string;
+  event_type: string;
+  price?: string;
+  image_url?: string;
+}
+
+interface BusinessConfig {
+  client_name: string;
+  client_type: string;
   location: string;
-  brandColor: string;
-  sampleEvents: number;
+  brand_color: string;
   features: string[];
 }
 
-interface BusinessEvent {
-  id: number;
-  title: string;
-  date: string;
-  time: string;
-  participants: number;
-  venue: string;
-  description?: string;
-  category: string;
-  price?: string;
-  views: number;
-  likes: number;
-  imageUrl?: string;
+interface EventCreationFormProps {
+  config: BusinessConfig;
+  onEventCreate: (event: BusinessEvent) => void;
 }
 
-interface EventCreationFormProps {
-  config: DemoConfig;
-  onEventCreate: (event: Omit<BusinessEvent, 'id' | 'participants' | 'views' | 'likes'>) => void;
-}
+const EVENT_TYPES = [
+  'À boire',
+  'À manger',
+  'Soirées',
+  'Activités'
+];
 
 const EventCreationForm = ({ config, onEventCreate }: EventCreationFormProps) => {
-  const { toast } = useToast();
-  
   const [newEvent, setNewEvent] = useState({
     title: '',
     date: '',
     time: '',
-    venue: config.clientName,
+    venue: config.client_name,
     description: '',
     category: 'bar',
+    event_type: 'Soirées',
     price: '',
-    imageUrl: ''
+    image_url: ''
   });
-
-  // Mettre à jour le venue quand le nom du client change
-  useEffect(() => {
-    setNewEvent(prev => ({ ...prev, venue: config.clientName }));
-  }, [config.clientName]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEvent.title || !newEvent.date || !newEvent.time) {
-      toast({
-        title: "Erreur",
-        description: "Veuillez remplir tous les champs obligatoires",
-        variant: "destructive"
-      });
       return;
     }
 
     onEventCreate({
       ...newEvent,
-      venue: config.clientName
+      venue: config.client_name
     });
 
     setNewEvent({ 
       title: '', 
       date: '', 
       time: '', 
-      venue: config.clientName, 
+      venue: config.client_name, 
       description: '', 
       category: 'bar', 
+      event_type: 'Soirées',
       price: '', 
-      imageUrl: '' 
-    });
-    
-    toast({
-      title: "✅ Événement créé !",
-      description: `"${newEvent.title}" a été publié avec succès`,
+      image_url: '' 
     });
   };
 
@@ -97,7 +84,7 @@ const EventCreationForm = ({ config, onEventCreate }: EventCreationFormProps) =>
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center">
-          <PlusCircle className="h-5 w-5 mr-2" style={{ color: config.brandColor }} />
+          <PlusCircle className="h-5 w-5 mr-2" style={{ color: config.brand_color }} />
           Créer un événement
         </CardTitle>
       </CardHeader>
@@ -108,8 +95,8 @@ const EventCreationForm = ({ config, onEventCreate }: EventCreationFormProps) =>
               Image de l'événement
             </label>
             <ImageUpload
-              onImageSelect={(imageUrl) => setNewEvent({ ...newEvent, imageUrl })}
-              currentImage={newEvent.imageUrl}
+              onImageSelect={(imageUrl) => setNewEvent({ ...newEvent, image_url: imageUrl })}
+              currentImage={newEvent.image_url}
             />
           </div>
 
@@ -121,6 +108,7 @@ const EventCreationForm = ({ config, onEventCreate }: EventCreationFormProps) =>
               value={newEvent.title}
               onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
               placeholder="Ex: Soirée Jazz, Happy Hour..."
+              required
             />
           </div>
 
@@ -133,6 +121,7 @@ const EventCreationForm = ({ config, onEventCreate }: EventCreationFormProps) =>
                 type="date"
                 value={newEvent.date}
                 onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
+                required
               />
             </div>
             <div>
@@ -143,8 +132,26 @@ const EventCreationForm = ({ config, onEventCreate }: EventCreationFormProps) =>
                 type="time"
                 value={newEvent.time}
                 onChange={(e) => setNewEvent({ ...newEvent, time: e.target.value })}
+                required
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Type d'événement
+            </label>
+            <select
+              value={newEvent.event_type}
+              onChange={(e) => setNewEvent({ ...newEvent, event_type: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {EVENT_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
@@ -173,7 +180,7 @@ const EventCreationForm = ({ config, onEventCreate }: EventCreationFormProps) =>
           <Button 
             type="submit" 
             className="w-full"
-            style={{ backgroundColor: config.brandColor }}
+            style={{ backgroundColor: config.brand_color }}
           >
             Créer l'événement
           </Button>

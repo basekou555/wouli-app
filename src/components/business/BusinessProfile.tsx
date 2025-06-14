@@ -1,20 +1,19 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Edit3, Eye, MapPin, Star, Building } from 'lucide-react';
+import { Edit3, MapPin, Star, Building } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-interface DemoConfig {
-  clientName: string;
-  clientType: string;
+interface BusinessConfig {
+  client_name: string;
+  client_type: string;
   location: string;
-  brandColor: string;
-  sampleEvents: number;
+  brand_color: string;
   features: string[];
 }
 
 interface BusinessProfileProps {
-  config: DemoConfig;
+  config: BusinessConfig;
   eventsCount: number;
 }
 
@@ -29,13 +28,13 @@ const BusinessProfile = ({ config, eventsCount }: BusinessProfileProps) => {
           <div className="flex items-start gap-6">
             <div 
               className="w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl shadow-lg"
-              style={{ backgroundColor: config.brandColor }}
+              style={{ backgroundColor: config.brand_color }}
             >
               <Building className="h-10 w-10" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">{config.clientName}</h1>
-              <p className="text-lg text-gray-600 mt-1">{config.clientType}</p>
+              <h1 className="text-3xl font-bold text-gray-900">{config.client_name}</h1>
+              <p className="text-lg text-gray-600 mt-1">{config.client_type}</p>
               <div className="flex items-center mt-2 text-gray-500">
                 <MapPin className="h-4 w-4 mr-1" />
                 <span>{config.location}, France</span>
@@ -52,18 +51,11 @@ const BusinessProfile = ({ config, eventsCount }: BusinessProfileProps) => {
           <div className="flex flex-col sm:flex-row gap-3">
             <Button 
               variant="outline" 
-              onClick={() => navigate('/admin')}
+              onClick={() => navigate('/profile-settings')}
               className="flex items-center"
             >
               <Edit3 className="h-4 w-4 mr-2" />
-              Configuration
-            </Button>
-            <Button 
-              style={{ backgroundColor: config.brandColor }}
-              className="text-white"
-            >
-              <Eye className="h-4 w-4 mr-2" />
-              Voir profil public
+              Modifier le profil
             </Button>
           </div>
         </div>
@@ -72,7 +64,7 @@ const BusinessProfile = ({ config, eventsCount }: BusinessProfileProps) => {
         <div className="flex flex-wrap gap-2 mt-6">
           <span 
             className="px-3 py-1 rounded-full text-sm font-medium text-white"
-            style={{ backgroundColor: config.brandColor }}
+            style={{ backgroundColor: config.brand_color }}
           >
             Partenaire Wouli
           </span>
