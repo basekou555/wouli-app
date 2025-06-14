@@ -74,7 +74,14 @@ export const useBusinessEvents = () => {
         .order('date', { ascending: true });
 
       if (error) throw error;
-      setEvents(data || []);
+      
+      // Map Supabase data to BusinessEvent type
+      const mappedEvents: BusinessEvent[] = (data || []).map(event => ({
+        ...event,
+        location: event.venue // Map venue to location for consistency
+      }));
+      
+      setEvents(mappedEvents);
     } catch (error) {
       handleError(error, 'fetchEvents');
       // Fallback to empty array instead of showing error immediately
@@ -111,6 +118,7 @@ export const useBusinessEvents = () => {
         .insert({
           user_id: user.id,
           ...eventData,
+          venue: eventData.venue, // Use venue field for Supabase
           views: 0,
           likes: 0,
           participants: 0
@@ -120,13 +128,19 @@ export const useBusinessEvents = () => {
 
       if (error) throw error;
 
-      setEvents([...events, data]);
+      // Map the returned data to BusinessEvent type
+      const mappedEvent: BusinessEvent = {
+        ...data,
+        location: data.venue
+      };
+
+      setEvents([...events, mappedEvent]);
       toast({
         title: "✅ Événement créé !",
         description: `"${eventData.title}" a été publié avec succès`,
       });
       
-      return { data, error: null };
+      return { data: mappedEvent, error: null };
     } catch (error) {
       const apiError = handleError(error, 'createEvent');
       toast({

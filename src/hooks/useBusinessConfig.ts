@@ -2,23 +2,31 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
-interface BusinessConfig {
-  id?: string;
-  client_name: string;
-  client_type: string;
-  location: string;
-  brand_color: string;
-  features: string[];
-}
+import { BusinessConfig } from '@/types/business';
+import { ApiError } from '@/types/api';
 
 export const useBusinessConfig = () => {
   const [config, setConfig] = useState<BusinessConfig | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<ApiError | null>(null);
   const { toast } = useToast();
+
+  const handleError = (error: any, context: string) => {
+    console.error(`Error in ${context}:`, error);
+    const apiError: ApiError = {
+      message: error.message || 'Une erreur inattendue s\'est produite',
+      code: error.code,
+      details: error
+    };
+    setError(apiError);
+    return apiError;
+  };
 
   const fetchConfig = async () => {
     try {
+      setLoading(true);
+      setError(null);
+      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         // Use default config if not authenticated
@@ -40,7 +48,6 @@ export const useBusinessConfig = () => {
         .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching config:', error);
         throw error;
       }
 
@@ -51,7 +58,10 @@ export const useBusinessConfig = () => {
           client_type: data.client_type,
           location: data.location,
           brand_color: data.brand_color,
-          features: data.features
+          features: data.features,
+          user_id: data.user_id,
+          created_at: data.created_at,
+          updated_at: data.updated_at
         });
       } else {
         // Create default config for new user
@@ -73,17 +83,19 @@ export const useBusinessConfig = () => {
           .single();
 
         if (insertError) {
-          console.error('Error creating config:', insertError);
           throw insertError;
         }
         
         setConfig({
           id: newConfig.id,
-          ...defaultConfig
+          ...defaultConfig,
+          user_id: newConfig.user_id,
+          created_at: newConfig.created_at,
+          updated_at: newConfig.updated_at
         });
       }
     } catch (error) {
-      console.error('Error fetching config:', error);
+      handleError(error, 'fetchConfig');
       // Fallback to default config
       setConfig({
         client_name: 'Blue Note Bar',
@@ -99,6 +111,8 @@ export const useBusinessConfig = () => {
 
   const updateConfig = async (newConfig: BusinessConfig) => {
     try {
+      setError(null);
+      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast({
@@ -130,7 +144,7 @@ export const useBusinessConfig = () => {
         description: "Votre profil a été mis à jour avec succès",
       });
     } catch (error) {
-      console.error('Error updating config:', error);
+      handleError(error, 'updateConfig');
       toast({
         title: "Erreur",
         description: "Impossible de sauvegarder la configuration",
@@ -146,7 +160,9 @@ export const useBusinessConfig = () => {
   return {
     config,
     loading,
+    error,
     updateConfig,
-    refetch: fetchConfig
+    refetch: fetchConfig,
+    clearError: () => setError(null)
   };
 };
