@@ -52,11 +52,19 @@ export const likeEventInDatabase = async (eventId: string, userId: string): Prom
 
     if (likeError) throw likeError;
 
-    // Update the likes counter in both events and business_events tables
-    await Promise.all([
-      supabase.rpc('increment_event_likes_counter', { event_id: eventId, table_name: 'events' }),
-      supabase.rpc('increment_event_likes_counter', { event_id: eventId, table_name: 'business_events' })
-    ]);
+    // Update the likes counter in both events and business_events tables using direct SQL
+    const { error: eventsError } = await supabase
+      .from('events')
+      .update({ likes: supabase.sql`likes + 1` })
+      .eq('id', eventId);
+
+    const { error: businessEventsError } = await supabase
+      .from('business_events')
+      .update({ likes: supabase.sql`likes + 1` })
+      .eq('id', eventId);
+
+    if (eventsError) console.warn('Error updating events likes:', eventsError);
+    if (businessEventsError) console.warn('Error updating business_events likes:', businessEventsError);
 
     return true;
   } catch (error) {
@@ -91,11 +99,19 @@ export const participateInEventDatabase = async (
 
     if (participationError) throw participationError;
 
-    // Update the participants counter in both events and business_events tables
-    await Promise.all([
-      supabase.rpc('increment_event_participants_counter', { event_id: eventId, table_name: 'events' }),
-      supabase.rpc('increment_event_participants_counter', { event_id: eventId, table_name: 'business_events' })
-    ]);
+    // Update the participants counter in both events and business_events tables using direct SQL
+    const { error: eventsError } = await supabase
+      .from('events')
+      .update({ participants: supabase.sql`participants + 1` })
+      .eq('id', eventId);
+
+    const { error: businessEventsError } = await supabase
+      .from('business_events')
+      .update({ participants: supabase.sql`participants + 1` })
+      .eq('id', eventId);
+
+    if (eventsError) console.warn('Error updating events participants:', eventsError);
+    if (businessEventsError) console.warn('Error updating business_events participants:', businessEventsError);
 
     return true;
   } catch (error) {
@@ -112,13 +128,13 @@ export const getEventInteractionStatus = async (eventId: string, userId: string)
         .select('id')
         .eq('event_id', eventId)
         .eq('user_id', userId)
-        .single(),
+        .maybeSingle(),
       supabase
         .from('event_participants')
         .select('id')
         .eq('event_id', eventId)
         .eq('user_id', userId)
-        .single()
+        .maybeSingle()
     ]);
 
     return {

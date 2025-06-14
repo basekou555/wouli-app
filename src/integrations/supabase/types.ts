@@ -344,6 +344,14 @@ export type Database = {
           events_created: number
         }[]
       }
+      increment_event_likes_counter: {
+        Args: { event_id: string; table_name: string }
+        Returns: undefined
+      }
+      increment_event_participants_counter: {
+        Args: { event_id: string; table_name: string }
+        Returns: undefined
+      }
       increment_event_views: {
         Args: { event_id: number }
         Returns: undefined

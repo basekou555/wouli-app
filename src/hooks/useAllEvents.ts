@@ -4,6 +4,7 @@ import { EventSource, UnifiedEvent } from '@/types/unified';
 import { ApiError } from '@/types/api';
 import { fetchUserEvents, fetchBusinessEvents } from '@/services/eventService';
 import { useEventActions } from '@/hooks/useEventActions';
+import { useRealTimeEvents } from '@/hooks/useRealTimeEvents';
 
 export const useAllEvents = (source: EventSource = 'all') => {
   const [events, setEvents] = useState<UnifiedEvent[]>([]);
@@ -11,6 +12,9 @@ export const useAllEvents = (source: EventSource = 'all') => {
   const [error, setError] = useState<ApiError | null>(null);
 
   const { incrementViews, likeEvent, participateEvent } = useEventActions(events, setEvents);
+  
+  // Enable real-time updates
+  useRealTimeEvents(events, setEvents);
 
   const handleError = (error: any, context: string) => {
     console.error(`Error in ${context}:`, error);
