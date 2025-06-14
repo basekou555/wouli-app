@@ -68,17 +68,31 @@ export const useAllEvents = (source: EventSource = 'all') => {
 
       // Fetch business events if needed
       if (source === 'all' || source === 'business') {
+        // First get business events
         const { data: businessEvents, error: businessError } = await supabase
           .from('business_events')
-          .select(`
-            *,
-            business_configs!inner(client_name)
-          `)
+          .select('*')
           .order('date', { ascending: true });
 
         if (businessError) {
           console.warn('Error fetching business events:', businessError);
         } else if (businessEvents) {
+          // Then get business configs for organizer names
+          const userIds = [...new Set(businessEvents.map(event => event.user_id))];
+          const { data: businessConfigs, error: configError } = await supabase
+            .from('business_configs')
+            .select('user_id, client_name')
+            .in('user_id', userIds);
+
+          if (configError) {
+            console.warn('Error fetching business configs:', configError);
+          }
+
+          // Create a map for quick lookup
+          const configMap = new Map(
+            businessConfigs?.map(config => [config.user_id, config.client_name]) || []
+          );
+
           const mappedBusinessEvents: UnifiedEvent[] = businessEvents.map(event => ({
             id: event.id,
             title: event.title,
@@ -93,7 +107,7 @@ export const useAllEvents = (source: EventSource = 'all') => {
             created_at: event.created_at,
             updated_at: event.updated_at,
             source: 'business',
-            organizer: event.business_configs?.client_name || 'Établissement',
+            organizer: configMap.get(event.user_id) || 'Établissement',
             organizer_type: 'business',
             venue: event.venue,
             time: event.time,
