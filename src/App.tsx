@@ -19,6 +19,7 @@ import NotFound from "./pages/NotFound";
 import BusinessDashboard from "./pages/BusinessDashboard";
 import BusinessEventDetails from "./pages/BusinessEventDetails";
 import ProfileSettings from "./pages/ProfileSettings";
+import UserProfileSettings from "./pages/UserProfileSettings";
 import DemoSetup from "./pages/DemoSetup";
 
 const queryClient = new QueryClient({
@@ -54,6 +55,7 @@ function App() {
                 <Route path="/business" element={<BusinessDashboard />} />
                 <Route path="/business/event/:id" element={<BusinessEventDetails />} />
                 <Route path="/profile-settings" element={<ProfileSettings />} />
+                <Route path="/user-settings" element={<UserProfileSettings />} />
                 <Route path="/demo-setup" element={<DemoSetup />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
