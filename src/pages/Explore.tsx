@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import AppLayout from '../components/AppLayout';
 import SwipeCard from '../components/explore/SwipeCard';
 import ExploreHeader from '../components/explore/ExploreHeader';
@@ -15,7 +15,7 @@ import { getEventInteractionStatus } from '../services/eventInteractionService';
 const Explore = () => {
   const { user } = useAuth();
   const {
-    filteredEvents,
+    filteredEvents: allEvents,
     loading,
     error,
     currentIndex,
@@ -23,10 +23,6 @@ const Explore = () => {
     refetch
   } = useSwipeCards();
   
-  const { incrementViews, likeEvent, participateEvent } = useEventActions(filteredEvents, refetch);
-  const [likedEvents, setLikedEvents] = useState<string[]>([]);
-  const [participatingEvents, setParticipatingEvents] = useState<string[]>([]);
-
   const {
     selectedCategory,
     searchTerm,
@@ -36,6 +32,23 @@ const Explore = () => {
     toggleFilters,
     clearFilters
   } = useExploreFilters();
+
+  // Filter events based on search and category
+  const filteredEvents = useMemo(() => {
+    return allEvents.filter(event => {
+      const matchesSearch = !searchTerm || 
+        event.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        event.location.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesCategory = !selectedCategory || event.category === selectedCategory;
+      
+      return matchesSearch && matchesCategory;
+    });
+  }, [allEvents, searchTerm, selectedCategory]);
+
+  const { incrementViews, likeEvent, participateEvent } = useEventActions(filteredEvents, refetch);
+  const [likedEvents, setLikedEvents] = useState<string[]>([]);
+  const [participatingEvents, setParticipatingEvents] = useState<string[]>([]);
 
   // Set up real-time updates for event stats
   useRealTimeEvents(filteredEvents, refetch);

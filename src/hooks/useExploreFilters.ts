@@ -2,34 +2,36 @@
 import { useState, useMemo } from 'react';
 import { UnifiedEvent } from '@/types/unified';
 
-export const useExploreFilters = (allEvents: UnifiedEvent[]) => {
+export const useExploreFilters = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState('all'); // 'all', 'public', 'friends'
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
-  const filteredEvents = useMemo(() => {
-    return allEvents.filter(event => {
-      const matchesSearch = !searchTerm || 
-        event.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        event.location.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      // For demo purposes, treat business events as "public" and user events as "friends"
-      const matchesFilter = filter === 'all' || 
-        (filter === 'public' && event.source === 'business') ||
-        (filter === 'friends' && event.source === 'user');
-      
-      return matchesSearch && matchesFilter;
-    });
-  }, [allEvents, searchTerm, filter]);
+  const handleCategoryChange = (category: string | null) => {
+    setSelectedCategory(category);
+  };
 
-  const handleFilter = (filterType: string) => {
-    setFilter(filterType);
+  const handleSearchChange = (term: string) => {
+    setSearchTerm(term);
+  };
+
+  const toggleFilters = () => {
+    setShowFilters(prev => !prev);
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setSelectedCategory(null);
+    setShowFilters(false);
   };
 
   return {
+    selectedCategory,
     searchTerm,
-    setSearchTerm,
-    filter,
-    handleFilter,
-    filteredEvents
+    showFilters,
+    handleCategoryChange,
+    handleSearchChange,
+    toggleFilters,
+    clearFilters
   };
 };

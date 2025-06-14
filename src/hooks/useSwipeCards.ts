@@ -1,13 +1,20 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAnimation, PanInfo } from 'framer-motion';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { UnifiedEvent } from '@/types/unified';
+import { useAllEvents } from '@/hooks/useAllEvents';
 
-export const useSwipeCards = (filteredEvents: UnifiedEvent[]) => {
+export const useSwipeCards = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const controls = useAnimation();
   const { toast } = useToast();
+  const { events: allEvents, loading, error, refetch } = useAllEvents();
+  const [filteredEvents, setFilteredEvents] = useState<UnifiedEvent[]>([]);
+
+  useEffect(() => {
+    setFilteredEvents(allEvents);
+  }, [allEvents]);
 
   const handleSwipe = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const swipeThreshold = 100;
@@ -71,12 +78,16 @@ export const useSwipeCards = (filteredEvents: UnifiedEvent[]) => {
   };
 
   return {
+    filteredEvents,
+    loading,
+    error,
     currentIndex,
     setCurrentIndex,
     controls,
     handleSwipe,
     handleLike,
     handlePass,
-    handleSave
+    handleSave,
+    refetch
   };
 };
