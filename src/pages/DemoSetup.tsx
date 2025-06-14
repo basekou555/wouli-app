@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Play, Users, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import DemoDataLoader from '@/components/DemoDataLoader';
-import { useDemoData } from '@/hooks/useDemoData';
+import SupabaseDemoDataLoader from '@/components/SupabaseDemoDataLoader';
+import { useSupabaseDemoData } from '@/hooks/useSupabaseDemoData';
 
 const DemoSetup = () => {
-  const { demoEvents, demoConfigs } = useDemoData();
+  const { demoEvents, demoConfigs } = useSupabaseDemoData();
 
   const demoScenarios = [
     {
@@ -41,15 +41,15 @@ const DemoSetup = () => {
             </Button>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Configuration Démo</h1>
-              <p className="text-gray-600 mt-1">Préparez votre environnement de démonstration</p>
+              <p className="text-gray-600 mt-1">Données réelles depuis Supabase</p>
             </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto p-6 space-y-8">
-        {/* Chargement des données */}
-        <DemoDataLoader />
+        {/* Chargement des données depuis Supabase */}
+        <SupabaseDemoDataLoader />
 
         {/* Scénarios de démo */}
         <Card>
@@ -91,22 +91,22 @@ const DemoSetup = () => {
               <div className="flex items-start space-x-3">
                 <div className="w-6 h-6 rounded-full bg-blue-500 text-white text-sm flex items-center justify-center">1</div>
                 <div>
-                  <div className="font-medium">Chargez les données de démo</div>
-                  <div className="text-sm text-gray-600">Utilisez le bouton ci-dessus pour initialiser les événements</div>
+                  <div className="font-medium">Chargez les données depuis Supabase</div>
+                  <div className="text-sm text-gray-600">Utilisez le bouton pour récupérer les vraies données de la base</div>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
                 <div className="w-6 h-6 rounded-full bg-blue-500 text-white text-sm flex items-center justify-center">2</div>
                 <div>
                   <div className="font-medium">Testez le parcours utilisateur</div>
-                  <div className="text-sm text-gray-600">Naviguez dans l'app, swipez les événements, testez les filtres</div>
+                  <div className="text-sm text-gray-600">Naviguez dans l'app avec les vraies données Supabase</div>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
                 <div className="w-6 h-6 rounded-full bg-blue-500 text-white text-sm flex items-center justify-center">3</div>
                 <div>
                   <div className="font-medium">Explorez le dashboard business</div>
-                  <div className="text-sm text-gray-600">Créez des événements, consultez les stats, testez les fonctionnalités</div>
+                  <div className="text-sm text-gray-600">Créez des événements, consultez les stats réelles</div>
                 </div>
               </div>
             </div>
@@ -118,13 +118,13 @@ const DemoSetup = () => {
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-blue-600">{demoEvents.length}</div>
-              <div className="text-sm text-gray-600">Événements de démo</div>
+              <div className="text-sm text-gray-600">Événements Supabase</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-green-600">{demoConfigs.length}</div>
-              <div className="text-sm text-gray-600">Établissements simulés</div>
+              <div className="text-sm text-gray-600">Établissements réels</div>
             </CardContent>
           </Card>
           <Card>
