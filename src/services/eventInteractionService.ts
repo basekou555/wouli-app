@@ -32,11 +32,32 @@ export const incrementEventViews = async (eventId: string, source: 'user' | 'bus
 
 export const likeEventInDatabase = async (eventId: string, userId: string): Promise<boolean> => {
   try {
-    const { error } = await supabase
+    // Check if already liked to prevent duplicates
+    const { data: existingLike } = await supabase
+      .from('event_likes')
+      .select('id')
+      .eq('event_id', eventId)
+      .eq('user_id', userId)
+      .single();
+
+    if (existingLike) {
+      console.log('Event already liked by user');
+      return false;
+    }
+
+    // Add the like
+    const { error: likeError } = await supabase
       .from('event_likes')
       .insert({ event_id: eventId, user_id: userId });
 
-    if (error) throw error;
+    if (likeError) throw likeError;
+
+    // Update the likes counter in both events and business_events tables
+    await Promise.all([
+      supabase.rpc('increment_event_likes_counter', { event_id: eventId, table_name: 'events' }),
+      supabase.rpc('increment_event_likes_counter', { event_id: eventId, table_name: 'business_events' })
+    ]);
+
     return true;
   } catch (error) {
     console.error('Error liking event:', error);
@@ -50,14 +71,65 @@ export const participateInEventDatabase = async (
   status: 'going' | 'interested' = 'going'
 ): Promise<boolean> => {
   try {
-    const { error } = await supabase
+    // Check if already participating to prevent duplicates
+    const { data: existingParticipation } = await supabase
+      .from('event_participants')
+      .select('id')
+      .eq('event_id', eventId)
+      .eq('user_id', userId)
+      .single();
+
+    if (existingParticipation) {
+      console.log('User already participating in event');
+      return false;
+    }
+
+    // Add the participation
+    const { error: participationError } = await supabase
       .from('event_participants')
       .insert({ event_id: eventId, user_id: userId, status });
 
-    if (error) throw error;
+    if (participationError) throw participationError;
+
+    // Update the participants counter in both events and business_events tables
+    await Promise.all([
+      supabase.rpc('increment_event_participants_counter', { event_id: eventId, table_name: 'events' }),
+      supabase.rpc('increment_event_participants_counter', { event_id: eventId, table_name: 'business_events' })
+    ]);
+
     return true;
   } catch (error) {
     console.error('Error participating in event:', error);
     return false;
+  }
+};
+
+export const getEventInteractionStatus = async (eventId: string, userId: string) => {
+  try {
+    const [likesResult, participantsResult] = await Promise.all([
+      supabase
+        .from('event_likes')
+        .select('id')
+        .eq('event_id', eventId)
+        .eq('user_id', userId)
+        .single(),
+      supabase
+        .from('event_participants')
+        .select('id')
+        .eq('event_id', eventId)
+        .eq('user_id', userId)
+        .single()
+    ]);
+
+    return {
+      hasLiked: !!likesResult.data,
+      hasParticipated: !!participantsResult.data
+    };
+  } catch (error) {
+    console.error('Error getting interaction status:', error);
+    return {
+      hasLiked: false,
+      hasParticipated: false
+    };
   }
 };

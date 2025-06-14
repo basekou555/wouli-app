@@ -25,6 +25,7 @@ export const useEventActions = (
     const success = await likeEventInDatabase(eventId, userId);
     
     if (success) {
+      // Update local state optimistically
       setEvents(prev => prev.map(event => 
         event.id === eventId 
           ? { ...event, likes: (event.likes || 0) + 1 }
@@ -37,8 +38,8 @@ export const useEventActions = (
       });
     } else {
       toast({
-        title: "Erreur",
-        description: "Impossible d'aimer cet événement",
+        title: "Déjà aimé",
+        description: "Tu as déjà aimé cet événement",
         variant: "destructive"
       });
     }
@@ -48,6 +49,7 @@ export const useEventActions = (
     const success = await participateInEventDatabase(eventId, userId, status);
     
     if (success) {
+      // Update local state optimistically
       setEvents(prev => prev.map(event => 
         event.id === eventId 
           ? { ...event, participants: (event.participants || 0) + 1 }
@@ -60,8 +62,8 @@ export const useEventActions = (
       });
     } else {
       toast({
-        title: "Erreur",
-        description: "Impossible de participer à cet événement",
+        title: "Déjà inscrit",
+        description: "Tu participes déjà à cet événement",
         variant: "destructive"
       });
     }
