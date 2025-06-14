@@ -2,9 +2,9 @@
 import { supabase } from '@/integrations/supabase/client';
 import { UnifiedEvent } from '@/types/unified';
 
-// Valid categories based on Supabase enum
+// Valid categories based on the new Wouli categories
 const VALID_CATEGORIES = [
-  'bar', 'restaurant', 'club', 'concert', 'sport', 'culture', 'festival', 'autre'
+  'a-boire', 'a-manger', 'soirees', 'activites'
 ] as const;
 
 type ValidCategory = typeof VALID_CATEGORIES[number];
@@ -71,7 +71,7 @@ export const searchEvents = async (
           description: event.description,
           date: event.date,
           location: event.location,
-          category: event.category,
+          category: event.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
           image_url: event.image_url,
           views: event.views || 0,
           likes: event.likes || 0,
@@ -127,7 +127,7 @@ export const searchEvents = async (
           description: event.description,
           date: `${event.date}T${event.time}`,
           location: event.venue,
-          category: event.category,
+          category: event.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
           image_url: event.image_url,
           views: event.views || 0,
           likes: event.likes || 0,
@@ -139,7 +139,7 @@ export const searchEvents = async (
           organizer_type: 'business',
           venue: event.venue,
           time: event.time,
-          event_type: event.event_type,
+          event_type: event.event_type as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
           price_text: event.price
         }));
         allEvents.push(...mappedBusinessEvents);

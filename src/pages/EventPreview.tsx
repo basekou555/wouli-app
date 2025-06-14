@@ -55,7 +55,7 @@ const EventPreview = () => {
             description: businessEvent.description,
             date: `${businessEvent.date}T${businessEvent.time}`,
             location: businessEvent.venue,
-            category: businessEvent.category,
+            category: businessEvent.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
             image_url: businessEvent.image_url,
             views: businessEvent.views || 0,
             likes: businessEvent.likes || 0,
@@ -67,7 +67,7 @@ const EventPreview = () => {
             organizer_type: 'business',
             venue: businessEvent.venue,
             time: businessEvent.time,
-            event_type: businessEvent.event_type,
+            event_type: businessEvent.event_type as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
             price_text: businessEvent.price
           };
           
@@ -89,7 +89,7 @@ const EventPreview = () => {
             description: userEvent.description,
             date: userEvent.date,
             location: userEvent.location,
-            category: userEvent.category,
+            category: userEvent.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
             image_url: userEvent.image_url,
             views: userEvent.views || 0,
             likes: userEvent.likes || 0,
