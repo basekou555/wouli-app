@@ -15,7 +15,7 @@ import { getEventInteractionStatus } from '../services/eventInteractionService';
 const Explore = () => {
   const { user } = useAuth();
   const {
-    filteredEvents: allEvents,
+    allEvents,
     loading,
     error,
     currentIndex,
@@ -104,7 +104,7 @@ const Explore = () => {
   const currentEvent = filteredEvents[currentIndex];
 
   if (loading) return <AppLayout><div className="p-8 text-center">Chargement...</div></AppLayout>;
-  if (error) return <AppLayout><div className="p-8 text-center text-red-500">{error}</div></AppLayout>;
+  if (error) return <AppLayout><div className="p-8 text-center text-red-500">{error.message}</div></AppLayout>;
 
   return (
     <AppLayout>
