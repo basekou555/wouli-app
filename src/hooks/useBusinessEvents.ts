@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { BusinessEvent } from '@/types/events';
 import { ApiError } from '@/types/api';
+import { createApiError } from './utils/errorHandling';
 import { fetchBusinessEvents, createBusinessEvent, deleteBusinessEvent } from '@/services/businessEventsService';
 import { UseBusinessEventsReturn, CreateEventData } from './types/businessEvents';
 import { useBusinessEventActions } from './business/useBusinessEventActions';
