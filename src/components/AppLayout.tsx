@@ -1,6 +1,6 @@
 
 import React from 'react';
-import AppNavbar from './AppNavbar';
+import BottomNavigation from './BottomNavigation';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -8,15 +8,16 @@ interface AppLayoutProps {
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <AppNavbar />
-      
-      {/* Content area with improved spacing for profile and social content */}
-      <main className="flex-1 md:ml-64 pt-16 pb-20 md:py-6 px-4 md:px-8">
-        <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen bg-gray-50">
+      {/* Content area with proper centering */}
+      <main className="pb-20 pt-4 px-4">
+        <div className="max-w-2xl mx-auto">
           {children}
         </div>
       </main>
+      
+      {/* Bottom navigation for mobile */}
+      <BottomNavigation />
     </div>
   );
 };

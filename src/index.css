@@ -41,4 +41,16 @@
   .text-gradient {
     @apply bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent;
   }
+  
+  .nav-link {
+    @apply text-gray-600 hover:text-gray-900 transition-colors duration-200;
+  }
+  
+  .instagram-button {
+    @apply bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-2 rounded-full font-medium hover:from-purple-600 hover:to-pink-600 transition-all duration-200 shadow-md hover:shadow-lg;
+  }
+  
+  .instagram-gradient {
+    @apply bg-gradient-to-r from-purple-500 via-pink-500 to-orange-400;
+  }
 }
