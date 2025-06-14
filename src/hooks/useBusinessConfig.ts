@@ -37,9 +37,10 @@ export const useBusinessConfig = () => {
         .from('business_configs' as any)
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching config:', error);
         throw error;
       }
 
@@ -71,7 +72,10 @@ export const useBusinessConfig = () => {
           .select()
           .single();
 
-        if (insertError) throw insertError;
+        if (insertError) {
+          console.error('Error creating config:', insertError);
+          throw insertError;
+        }
         
         setConfig({
           id: newConfig.id,

@@ -69,8 +69,12 @@ export const useBusinessEvents = () => {
         .eq('user_id', user.id)
         .order('date', { ascending: true });
 
-      if (error) throw error;
-      setEvents(data || []);
+      if (error) {
+        console.error('Error fetching events:', error);
+        throw error;
+      }
+      
+      setEvents((data || []) as BusinessEvent[]);
     } catch (error) {
       console.error('Error fetching events:', error);
       toast({
@@ -78,6 +82,8 @@ export const useBusinessEvents = () => {
         description: "Impossible de charger les événements",
         variant: "destructive"
       });
+      // Use mock data as fallback
+      setEvents([]);
     } finally {
       setLoading(false);
     }
@@ -115,9 +121,13 @@ export const useBusinessEvents = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating event:', error);
+        throw error;
+      }
 
-      setEvents([...events, data]);
+      const newEvent = data as BusinessEvent;
+      setEvents([...events, newEvent]);
       toast({
         title: "✅ Événement créé !",
         description: `"${eventData.title}" a été publié avec succès`,
@@ -150,7 +160,10 @@ export const useBusinessEvents = () => {
         .delete()
         .eq('id', eventId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error deleting event:', error);
+        throw error;
+      }
 
       setEvents(events.filter(event => event.id !== eventId));
       toast({
