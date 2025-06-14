@@ -2,6 +2,17 @@
 import { supabase } from '@/integrations/supabase/client';
 import { UnifiedEvent } from '@/types/unified';
 
+// Valid categories based on Supabase enum
+const VALID_CATEGORIES = [
+  'bar', 'restaurant', 'club', 'concert', 'sport', 'culture', 'festival', 'autre'
+] as const;
+
+type ValidCategory = typeof VALID_CATEGORIES[number];
+
+const isValidCategory = (category: string): category is ValidCategory => {
+  return VALID_CATEGORIES.includes(category as ValidCategory);
+};
+
 export const incrementSearchAppearances = async (eventIds: string[]): Promise<void> => {
   try {
     // Use a simple approach - update each event individually
@@ -33,6 +44,9 @@ export const searchEvents = async (
   try {
     const allEvents: UnifiedEvent[] = [];
 
+    // Validate category if provided
+    const validCategory = category && isValidCategory(category) ? category : undefined;
+
     // Search in events table
     if (source === 'all' || source === 'user') {
       let eventsQuery = supabase
@@ -41,8 +55,8 @@ export const searchEvents = async (
         .or(`title.ilike.%${query}%,description.ilike.%${query}%,location.ilike.%${query}%`)
         .order('date', { ascending: true });
 
-      if (category) {
-        eventsQuery = eventsQuery.eq('category', category);
+      if (validCategory) {
+        eventsQuery = eventsQuery.eq('category', validCategory);
       }
 
       const { data: userEvents, error: userError } = await eventsQuery;
@@ -86,8 +100,8 @@ export const searchEvents = async (
         .or(`title.ilike.%${query}%,description.ilike.%${query}%,venue.ilike.%${query}%`)
         .order('date', { ascending: true });
 
-      if (category) {
-        businessQuery = businessQuery.eq('category', category);
+      if (validCategory) {
+        businessQuery = businessQuery.eq('category', validCategory);
       }
 
       const { data: businessEvents, error: businessError } = await businessQuery;
