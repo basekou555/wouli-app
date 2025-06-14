@@ -75,10 +75,12 @@ export const useBusinessEvents = () => {
 
       if (error) throw error;
       
-      // Map Supabase data to BusinessEvent type
+      // Map Supabase data to BusinessEvent type with proper type casting
       const mappedEvents: BusinessEvent[] = (data || []).map(event => ({
         ...event,
-        location: event.venue // Map venue to location for consistency
+        location: event.venue, // Map venue to location for consistency
+        category: event.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
+        event_type: event.event_type as 'a-boire' | 'a-manger' | 'soirees' | 'activites'
       }));
       
       setEvents(mappedEvents);
@@ -128,10 +130,12 @@ export const useBusinessEvents = () => {
 
       if (error) throw error;
 
-      // Map the returned data to BusinessEvent type
+      // Map the returned data to BusinessEvent type with proper type casting
       const mappedEvent: BusinessEvent = {
         ...data,
-        location: data.venue
+        location: data.venue,
+        category: data.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
+        event_type: data.event_type as 'a-boire' | 'a-manger' | 'soirees' | 'activites'
       };
 
       setEvents([...events, mappedEvent]);
