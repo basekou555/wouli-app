@@ -11,22 +11,6 @@ export const useAllEvents = (source: EventSource = 'all') => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const { incrementViews, likeEvent, participateEvent } = useEventActions(events, setEvents);
-  
-  // Enable real-time updates
-  useRealTimeEvents(events, setEvents);
-
-  const handleError = (error: any, context: string) => {
-    console.error(`Error in ${context}:`, error);
-    const apiError: ApiError = {
-      message: error.message || 'Une erreur inattendue s\'est produite',
-      code: error.code,
-      details: error
-    };
-    setError(apiError);
-    return apiError;
-  };
-
   const fetchEvents = async () => {
     try {
       setLoading(true);
@@ -56,6 +40,22 @@ export const useAllEvents = (source: EventSource = 'all') => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const { incrementViews, likeEvent, participateEvent } = useEventActions(events, fetchEvents);
+  
+  // Enable real-time updates
+  useRealTimeEvents(events, setEvents);
+
+  const handleError = (error: any, context: string) => {
+    console.error(`Error in ${context}:`, error);
+    const apiError: ApiError = {
+      message: error.message || 'Une erreur inattendue s\'est produite',
+      code: error.code,
+      details: error
+    };
+    setError(apiError);
+    return apiError;
   };
 
   useEffect(() => {
