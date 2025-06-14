@@ -7,7 +7,7 @@ export interface UnifiedEvent extends BaseEvent {
   organizer_type: 'user' | 'business';
   venue?: string;
   time?: string;
-  event_type?: string;
+  event_type?: 'a-boire' | 'a-manger' | 'soirees' | 'activites';
   price_text?: string;
   end_date?: string;
   max_participants?: number;

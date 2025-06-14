@@ -2,26 +2,24 @@
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Search, MapPin, Filter, X } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
+import SimpleCategorySelector from './SimpleCategorySelector';
 
 interface SearchAndFiltersProps {
   onSearch: (term: string) => void;
   onLocationToggle: (enabled: boolean) => void;
   onCategoryFilter: (categories: string[]) => void;
-  categories: Array<{ id: string; name: string; icon: string }>;
 }
 
 const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({
   onSearch,
   onLocationToggle,
-  onCategoryFilter,
-  categories
+  onCategoryFilter
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [locationEnabled, setLocationEnabled] = useState(false);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{lat: number, lon: number} | null>(null);
   const { toast } = useToast();
 
@@ -68,18 +66,14 @@ const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({
     }
   };
 
-  const handleCategorySelect = (categoryId: string) => {
-    const updated = selectedCategories.includes(categoryId)
-      ? selectedCategories.filter(id => id !== categoryId)
-      : [...selectedCategories, categoryId];
-    
-    setSelectedCategories(updated);
-    onCategoryFilter(updated);
+  const handleCategorySelect = (categoryId: string | null) => {
+    setSelectedCategory(categoryId);
+    onCategoryFilter(categoryId ? [categoryId] : []);
   };
 
   const clearAllFilters = () => {
     setSearchTerm('');
-    setSelectedCategories([]);
+    setSelectedCategory(null);
     setLocationEnabled(false);
     setUserLocation(null);
     onSearch('');
@@ -92,7 +86,7 @@ const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({
     onSearch(searchTerm);
   };
 
-  const hasActiveFilters = searchTerm || selectedCategories.length > 0 || locationEnabled;
+  const hasActiveFilters = searchTerm || selectedCategory || locationEnabled;
 
   return (
     <div className="space-y-4 bg-white p-4 rounded-lg shadow-sm border">
@@ -119,15 +113,6 @@ const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({
           Près de moi
         </Button>
 
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex items-center"
-        >
-          <Filter className="h-4 w-4 mr-1" />
-          Catégories
-        </Button>
-
         {hasActiveFilters && (
           <Button
             variant="ghost"
@@ -141,18 +126,13 @@ const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({
         )}
       </div>
 
-      {/* Filtres de catégories */}
-      <div className="flex gap-2 flex-wrap">
-        {categories.slice(0, 6).map((category) => (
-          <Badge
-            key={category.id}
-            variant={selectedCategories.includes(category.id) ? "default" : "outline"}
-            className="cursor-pointer hover:bg-purple-100"
-            onClick={() => handleCategorySelect(category.id)}
-          >
-            {category.icon} {category.name}
-          </Badge>
-        ))}
+      {/* Sélecteur de catégories simplifié */}
+      <div>
+        <SimpleCategorySelector
+          selectedCategory={selectedCategory}
+          onCategorySelect={handleCategorySelect}
+          showAllOption={true}
+        />
       </div>
 
       {/* Indicateurs actifs */}
@@ -160,9 +140,7 @@ const SearchAndFilters: React.FC<SearchAndFiltersProps> = ({
         <div className="text-xs text-gray-500 flex items-center gap-4">
           {searchTerm && <span>🔍 "{searchTerm}"</span>}
           {locationEnabled && <span>📍 Localisation activée</span>}
-          {selectedCategories.length > 0 && (
-            <span>🏷️ {selectedCategories.length} catégorie(s)</span>
-          )}
+          {selectedCategory && <span>🏷️ {selectedCategory}</span>}
         </div>
       )}
     </div>

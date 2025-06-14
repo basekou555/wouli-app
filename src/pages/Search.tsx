@@ -6,15 +6,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Search as SearchIcon, MapPin, Calendar, Users, Heart, X, Filter, Building } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
-import { categories } from '../data/mockEvents';
+import { WOULI_CATEGORIES, getCategoryName, getCategoryIcon } from '@/data/wouliCategories';
 import { useAllEvents } from '@/hooks/useAllEvents';
 import { UnifiedEvent } from '@/types/unified';
 import BottomNavigation from '../components/BottomNavigation';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
+import SimpleCategorySelector from '@/components/SimpleCategorySelector';
 
 const Search = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState('all');
   const [likedEvents, setLikedEvents] = useState<string[]>([]);
   const [participatingEvents, setParticipatingEvents] = useState<string[]>([]);
@@ -45,7 +46,7 @@ const Search = () => {
     }
 
     // Filtre par catégorie
-    if (selectedCategory !== 'all') {
+    if (selectedCategory) {
       filtered = filtered.filter(event => event.category === selectedCategory);
     }
 
@@ -109,7 +110,7 @@ const Search = () => {
 
   const clearFilters = () => {
     setSearchTerm('');
-    setSelectedCategory('all');
+    setSelectedCategory(null);
     setSelectedDate('all');
   };
 
@@ -157,18 +158,11 @@ const Search = () => {
           <div className="space-y-3 pt-2 border-t">
             <div>
               <p className="text-sm font-medium text-gray-700 mb-2">Catégorie</p>
-              <div className="flex gap-2 flex-wrap">
-                {categories.map((category) => (
-                  <Badge
-                    key={category.id}
-                    variant={selectedCategory === category.id ? "default" : "outline"}
-                    className="cursor-pointer"
-                    onClick={() => setSelectedCategory(category.id)}
-                  >
-                    {category.icon} {category.name}
-                  </Badge>
-                ))}
-              </div>
+              <SimpleCategorySelector
+                selectedCategory={selectedCategory}
+                onCategorySelect={setSelectedCategory}
+                showAllOption={true}
+              />
             </div>
 
             <div>
@@ -204,7 +198,7 @@ const Search = () => {
           <p className="text-gray-600">
             {filteredEvents.length} événement{filteredEvents.length !== 1 ? 's' : ''} trouvé{filteredEvents.length !== 1 ? 's' : ''}
           </p>
-          {(searchTerm || selectedCategory !== 'all' || selectedDate !== 'all') && (
+          {(searchTerm || selectedCategory || selectedDate !== 'all') && (
             <Badge variant="secondary">
               Filtres actifs
             </Badge>
@@ -229,7 +223,7 @@ const Search = () => {
                         <h3 className="font-semibold text-lg line-clamp-1">{event.title}</h3>
                         <div className="flex gap-1 ml-2">
                           <Badge variant="outline" className="text-xs">
-                            {categories.find(c => c.id === event.category)?.icon}
+                            {getCategoryIcon(event.category)}
                           </Badge>
                           {event.source === 'business' && (
                             <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-800">

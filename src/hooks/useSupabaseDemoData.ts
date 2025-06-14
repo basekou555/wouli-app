@@ -37,8 +37,8 @@ export const useSupabaseDemoData = () => {
         time: event.time,
         location: event.venue,
         venue: event.venue,
-        category: event.category,
-        event_type: event.event_type,
+        category: event.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
+        event_type: event.event_type as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
         price: event.price,
         image_url: event.image_url,
         views: event.views || 0,
@@ -86,7 +86,7 @@ export const useSupabaseDemoData = () => {
 
   const getEventsByCategory = (category: string): BusinessEvent[] => {
     return events.filter(event => 
-      event.event_type.toLowerCase() === category.toLowerCase()
+      event.event_type === category
     );
   };
 

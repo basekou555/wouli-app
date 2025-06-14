@@ -5,7 +5,7 @@ export interface BaseEvent {
   description?: string;
   date: string;
   location: string;
-  category: string;
+  category: 'a-boire' | 'a-manger' | 'soirees' | 'activites';
   image_url?: string;
   views: number;
   likes: number;
@@ -28,7 +28,7 @@ export interface UserEvent extends BaseEvent {
 export interface BusinessEvent extends BaseEvent {
   time: string;
   venue: string;
-  event_type: string;
+  event_type: 'a-boire' | 'a-manger' | 'soirees' | 'activites';
   price?: string;
   user_id: string;
 }

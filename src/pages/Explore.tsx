@@ -8,7 +8,7 @@ import { motion, PanInfo, useAnimation } from "framer-motion";
 import { useToast } from "@/components/ui/use-toast";
 import { useAllEvents } from '@/hooks/useAllEvents';
 import { UnifiedEvent } from '@/types/unified';
-import { categories } from '../data/mockEvents';
+import { WOULI_CATEGORIES, getCategoryName, getCategoryIcon } from '@/data/wouliCategories';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
 
 const formatDate = (dateString: string) => {
@@ -216,6 +216,11 @@ const Explore = () => {
                       </span>
                     </div>
                   )}
+                  <div className="absolute top-4 left-4">
+                    <span className="bg-white/90 text-gray-800 px-2 py-1 rounded-full text-xs font-medium">
+                      {getCategoryIcon(currentEvent?.category)} {getCategoryName(currentEvent?.category)}
+                    </span>
+                  </div>
                   <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
                     <h2 className="text-2xl font-bold mb-1">{currentEvent?.title}</h2>
                     <div className="flex items-center mt-1">

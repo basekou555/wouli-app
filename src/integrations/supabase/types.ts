@@ -358,15 +358,7 @@ export type Database = {
       }
     }
     Enums: {
-      event_category:
-        | "bar"
-        | "restaurant"
-        | "club"
-        | "concert"
-        | "sport"
-        | "culture"
-        | "festival"
-        | "autre"
+      event_category: "a-boire" | "a-manger" | "soirees" | "activites"
       event_creator_type: "user" | "business" | "admin"
       participant_status: "going" | "interested"
       user_type: "user" | "business"
@@ -485,16 +477,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      event_category: [
-        "bar",
-        "restaurant",
-        "club",
-        "concert",
-        "sport",
-        "culture",
-        "festival",
-        "autre",
-      ],
+      event_category: ["a-boire", "a-manger", "soirees", "activites"],
       event_creator_type: ["user", "business", "admin"],
       participant_status: ["going", "interested"],
       user_type: ["user", "business"],
