@@ -1,23 +1,8 @@
 
 import React from 'react';
-import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, Eye, Heart, ExternalLink } from 'lucide-react';
-
-interface BusinessEvent {
-  id?: string;
-  title: string;
-  description?: string;
-  date: string;
-  time: string;
-  venue: string;
-  category: string;
-  event_type: string;
-  price?: string;
-  image_url?: string;
-  views: number;
-  likes: number;
-  participants: number;
-}
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BarChart3, Eye, Heart, Users, Calendar, ExternalLink } from 'lucide-react';
+import { BusinessEvent } from '@/types/events';
 
 interface BusinessConfig {
   client_name: string;
@@ -35,63 +20,69 @@ interface StatisticsCardsProps {
 const StatisticsCards = ({ config, events }: StatisticsCardsProps) => {
   const totalViews = events.reduce((sum, event) => sum + event.views, 0);
   const totalLikes = events.reduce((sum, event) => sum + event.likes, 0);
-  const totalRedirections = Math.floor(totalViews * 0.15);
+  const totalParticipants = events.reduce((sum, event) => sum + event.participants, 0);
+  const totalRedirections = Math.floor(totalViews * 0.15); // Mock calculation
 
-  if (!config.features.includes('stats')) {
-    return null;
-  }
+  const stats = [
+    {
+      title: "Événements créés",
+      value: events.length,
+      icon: Calendar,
+      color: config.brand_color,
+      visible: config.features.includes('events')
+    },
+    {
+      title: "Vues totales",
+      value: totalViews,
+      icon: Eye,
+      color: "#3B82F6",
+      visible: config.features.includes('stats')
+    },
+    {
+      title: "Likes totaux",
+      value: totalLikes,
+      icon: Heart,
+      color: "#EF4444",
+      visible: config.features.includes('stats')
+    },
+    {
+      title: "Participants",
+      value: totalParticipants,
+      icon: Users,
+      color: "#10B981",
+      visible: config.features.includes('stats')
+    },
+    {
+      title: "Redirections",
+      value: totalRedirections,
+      icon: ExternalLink,
+      color: "#8B5CF6",
+      visible: config.features.includes('redirections')
+    }
+  ];
+
+  const visibleStats = stats.filter(stat => stat.visible);
 
   return (
-    <div className="grid md:grid-cols-4 gap-4 mb-8">
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Événements</p>
-              <p className="text-2xl font-bold">{events.length}</p>
-            </div>
-            <Calendar className="h-8 w-8" style={{ color: config.brand_color }} />
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Vues totales</p>
-              <p className="text-2xl font-bold">{totalViews}</p>
-            </div>
-            <Eye className="h-8 w-8 text-blue-500" />
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Likes</p>
-              <p className="text-2xl font-bold">{totalLikes}</p>
-            </div>
-            <Heart className="h-8 w-8 text-red-500" />
-          </div>
-        </CardContent>
-      </Card>
-      
-      {config.features.includes('redirections') && (
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Redirections</p>
-                <p className="text-2xl font-bold">{totalRedirections}</p>
-              </div>
-              <ExternalLink className="h-8 w-8 text-green-500" />
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {visibleStats.map((stat, index) => (
+        <Card key={index}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              {stat.title}
+            </CardTitle>
+            <stat.icon 
+              className="h-4 w-4" 
+              style={{ color: stat.color }}
+            />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold" style={{ color: stat.color }}>
+              {stat.value}
             </div>
           </CardContent>
         </Card>
-      )}
+      ))}
     </div>
   );
 };
