@@ -4,18 +4,22 @@ import { UnifiedEvent } from '@/types/unified';
 
 export const incrementSearchAppearances = async (eventIds: string[]): Promise<void> => {
   try {
-    // Increment search_appearances for events
-    const { error: eventsError } = await supabase
-      .from('events')
-      .update({ search_appearances: supabase.sql`search_appearances + 1` })
-      .in('id', eventIds);
+    // Use a simple approach - update each event individually
+    for (const eventId of eventIds) {
+      // Try to increment in events table
+      const { data: eventExists } = await supabase
+        .from('events')
+        .select('id, search_appearances')
+        .eq('id', eventId)
+        .single();
 
-    if (eventsError) {
-      console.warn('Error updating events search_appearances:', eventsError);
+      if (eventExists) {
+        await supabase
+          .from('events')
+          .update({ search_appearances: (eventExists.search_appearances || 0) + 1 })
+          .eq('id', eventId);
+      }
     }
-
-    // Note: business_events table doesn't have search_appearances field
-    // We could add it later if needed for business analytics
   } catch (error) {
     console.error('Error incrementing search appearances:', error);
   }
@@ -31,12 +35,17 @@ export const searchEvents = async (
 
     // Search in events table
     if (source === 'all' || source === 'user') {
-      const { data: userEvents, error: userError } = await supabase
+      let eventsQuery = supabase
         .from('events')
         .select('*')
         .or(`title.ilike.%${query}%,description.ilike.%${query}%,location.ilike.%${query}%`)
-        .eq(category ? 'category' : 'id', category || supabase.sql`id`)
         .order('date', { ascending: true });
+
+      if (category) {
+        eventsQuery = eventsQuery.eq('category', category);
+      }
+
+      const { data: userEvents, error: userError } = await eventsQuery;
 
       if (userError) {
         console.warn('Error searching user events:', userError);
@@ -71,12 +80,17 @@ export const searchEvents = async (
 
     // Search in business_events table
     if (source === 'all' || source === 'business') {
-      const { data: businessEvents, error: businessError } = await supabase
+      let businessQuery = supabase
         .from('business_events')
         .select('*')
         .or(`title.ilike.%${query}%,description.ilike.%${query}%,venue.ilike.%${query}%`)
-        .eq(category ? 'category' : 'id', category || supabase.sql`id`)
         .order('date', { ascending: true });
+
+      if (category) {
+        businessQuery = businessQuery.eq('category', category);
+      }
+
+      const { data: businessEvents, error: businessError } = await businessQuery;
 
       if (businessError) {
         console.warn('Error searching business events:', businessError);

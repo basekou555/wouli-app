@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar, MapPin, Users, Clock, Euro, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { UnifiedEvent } from '@/types/unified';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { useToast } from '@/hooks/use-toast';
 
 const formatDate = (dateString: string) => {

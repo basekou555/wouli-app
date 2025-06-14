@@ -52,19 +52,21 @@ export const likeEventInDatabase = async (eventId: string, userId: string): Prom
 
     if (likeError) throw likeError;
 
-    // Update the likes counter in both events and business_events tables using direct SQL
-    const { error: eventsError } = await supabase
-      .from('events')
-      .update({ likes: supabase.sql`likes + 1` })
-      .eq('id', eventId);
+    // Use RPC functions to update counters
+    const { error: eventsRpcError } = await supabase
+      .rpc('increment_event_likes_counter', { 
+        event_id: eventId, 
+        table_name: 'events' 
+      });
 
-    const { error: businessEventsError } = await supabase
-      .from('business_events')
-      .update({ likes: supabase.sql`likes + 1` })
-      .eq('id', eventId);
+    const { error: businessEventsRpcError } = await supabase
+      .rpc('increment_event_likes_counter', { 
+        event_id: eventId, 
+        table_name: 'business_events' 
+      });
 
-    if (eventsError) console.warn('Error updating events likes:', eventsError);
-    if (businessEventsError) console.warn('Error updating business_events likes:', businessEventsError);
+    if (eventsRpcError) console.warn('Error updating events likes:', eventsRpcError);
+    if (businessEventsRpcError) console.warn('Error updating business_events likes:', businessEventsRpcError);
 
     return true;
   } catch (error) {
@@ -99,19 +101,21 @@ export const participateInEventDatabase = async (
 
     if (participationError) throw participationError;
 
-    // Update the participants counter in both events and business_events tables using direct SQL
-    const { error: eventsError } = await supabase
-      .from('events')
-      .update({ participants: supabase.sql`participants + 1` })
-      .eq('id', eventId);
+    // Use RPC functions to update counters
+    const { error: eventsRpcError } = await supabase
+      .rpc('increment_event_participants_counter', { 
+        event_id: eventId, 
+        table_name: 'events' 
+      });
 
-    const { error: businessEventsError } = await supabase
-      .from('business_events')
-      .update({ participants: supabase.sql`participants + 1` })
-      .eq('id', eventId);
+    const { error: businessEventsRpcError } = await supabase
+      .rpc('increment_event_participants_counter', { 
+        event_id: eventId, 
+        table_name: 'business_events' 
+      });
 
-    if (eventsError) console.warn('Error updating events participants:', eventsError);
-    if (businessEventsError) console.warn('Error updating business_events participants:', businessEventsError);
+    if (eventsRpcError) console.warn('Error updating events participants:', eventsRpcError);
+    if (businessEventsRpcError) console.warn('Error updating business_events participants:', businessEventsRpcError);
 
     return true;
   } catch (error) {
