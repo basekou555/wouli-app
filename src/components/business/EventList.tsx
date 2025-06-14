@@ -4,24 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, MapPin, Eye, Heart, ExternalLink, Trash2, Tag, Clock, Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
-interface BusinessEvent {
-  id?: string;
-  title: string;
-  description?: string;
-  date: string;
-  time: string;
-  venue?: string;
-  custom_venue?: string;
-  category: string;
-  event_type: string;
-  price?: string;
-  external_url?: string;
-  image_url?: string;
-  views: number;
-  likes: number;
-  participants: number;
-}
+import { BusinessEvent } from '@/types/events';
 
 interface BusinessConfig {
   client_name: string;
@@ -103,7 +86,7 @@ const EventList = ({ config, events, onDeleteEvent, onEditEvent }: EventListProp
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDeleteEvent(event.id!)}
+                            onClick={() => handleDeleteEvent(event.id)}
                             className="text-red-500 hover:bg-red-50"
                             title="Supprimer"
                           >

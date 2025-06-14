@@ -6,20 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle, MapPin, ExternalLink } from 'lucide-react';
 import ImageUpload from '@/components/ImageUpload';
-
-interface BusinessEvent {
-  title: string;
-  description?: string;
-  date: string;
-  time: string;
-  venue?: string;
-  custom_venue?: string;
-  category: string;
-  event_type: string;
-  price?: string;
-  external_url?: string;
-  image_url?: string;
-}
+import { BusinessEvent } from '@/types/events';
 
 interface BusinessConfig {
   client_name: string;
@@ -31,7 +18,7 @@ interface BusinessConfig {
 
 interface EventCreationFormProps {
   config: BusinessConfig;
-  onEventCreate: (event: BusinessEvent) => void;
+  onEventCreate: (event: Omit<BusinessEvent, 'id' | 'views' | 'likes' | 'participants' | 'user_id'>) => void;
   editingEvent?: BusinessEvent;
   onEventUpdate?: (eventId: string, event: Partial<BusinessEvent>) => void;
   onCancelEdit?: () => void;
@@ -59,8 +46,8 @@ const EventCreationForm = ({ config, onEventCreate, editingEvent, onEventUpdate,
     venue: editingEvent?.venue || config.client_name,
     custom_venue: editingEvent?.custom_venue || '',
     description: editingEvent?.description || '',
-    category: editingEvent?.category || 'bar',
-    event_type: editingEvent?.event_type || 'Soirées',
+    category: editingEvent?.category || 'a-boire',
+    event_type: editingEvent?.event_type || 'a-boire',
     price: editingEvent?.price || '',
     external_url: editingEvent?.external_url || '',
     image_url: editingEvent?.image_url || ''
@@ -77,10 +64,11 @@ const EventCreationForm = ({ config, onEventCreate, editingEvent, onEventUpdate,
     const eventData = {
       ...newEvent,
       venue: useCustomVenue ? undefined : newEvent.venue,
-      custom_venue: useCustomVenue ? newEvent.custom_venue : undefined
+      custom_venue: useCustomVenue ? newEvent.custom_venue : undefined,
+      location: useCustomVenue ? newEvent.custom_venue : newEvent.venue
     };
 
-    if (editingEvent && onEventUpdate) {
+    if (editingEvent && onEventUpdate && editingEvent.id) {
       onEventUpdate(editingEvent.id, eventData);
     } else {
       onEventCreate(eventData);
@@ -95,8 +83,8 @@ const EventCreationForm = ({ config, onEventCreate, editingEvent, onEventUpdate,
         venue: config.client_name, 
         custom_venue: '',
         description: '', 
-        category: 'bar', 
-        event_type: 'Soirées',
+        category: 'a-boire', 
+        event_type: 'a-boire',
         price: '', 
         external_url: '',
         image_url: '' 
@@ -223,14 +211,13 @@ const EventCreationForm = ({ config, onEventCreate, editingEvent, onEventUpdate,
             </label>
             <select
               value={newEvent.event_type}
-              onChange={(e) => setNewEvent({ ...newEvent, event_type: e.target.value })}
+              onChange={(e) => setNewEvent({ ...newEvent, event_type: e.target.value as 'a-boire' | 'a-manger' | 'soirees' | 'activites' })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              {EVENT_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
+              <option value="a-boire">À boire</option>
+              <option value="a-manger">À manger</option>
+              <option value="soirees">Soirées</option>
+              <option value="activites">Activités</option>
             </select>
           </div>
 

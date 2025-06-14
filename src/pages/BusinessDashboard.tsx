@@ -39,7 +39,7 @@ const BusinessDashboard = () => {
     );
   }
 
-  const handleEventCreate = async (eventData: any) => {
+  const handleEventCreate = async (eventData: Omit<BusinessEvent, 'id' | 'views' | 'likes' | 'participants' | 'user_id'>) => {
     const result = await createEvent(eventData);
     return result;
   };
