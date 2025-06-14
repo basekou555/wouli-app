@@ -21,7 +21,7 @@ export const useEventActions = (
     }
   };
 
-  const likeEvent = async (eventId: string, userId: string) => {
+  const likeEvent = async (eventId: string, userId: string): Promise<boolean> => {
     const success = await likeEventInDatabase(eventId, userId);
     
     if (success) {
@@ -36,16 +36,18 @@ export const useEventActions = (
         title: "❤️ Événement aimé !",
         description: "L'événement a été ajouté à tes favoris"
       });
+      return true;
     } else {
       toast({
         title: "Déjà aimé",
         description: "Tu as déjà aimé cet événement",
         variant: "destructive"
       });
+      return false;
     }
   };
 
-  const participateEvent = async (eventId: string, userId: string, status: 'going' | 'interested' = 'going') => {
+  const participateEvent = async (eventId: string, userId: string, status: 'going' | 'interested' = 'going'): Promise<boolean> => {
     const success = await participateInEventDatabase(eventId, userId, status);
     
     if (success) {
@@ -60,12 +62,14 @@ export const useEventActions = (
         title: "🎉 Participation confirmée !",
         description: status === 'going' ? "Tu participes à cet événement" : "Tu es intéressé par cet événement"
       });
+      return true;
     } else {
       toast({
         title: "Déjà inscrit",
         description: "Tu participes déjà à cet événement",
         variant: "destructive"
       });
+      return false;
     }
   };
 

@@ -1,78 +1,129 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AppLayout from '../components/AppLayout';
-import { useAllEvents } from '@/hooks/useAllEvents';
-import { useExploreFilters } from '@/hooks/useExploreFilters';
-import { useSwipeCards } from '@/hooks/useSwipeCards';
-import { PageSkeleton } from '@/components/LoadingSkeleton';
-import ExploreHeader from '@/components/explore/ExploreHeader';
-import ExploreFilters from '@/components/explore/ExploreFilters';
-import SwipeCard from '@/components/explore/SwipeCard';
-import EmptyState from '@/components/explore/EmptyState';
+import SwipeCard from '../components/explore/SwipeCard';
+import ExploreHeader from '../components/explore/ExploreHeader';
+import ExploreFilters from '../components/explore/ExploreFilters';
+import EmptyState from '../components/explore/EmptyState';
+import { useSwipeCards } from '../hooks/useSwipeCards';
+import { useExploreFilters } from '../hooks/useExploreFilters';
+import { useEventActions } from '../hooks/useEventActions';
+import { useAuth } from '../contexts/AuthContext';
+import { useRealTimeEvents } from '../hooks/useRealTimeEvents';
+import { getEventInteractionStatus } from '../services/eventInteractionService';
 
 const Explore = () => {
-  const [showSearch, setShowSearch] = useState(false);
+  const { user } = useAuth();
+  const {
+    filteredEvents,
+    loading,
+    error,
+    currentIndex,
+    setCurrentIndex,
+    refetch
+  } = useSwipeCards();
   
-  const { events: allEvents, loading } = useAllEvents();
-  const { searchTerm, setSearchTerm, filter, handleFilter, filteredEvents } = useExploreFilters(allEvents);
-  const { currentIndex, setCurrentIndex, controls, handleSwipe, handleLike, handlePass, handleSave } = useSwipeCards(filteredEvents);
+  const { incrementViews, likeEvent, participateEvent } = useEventActions(filteredEvents, refetch);
+  const [likedEvents, setLikedEvents] = useState<string[]>([]);
+  const [participatingEvents, setParticipatingEvents] = useState<string[]>([]);
 
-  const performSearch = () => {
-    setCurrentIndex(0);
+  const {
+    selectedCategory,
+    searchTerm,
+    showFilters,
+    handleCategoryChange,
+    handleSearchChange,
+    toggleFilters,
+    clearFilters
+  } = useExploreFilters();
+
+  // Set up real-time updates for event stats
+  useRealTimeEvents(filteredEvents, refetch);
+
+  // Load user interaction status for current events
+  useEffect(() => {
+    const loadInteractionStatus = async () => {
+      if (!user || !filteredEvents.length) return;
+
+      const statuses = await Promise.all(
+        filteredEvents.map(event => 
+          getEventInteractionStatus(event.id, user.id)
+        )
+      );
+
+      const liked = filteredEvents
+        .filter((_, index) => statuses[index]?.hasLiked)
+        .map(event => event.id);
+      
+      const participating = filteredEvents
+        .filter((_, index) => statuses[index]?.hasParticipated)
+        .map(event => event.id);
+
+      setLikedEvents(liked);
+      setParticipatingEvents(participating);
+    };
+
+    loadInteractionStatus();
+  }, [filteredEvents, user]);
+
+  const handleLike = async (eventId: string) => {
+    if (!user) return;
+    
+    const success = await likeEvent(eventId, user.id);
+    if (success) {
+      setLikedEvents(prev => [...prev, eventId]);
+    }
+  };
+
+  const handleParticipate = async (eventId: string) => {
+    if (!user) return;
+    
+    const success = await participateEvent(eventId, user.id);
+    if (success) {
+      setParticipatingEvents(prev => [...prev, eventId]);
+    }
+  };
+
+  const handleViewEvent = async (eventId: string) => {
+    await incrementViews(eventId, 'user');
   };
 
   const currentEvent = filteredEvents[currentIndex];
 
-  if (loading) {
-    return (
-      <AppLayout>
-        <PageSkeleton />
-      </AppLayout>
-    );
-  }
+  if (loading) return <AppLayout><div className="p-8 text-center">Chargement...</div></AppLayout>;
+  if (error) return <AppLayout><div className="p-8 text-center text-red-500">{error}</div></AppLayout>;
 
   return (
     <AppLayout>
-      <div className="py-6 space-y-6">
-        <ExploreHeader />
-        
-        <ExploreFilters
-          filter={filter}
-          onFilterChange={handleFilter}
-          showSearch={showSearch}
-          onToggleSearch={() => setShowSearch(!showSearch)}
+      <div className="h-full flex flex-col">
+        <ExploreHeader 
           searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          onPerformSearch={performSearch}
+          onSearchChange={handleSearchChange}
+          onToggleFilters={toggleFilters}
+          onClearFilters={clearFilters}
         />
-        
-        {/* Card swiper */}
-        {filteredEvents.length > 0 ? (
-          <div className="relative h-[70vh] flex items-center justify-center">
-            <SwipeCard
-              event={currentEvent}
-              controls={controls}
-              onSwipe={handleSwipe}
-              onPass={handlePass}
-              onSave={handleSave}
-              onLike={handleLike}
-            />
-            
-            {/* Swipe instructions */}
-            <div className="absolute bottom-2 left-0 right-0 text-center text-gray-500 text-sm">
-              Swipez à gauche pour passer, à droite pour aimer
-            </div>
-          </div>
-        ) : (
-          <EmptyState />
+
+        {showFilters && (
+          <ExploreFilters 
+            selectedCategory={selectedCategory}
+            onCategoryChange={handleCategoryChange}
+          />
         )}
-        
-        {/* Card counter */}
-        <div className="text-center text-gray-500 text-sm">
-          {filteredEvents.length > 0 ? 
-            `${currentIndex + 1} / ${filteredEvents.length}` : 
-            "0 événements"
-          }
+
+        <div className="flex-1 flex items-center justify-center p-4">
+          {currentEvent ? (
+            <SwipeCard 
+              event={currentEvent}
+              onLike={() => handleLike(currentEvent.id)}
+              onParticipate={() => handleParticipate(currentEvent.id)}
+              onNext={() => setCurrentIndex(prev => prev + 1)}
+              onView={() => handleViewEvent(currentEvent.id)}
+              isLiked={likedEvents.includes(currentEvent.id)}
+              isParticipating={participatingEvents.includes(currentEvent.id)}
+            />
+          ) : (
+            <EmptyState onReset={clearFilters} />
+          )}
         </div>
       </div>
     </AppLayout>

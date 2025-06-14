@@ -1,118 +1,174 @@
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { motion, AnimationControls } from 'framer-motion';
-import { Calendar, MapPin, Users, Heart, X, Star } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Heart, Calendar, MapPin, Users, Eye, Building, Share2 } from 'lucide-react';
 import { UnifiedEvent } from '@/types/unified';
-import { getCategoryName, getCategoryIcon } from '@/data/wouliCategories';
+import { getCategoryIcon } from '@/data/wouliCategories';
+import { useNavigate } from 'react-router-dom';
 
 interface SwipeCardProps {
   event: UnifiedEvent;
-  controls: AnimationControls;
-  onSwipe: (event: MouseEvent | TouchEvent | PointerEvent, info: any) => void;
-  onPass: () => void;
-  onSave: () => void;
   onLike: () => void;
+  onParticipate: () => void;
+  onNext: () => void;
+  onView: () => void;
+  isLiked?: boolean;
+  isParticipating?: boolean;
 }
-
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat('fr-FR', {
-    day: 'numeric',
-    month: 'long',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(date);
-};
 
 const SwipeCard: React.FC<SwipeCardProps> = ({
   event,
-  controls,
-  onSwipe,
-  onPass,
-  onSave,
-  onLike
+  onLike,
+  onParticipate,
+  onNext,
+  onView,
+  isLiked = false,
+  isParticipating = false
 }) => {
+  const navigate = useNavigate();
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+  };
+
+  const handleViewDetails = () => {
+    onView();
+    navigate(`/events/${event.id}`);
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: event.title,
+          text: event.description,
+          url: window.location.origin + `/events/${event.id}`
+        });
+      } catch (error) {
+        console.log('Partage annulé');
+      }
+    } else {
+      // Fallback pour les navigateurs qui ne supportent pas l'API de partage
+      navigator.clipboard.writeText(window.location.origin + `/events/${event.id}`);
+    }
+  };
+
   return (
-    <motion.div
-      className="absolute w-full max-w-md"
-      animate={controls}
-      initial={{ x: 0, opacity: 1 }}
-      drag="x"
-      dragConstraints={{ left: -10, right: 10 }}
-      onDragEnd={onSwipe}
-      whileTap={{ scale: 1.05 }}
-    >
-      <div className="bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100">
-        {/* Card Image */}
-        <div className="relative w-full h-96">
-          <img
-            src={event?.image_url || "https://picsum.photos/400/200?random=event"}
-            alt={event?.title}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
-          {event?.source === 'business' && (
-            <div className="absolute top-4 right-4">
-              <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">
-                ★ Établissement
-              </span>
-            </div>
-          )}
+    <Card className="w-full max-w-sm mx-auto h-[600px] flex flex-col overflow-hidden shadow-lg">
+      {/* Image */}
+      <div className="relative h-64 overflow-hidden">
+        <img
+          src={event.image_url || "https://picsum.photos/400/300?random=event"}
+          alt={event.title}
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute top-4 right-4">
+          <Badge variant="outline" className="bg-white/90 text-xs">
+            {getCategoryIcon(event.category)}
+          </Badge>
+        </div>
+        {event.source === 'business' && (
           <div className="absolute top-4 left-4">
-            <span className="bg-white/90 text-gray-800 px-2 py-1 rounded-full text-xs font-medium">
-              {getCategoryIcon(event?.category)} {getCategoryName(event?.category)}
-            </span>
+            <Badge variant="secondary" className="bg-orange-100 text-orange-800 text-xs">
+              ★ Pro
+            </Badge>
           </div>
-          <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
-            <h2 className="text-2xl font-bold mb-1">{event?.title}</h2>
-            <div className="flex items-center mt-1">
-              <MapPin className="h-4 w-4 mr-1" />
-              <span className="text-sm">{event?.location}</span>
-            </div>
-            <div className="flex items-center mt-1">
-              <Calendar className="h-4 w-4 mr-1" />
-              <span className="text-sm">{formatDate(event?.date)}</span>
-            </div>
-            <div className="flex items-center mt-1">
-              <Users className="h-4 w-4 mr-1" />
-              <span className="text-sm">{event?.participants} participants</span>
-            </div>
-            <div className="flex items-center mt-1 text-xs text-gray-300">
-              <span>Proposé par {event?.organizer}</span>
-            </div>
-          </div>
-        </div>
-        
-        {/* Card Actions */}
-        <div className="flex justify-center space-x-4 py-4">
-          <Button 
-            variant="outline"
-            size="icon"
-            className="h-14 w-14 rounded-full border-2 border-red-400 text-red-500"
-            onClick={onPass}
-          >
-            <X className="h-6 w-6" />
-          </Button>
-          <Button 
-            variant="outline"
-            size="icon"
-            className="h-14 w-14 rounded-full border-2 border-blue-400 text-blue-500"
-            onClick={onSave}
-          >
-            <Star className="h-6 w-6" />
-          </Button>
-          <Button 
-            variant="outline"
-            size="icon"
-            className="h-14 w-14 rounded-full border-2 border-green-400 text-green-500"
-            onClick={onLike}
-          >
-            <Heart className="h-6 w-6" />
-          </Button>
-        </div>
+        )}
       </div>
-    </motion.div>
+
+      {/* Content */}
+      <CardContent className="flex-1 p-6 flex flex-col justify-between">
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 line-clamp-2">{event.title}</h2>
+            {event.description && (
+              <p className="text-gray-600 text-sm mt-2 line-clamp-3">{event.description}</p>
+            )}
+          </div>
+
+          <div className="space-y-3 text-sm text-gray-600">
+            <div className="flex items-center">
+              <Building className="h-4 w-4 mr-2" />
+              <span className="font-medium">{event.organizer}</span>
+            </div>
+            <div className="flex items-center">
+              <Calendar className="h-4 w-4 mr-2" />
+              <span>{formatDate(event.date)}</span>
+            </div>
+            <div className="flex items-center">
+              <MapPin className="h-4 w-4 mr-2" />
+              <span>{event.location}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center">
+                  <Eye className="h-4 w-4 mr-1" />
+                  <span>{event.views}</span>
+                </div>
+                <div className="flex items-center">
+                  <Heart className="h-4 w-4 mr-1" />
+                  <span>{event.likes}</span>
+                </div>
+                <div className="flex items-center">
+                  <Users className="h-4 w-4 mr-1" />
+                  <span>{event.participants}</span>
+                </div>
+              </div>
+              {event.price_text && (
+                <Badge variant="secondary" className="text-green-600">
+                  {event.price_text}
+                </Badge>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="space-y-3 mt-6">
+          <div className="flex space-x-2">
+            <Button
+              variant={isLiked ? "default" : "outline"}
+              size="sm"
+              onClick={onLike}
+              disabled={isLiked}
+              className="flex-1"
+            >
+              <Heart className={`h-4 w-4 mr-2 ${isLiked ? 'fill-current' : ''}`} />
+              {isLiked ? 'Aimé' : 'J\'aime'}
+            </Button>
+            <Button
+              variant={isParticipating ? "default" : "outline"}
+              size="sm"
+              onClick={onParticipate}
+              disabled={isParticipating}
+              className="flex-1"
+            >
+              {isParticipating ? '✅ Inscrit' : 'Participer'}
+            </Button>
+          </div>
+          
+          <div className="flex space-x-2">
+            <Button variant="ghost" size="sm" onClick={handleViewDetails} className="flex-1">
+              Voir détails
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleShare}>
+              <Share2 className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={onNext}>
+              Suivant
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
