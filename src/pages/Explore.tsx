@@ -4,67 +4,12 @@ import AppLayout from '../components/AppLayout';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar, MapPin, Search, Users, Filter, Heart, X, Star } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { motion, PanInfo, useAnimation } from "framer-motion";
 import { useToast } from "@/components/ui/use-toast";
-
-// Exemple d'événements à explorer
-const exploreEvents = [
-  {
-    id: '5',
-    title: 'Festival de Musique Électronique',
-    date: '2024-06-15T20:00:00',
-    location: 'Parc des Expositions, Paris',
-    participants: 120,
-    image: 'https://picsum.photos/400/200?random=10',
-    type: 'public'
-  },
-  {
-    id: '6',
-    title: 'Séance de Yoga en Plein Air',
-    date: '2024-05-22T09:00:00',
-    location: 'Parc Monceau, Paris',
-    participants: 15,
-    image: 'https://picsum.photos/400/200?random=11',
-    type: 'public'
-  },
-  {
-    id: '7',
-    title: 'Atelier Cuisine Italienne',
-    date: '2024-05-28T18:30:00',
-    location: 'École de Cuisine, Lyon',
-    participants: 8,
-    image: 'https://picsum.photos/400/200?random=12',
-    type: 'public'
-  },
-  {
-    id: '8',
-    title: 'Tournoi de Pétanque Amateur',
-    date: '2024-06-02T14:00:00',
-    location: 'Place du village, Marseille',
-    participants: 24,
-    image: 'https://picsum.photos/400/200?random=13',
-    type: 'public'
-  },
-  {
-    id: '9',
-    title: 'Soirée Jeux de Société',
-    date: '2024-05-30T19:00:00',
-    location: 'Bar à Jeux, Bordeaux',
-    participants: 12,
-    image: 'https://picsum.photos/400/200?random=14',
-    type: 'friends'
-  },
-  {
-    id: '10',
-    title: 'Randonnée en Montagne',
-    date: '2024-06-08T08:00:00',
-    location: 'Mont Blanc, Chamonix',
-    participants: 8,
-    image: 'https://picsum.photos/400/200?random=15',
-    type: 'friends'
-  },
-];
+import { useAllEvents } from '@/hooks/useAllEvents';
+import { UnifiedEvent } from '@/types/unified';
+import { categories } from '../data/mockEvents';
+import { PageSkeleton } from '@/components/LoadingSkeleton';
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
@@ -78,32 +23,34 @@ const formatDate = (dateString: string) => {
 
 const Explore = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [filteredEvents, setFilteredEvents] = useState(exploreEvents);
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all'); // 'all', 'public', 'friends'
   const [showSearch, setShowSearch] = useState(false);
   const controls = useAnimation();
   const { toast } = useToast();
+  
+  const { events: allEvents, loading } = useAllEvents();
+
+  // Filter events based on search and filter
+  const filteredEvents = allEvents.filter(event => {
+    const matchesSearch = !searchTerm || 
+      event.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      event.location.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // For demo purposes, treat business events as "public" and user events as "friends"
+    const matchesFilter = filter === 'all' || 
+      (filter === 'public' && event.source === 'business') ||
+      (filter === 'friends' && event.source === 'user');
+    
+    return matchesSearch && matchesFilter;
+  });
 
   const handleFilter = (filterType: string) => {
     setFilter(filterType);
-    if (filterType === 'all') {
-      setFilteredEvents(exploreEvents);
-    } else {
-      setFilteredEvents(exploreEvents.filter(event => event.type === filterType));
-    }
     setCurrentIndex(0);
   };
 
   const performSearch = () => {
-    const results = exploreEvents.filter(event => {
-      const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                        event.location.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesFilter = filter === 'all' || event.type === filter;
-      
-      return matchesSearch && matchesFilter;
-    });
-    setFilteredEvents(results);
     setCurrentIndex(0);
   };
 
@@ -170,6 +117,14 @@ const Explore = () => {
 
   const currentEvent = filteredEvents[currentIndex];
 
+  if (loading) {
+    return (
+      <AppLayout>
+        <PageSkeleton />
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <div className="py-6 space-y-6">
@@ -204,7 +159,7 @@ const Explore = () => {
               size="sm"
               className="rounded-full"
             >
-              Publics
+              Établissements
             </Button>
             <Button 
               variant={filter === 'friends' ? 'default' : 'outline'} 
@@ -212,7 +167,7 @@ const Explore = () => {
               size="sm"
               className="rounded-full"
             >
-              Amis
+              Utilisateurs
             </Button>
           </div>
         </div>
@@ -249,11 +204,18 @@ const Explore = () => {
                 {/* Card Image */}
                 <div className="relative w-full h-96">
                   <img
-                    src={currentEvent?.image}
+                    src={currentEvent?.image_url || "https://picsum.photos/400/200?random=event"}
                     alt={currentEvent?.title}
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+                  {currentEvent?.source === 'business' && (
+                    <div className="absolute top-4 right-4">
+                      <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">
+                        ★ Établissement
+                      </span>
+                    </div>
+                  )}
                   <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
                     <h2 className="text-2xl font-bold mb-1">{currentEvent?.title}</h2>
                     <div className="flex items-center mt-1">
@@ -267,6 +229,9 @@ const Explore = () => {
                     <div className="flex items-center mt-1">
                       <Users className="h-4 w-4 mr-1" />
                       <span className="text-sm">{currentEvent?.participants} participants</span>
+                    </div>
+                    <div className="flex items-center mt-1 text-xs text-gray-300">
+                      <span>Proposé par {currentEvent?.organizer}</span>
                     </div>
                   </div>
                 </div>

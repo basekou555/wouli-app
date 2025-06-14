@@ -3,8 +3,29 @@ import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Heart, X, MapPin, Calendar, Users, Filter, ArrowLeft, Clock, Tag, Euro, Building } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
-import { mockEvents, categories, Event } from '../data/mockEvents';
+import { categories } from '../data/mockEvents';
+import { UnifiedEvent } from '@/types/unified';
+import { useAllEvents } from '@/hooks/useAllEvents';
 import BottomNavigation from '../components/BottomNavigation';
+import { PageSkeleton } from '@/components/LoadingSkeleton';
+
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date);
+};
+
+const formatTime = (dateString: string) => {
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date);
+};
 
 const UserApp = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -12,13 +33,15 @@ const UserApp = () => {
   const [likedEvents, setLikedEvents] = useState<string[]>([]);
   const [participatingEvents, setParticipatingEvents] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<UnifiedEvent | null>(null);
   const { toast } = useToast();
+  
+  const { events: allEvents, loading, incrementViews, likeEvent, participateEvent } = useAllEvents();
 
   // Filter events based on selected category
   const filteredEvents = selectedCategory === 'all' 
-    ? mockEvents 
-    : mockEvents.filter(event => event.category === selectedCategory);
+    ? allEvents 
+    : allEvents.filter(event => event.category === selectedCategory);
 
   const handleCategoryChange = (categoryId: string) => {
     setSelectedCategory(categoryId);
@@ -26,25 +49,29 @@ const UserApp = () => {
     setShowFilters(false);
   };
 
-  const handleLike = () => {
-    const eventId = filteredEvents[currentIndex]?.id;
-    if (eventId && !likedEvents.includes(eventId)) {
-      setLikedEvents([...likedEvents, eventId]);
+  const handleLike = async () => {
+    const event = filteredEvents[currentIndex];
+    if (event && !likedEvents.includes(event.id)) {
+      setLikedEvents([...likedEvents, event.id]);
+      // Note: In a real app, you'd get the user ID from auth context
+      // await likeEvent(event.id, userId);
       toast({
         title: "❤️ Événement aimé !",
-        description: `Tu as aimé "${filteredEvents[currentIndex]?.title}"`,
+        description: `Tu as aimé "${event.title}"`,
       });
     }
     nextCard();
   };
 
-  const handleParticipate = () => {
-    const eventId = filteredEvents[currentIndex]?.id;
-    if (eventId && !participatingEvents.includes(eventId)) {
-      setParticipatingEvents([...participatingEvents, eventId]);
+  const handleParticipate = async () => {
+    const event = filteredEvents[currentIndex];
+    if (event && !participatingEvents.includes(event.id)) {
+      setParticipatingEvents([...participatingEvents, event.id]);
+      // Note: In a real app, you'd get the user ID from auth context
+      // await participateEvent(event.id, userId);
       toast({
         title: "🎉 Participation confirmée !",
-        description: `Tu participes à "${filteredEvents[currentIndex]?.title}"`,
+        description: `Tu participes à "${event.title}"`,
       });
     }
     nextCard();
@@ -68,6 +95,10 @@ const UserApp = () => {
 
   const currentEvent = filteredEvents[currentIndex];
 
+  if (loading) {
+    return <PageSkeleton />;
+  }
+
   if (selectedEvent) {
     return (
       <div className="min-h-screen bg-gray-50 pb-20">
@@ -90,7 +121,7 @@ const UserApp = () => {
             {/* Image */}
             <div className="relative h-64">
               <img
-                src={selectedEvent.image}
+                src={selectedEvent.image_url || "https://picsum.photos/400/200?random=event"}
                 alt={selectedEvent.title}
                 className="w-full h-full object-cover"
               />
@@ -103,6 +134,11 @@ const UserApp = () => {
                 <div className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium text-gray-700 inline-flex items-center">
                   <Building className="h-4 w-4 mr-1" />
                   Proposé par {selectedEvent.organizer}
+                  {selectedEvent.source === 'business' && (
+                    <span className="ml-2 bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full text-xs">
+                      Établissement
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -114,26 +150,28 @@ const UserApp = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center text-gray-600">
                   <MapPin className="h-4 w-4 mr-2 text-purple-500" />
-                  <span className="text-sm">{selectedEvent.venue}</span>
+                  <span className="text-sm">{selectedEvent.location}</span>
                 </div>
                 <div className="flex items-center text-gray-600">
                   <Calendar className="h-4 w-4 mr-2 text-purple-500" />
-                  <span className="text-sm">{new Date(selectedEvent.date).toLocaleDateString('fr-FR')}</span>
+                  <span className="text-sm">{formatDate(selectedEvent.date)}</span>
                 </div>
-                <div className="flex items-center text-gray-600">
-                  <Clock className="h-4 w-4 mr-2 text-purple-500" />
-                  <span className="text-sm">{selectedEvent.time}</span>
-                </div>
+                {selectedEvent.time && (
+                  <div className="flex items-center text-gray-600">
+                    <Clock className="h-4 w-4 mr-2 text-purple-500" />
+                    <span className="text-sm">{selectedEvent.time}</span>
+                  </div>
+                )}
                 <div className="flex items-center text-gray-600">
                   <Users className="h-4 w-4 mr-2 text-purple-500" />
                   <span className="text-sm">{selectedEvent.participants} participants</span>
                 </div>
               </div>
 
-              {selectedEvent.price && (
+              {selectedEvent.price_text && (
                 <div className="flex items-center text-gray-600">
                   <Euro className="h-4 w-4 mr-2 text-green-500" />
-                  <span className="text-sm font-medium">{selectedEvent.price}</span>
+                  <span className="text-sm font-medium">{selectedEvent.price_text}</span>
                 </div>
               )}
 
@@ -142,7 +180,7 @@ const UserApp = () => {
                 <p className="text-gray-600 text-sm leading-relaxed">{selectedEvent.description}</p>
               </div>
 
-              {selectedEvent.tags.length > 0 && (
+              {selectedEvent.tags && selectedEvent.tags.length > 0 && (
                 <div className="border-t pt-4">
                   <h3 className="font-medium text-gray-900 mb-2">Tags</h3>
                   <div className="flex flex-wrap gap-2">
@@ -157,8 +195,8 @@ const UserApp = () => {
 
               <div className="border-t pt-4">
                 <p className="text-xs text-gray-500">Organisé par {selectedEvent.organizer}</p>
-                {selectedEvent.maxParticipants && (
-                  <p className="text-xs text-gray-500">Places limitées à {selectedEvent.maxParticipants} personnes</p>
+                {selectedEvent.max_participants && (
+                  <p className="text-xs text-gray-500">Places limitées à {selectedEvent.max_participants} personnes</p>
                 )}
               </div>
             </div>
@@ -257,7 +295,7 @@ const UserApp = () => {
               {/* Image */}
               <div className="relative h-96">
                 <img
-                  src={currentEvent.image}
+                  src={currentEvent.image_url || "https://picsum.photos/400/200?random=event"}
                   alt={currentEvent.title}
                   className="w-full h-full object-cover"
                 />
@@ -271,6 +309,9 @@ const UserApp = () => {
                   <div className="bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-medium text-gray-700 flex items-center">
                     <Building className="h-3 w-3 mr-1" />
                     {currentEvent.organizer}
+                    {currentEvent.source === 'business' && (
+                      <span className="ml-1 text-orange-600">★</span>
+                    )}
                   </div>
                 </div>
                 <div className="absolute bottom-4 left-4 right-4 text-white">
@@ -278,20 +319,20 @@ const UserApp = () => {
                   <div className="space-y-1">
                     <div className="flex items-center text-sm">
                       <MapPin className="h-4 w-4 mr-2" />
-                      {currentEvent.venue}
+                      {currentEvent.location}
                     </div>
                     <div className="flex items-center text-sm">
                       <Calendar className="h-4 w-4 mr-2" />
-                      {new Date(currentEvent.date).toLocaleDateString('fr-FR')} à {currentEvent.time}
+                      {formatDate(currentEvent.date)}
                     </div>
                     <div className="flex items-center text-sm">
                       <Users className="h-4 w-4 mr-2" />
                       {currentEvent.participants} participants
                     </div>
-                    {currentEvent.price && (
+                    {currentEvent.price_text && (
                       <div className="flex items-center text-sm">
                         <Euro className="h-4 w-4 mr-2" />
-                        {currentEvent.price}
+                        {currentEvent.price_text}
                       </div>
                     )}
                   </div>

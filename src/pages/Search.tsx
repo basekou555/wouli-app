@@ -6,8 +6,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Search as SearchIcon, MapPin, Calendar, Users, Heart, X, Filter, Building } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
-import { mockEvents, categories, Event } from '../data/mockEvents';
+import { categories } from '../data/mockEvents';
+import { useAllEvents } from '@/hooks/useAllEvents';
+import { UnifiedEvent } from '@/types/unified';
 import BottomNavigation from '../components/BottomNavigation';
+import { PageSkeleton } from '@/components/LoadingSkeleton';
 
 const Search = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,6 +20,8 @@ const Search = () => {
   const [participatingEvents, setParticipatingEvents] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const { toast } = useToast();
+  
+  const { events: allEvents, loading } = useAllEvents();
 
   const dateFilters = [
     { id: 'all', name: 'Toutes les dates' },
@@ -27,14 +32,14 @@ const Search = () => {
   ];
 
   const filteredEvents = useMemo(() => {
-    let filtered = mockEvents;
+    let filtered = allEvents;
 
     // Filtre par terme de recherche
     if (searchTerm) {
       filtered = filtered.filter(event => 
         event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        event.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        event.venue.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        event.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        event.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
         event.organizer.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -47,7 +52,6 @@ const Search = () => {
     // Filtre par date (simplifié pour la démo)
     if (selectedDate !== 'all') {
       const today = new Date();
-      const eventDate = new Date();
       
       switch (selectedDate) {
         case 'today':
@@ -79,12 +83,12 @@ const Search = () => {
     }
 
     return filtered;
-  }, [searchTerm, selectedCategory, selectedDate]);
+  }, [allEvents, searchTerm, selectedCategory, selectedDate]);
 
   const handleLike = (eventId: string) => {
     if (!likedEvents.includes(eventId)) {
       setLikedEvents([...likedEvents, eventId]);
-      const event = mockEvents.find(e => e.id === eventId);
+      const event = allEvents.find(e => e.id === eventId);
       toast({
         title: "❤️ Événement aimé !",
         description: `Tu as aimé "${event?.title}"`,
@@ -95,7 +99,7 @@ const Search = () => {
   const handleParticipate = (eventId: string) => {
     if (!participatingEvents.includes(eventId)) {
       setParticipatingEvents([...participatingEvents, eventId]);
-      const event = mockEvents.find(e => e.id === eventId);
+      const event = allEvents.find(e => e.id === eventId);
       toast({
         title: "🎉 Participation confirmée !",
         description: `Tu participes à "${event?.title}"`,
@@ -118,6 +122,10 @@ const Search = () => {
       minute: '2-digit'
     }).format(date);
   };
+
+  if (loading) {
+    return <PageSkeleton />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -210,7 +218,7 @@ const Search = () => {
                 <div className="flex">
                   <div className="w-24 h-24 flex-shrink-0">
                     <img
-                      src={event.image}
+                      src={event.image_url || "https://picsum.photos/200/200?random=event"}
                       alt={event.title}
                       className="w-full h-full object-cover"
                     />
@@ -219,9 +227,16 @@ const Search = () => {
                     <div className="space-y-2">
                       <div className="flex justify-between items-start">
                         <h3 className="font-semibold text-lg line-clamp-1">{event.title}</h3>
-                        <Badge variant="outline" className="ml-2 text-xs">
-                          {categories.find(c => c.id === event.category)?.icon}
-                        </Badge>
+                        <div className="flex gap-1 ml-2">
+                          <Badge variant="outline" className="text-xs">
+                            {categories.find(c => c.id === event.category)?.icon}
+                          </Badge>
+                          {event.source === 'business' && (
+                            <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-800">
+                              ★
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                       
                       <div className="flex items-center text-sm text-gray-600">
@@ -232,7 +247,7 @@ const Search = () => {
                       <div className="space-y-1 text-sm text-gray-600">
                         <div className="flex items-center">
                           <MapPin className="h-3 w-3 mr-1" />
-                          {event.venue}
+                          {event.location}
                         </div>
                         <div className="flex items-center">
                           <Calendar className="h-3 w-3 mr-1" />
@@ -265,9 +280,9 @@ const Search = () => {
                             {participatingEvents.includes(event.id) ? '✅ Inscrit' : 'Participer'}
                           </Button>
                         </div>
-                        {event.price && (
+                        {event.price_text && (
                           <Badge variant="secondary" className="text-green-600">
-                            {event.price}
+                            {event.price_text}
                           </Badge>
                         )}
                       </div>
