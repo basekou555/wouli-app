@@ -2,30 +2,31 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
-interface BusinessEvent {
-  id?: string;
-  title: string;
-  description?: string;
-  date: string;
-  time: string;
-  venue: string;
-  category: string;
-  event_type: string;
-  price?: string;
-  image_url?: string;
-  views: number;
-  likes: number;
-  participants: number;
-}
+import { BusinessEvent } from '@/types/events';
+import { ApiError } from '@/types/api';
 
 export const useBusinessEvents = () => {
   const [events, setEvents] = useState<BusinessEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<ApiError | null>(null);
   const { toast } = useToast();
+
+  const handleError = (error: any, context: string) => {
+    console.error(`Error in ${context}:`, error);
+    const apiError: ApiError = {
+      message: error.message || 'Une erreur inattendue s\'est produite',
+      code: error.code,
+      details: error
+    };
+    setError(apiError);
+    return apiError;
+  };
 
   const fetchEvents = async () => {
     try {
+      setLoading(true);
+      setError(null);
+      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         // Use mock data if not authenticated
@@ -36,13 +37,15 @@ export const useBusinessEvents = () => {
             description: 'Une soirée jazz intimiste',
             date: '2025-06-14',
             time: '20:00',
+            location: 'Blue Note Bar',
             venue: 'Blue Note Bar',
             category: 'bar',
             event_type: 'À boire',
             price: '15€',
             views: 120,
             likes: 25,
-            participants: 45
+            participants: 45,
+            user_id: 'mock'
           },
           {
             id: '2',
@@ -50,16 +53,17 @@ export const useBusinessEvents = () => {
             description: 'Cocktails à prix réduit',
             date: '2025-06-15',
             time: '18:00',
+            location: 'Blue Note Bar',
             venue: 'Blue Note Bar',
             category: 'bar',
             event_type: 'À boire',
             price: '8€',
             views: 89,
             likes: 18,
-            participants: 32
+            participants: 32,
+            user_id: 'mock'
           }
         ]);
-        setLoading(false);
         return;
       }
 
@@ -69,44 +73,37 @@ export const useBusinessEvents = () => {
         .eq('user_id', user.id)
         .order('date', { ascending: true });
 
-      if (error) {
-        console.error('Error fetching events:', error);
-        throw error;
-      }
-      
+      if (error) throw error;
       setEvents(data || []);
     } catch (error) {
-      console.error('Error fetching events:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les événements",
-        variant: "destructive"
-      });
-      // Use mock data as fallback
+      handleError(error, 'fetchEvents');
+      // Fallback to empty array instead of showing error immediately
       setEvents([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const createEvent = async (eventData: Omit<BusinessEvent, 'id' | 'views' | 'likes' | 'participants'>) => {
+  const createEvent = async (eventData: Omit<BusinessEvent, 'id' | 'views' | 'likes' | 'participants' | 'user_id'>) => {
     try {
+      setError(null);
+      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        // Add to mock data if not authenticated
         const newEvent: BusinessEvent = {
           id: (events.length + 1).toString(),
           ...eventData,
           views: 0,
           likes: 0,
-          participants: 0
+          participants: 0,
+          user_id: 'mock'
         };
         setEvents([...events, newEvent]);
         toast({
           title: "✅ Événement créé !",
           description: `"${eventData.title}" a été publié avec succès`,
         });
-        return;
+        return { data: newEvent, error: null };
       }
 
       const { data, error } = await supabase
@@ -121,38 +118,38 @@ export const useBusinessEvents = () => {
         .select()
         .single();
 
-      if (error) {
-        console.error('Error creating event:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      const newEvent = data;
-      setEvents([...events, newEvent]);
+      setEvents([...events, data]);
       toast({
         title: "✅ Événement créé !",
         description: `"${eventData.title}" a été publié avec succès`,
       });
+      
+      return { data, error: null };
     } catch (error) {
-      console.error('Error creating event:', error);
+      const apiError = handleError(error, 'createEvent');
       toast({
         title: "Erreur",
-        description: "Impossible de créer l'événement",
+        description: apiError.message,
         variant: "destructive"
       });
+      return { data: null, error: apiError };
     }
   };
 
   const deleteEvent = async (eventId: string) => {
     try {
+      setError(null);
+      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        // Remove from mock data if not authenticated
         setEvents(events.filter(event => event.id !== eventId));
         toast({
           title: "🗑️ Événement supprimé",
           description: "L'événement a été retiré de votre liste",
         });
-        return;
+        return { error: null };
       }
 
       const { error } = await supabase
@@ -160,23 +157,23 @@ export const useBusinessEvents = () => {
         .delete()
         .eq('id', eventId);
 
-      if (error) {
-        console.error('Error deleting event:', error);
-        throw error;
-      }
+      if (error) throw error;
 
       setEvents(events.filter(event => event.id !== eventId));
       toast({
         title: "🗑️ Événement supprimé",
         description: "L'événement a été retiré de votre liste",
       });
+      
+      return { error: null };
     } catch (error) {
-      console.error('Error deleting event:', error);
+      const apiError = handleError(error, 'deleteEvent');
       toast({
         title: "Erreur",
-        description: "Impossible de supprimer l'événement",
+        description: apiError.message,
         variant: "destructive"
       });
+      return { error: apiError };
     }
   };
 
@@ -187,8 +184,10 @@ export const useBusinessEvents = () => {
   return {
     events,
     loading,
+    error,
     createEvent,
     deleteEvent,
-    refetch: fetchEvents
+    refetch: fetchEvents,
+    clearError: () => setError(null)
   };
 };

@@ -7,18 +7,21 @@ import EventCreationForm from '@/components/business/EventCreationForm';
 import EventList from '@/components/business/EventList';
 import StatisticsCards from '@/components/business/StatisticsCards';
 import PerformanceAnalytics from '@/components/business/PerformanceAnalytics';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import ErrorMessage from '@/components/ErrorMessage';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 const BusinessDashboard = () => {
-  const { config, loading: configLoading } = useBusinessConfig();
-  const { events, loading: eventsLoading, createEvent, deleteEvent } = useBusinessEvents();
+  const { config, loading: configLoading, error: configError } = useBusinessConfig();
+  const { events, loading: eventsLoading, error: eventsError, createEvent, deleteEvent, clearError } = useBusinessEvents();
 
-  if (configLoading || eventsLoading) {
+  const isLoading = configLoading || eventsLoading;
+  const hasError = configError || eventsError;
+
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Chargement...</p>
-        </div>
+        <LoadingSpinner size="lg" text="Chargement du tableau de bord..." />
       </div>
     );
   }
@@ -26,36 +29,48 @@ const BusinessDashboard = () => {
   if (!config) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600">Erreur lors du chargement de la configuration</p>
-        </div>
+        <ErrorMessage 
+          message="Impossible de charger la configuration" 
+          variant="destructive"
+        />
       </div>
     );
   }
 
-  const handleEventCreate = (eventData: any) => {
-    createEvent(eventData);
+  const handleEventCreate = async (eventData: any) => {
+    const result = await createEvent(eventData);
+    return result;
   };
 
-  const handleDeleteEvent = (id: string) => {
-    deleteEvent(id);
+  const handleDeleteEvent = async (id: string) => {
+    const result = await deleteEvent(id);
+    return result;
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <BusinessProfile config={config} eventsCount={events.length} />
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gray-50">
+        <BusinessProfile config={config} eventsCount={events.length} />
 
-      <div className="container mx-auto p-6">
-        <StatisticsCards config={config} events={events} />
+        <div className="container mx-auto p-6">
+          {hasError && (
+            <ErrorMessage 
+              message={hasError.message} 
+              onDismiss={clearError}
+            />
+          )}
 
-        <div className="grid lg:grid-cols-2 gap-8">
-          <EventCreationForm config={config} onEventCreate={handleEventCreate} />
-          <EventList config={config} events={events} onDeleteEvent={handleDeleteEvent} />
+          <StatisticsCards config={config} events={events} />
+
+          <div className="grid lg:grid-cols-2 gap-8">
+            <EventCreationForm config={config} onEventCreate={handleEventCreate} />
+            <EventList config={config} events={events} onDeleteEvent={handleDeleteEvent} />
+          </div>
+
+          <PerformanceAnalytics config={config} events={events} />
         </div>
-
-        <PerformanceAnalytics config={config} events={events} />
       </div>
-    </div>
+    </ErrorBoundary>
   );
 };
 
