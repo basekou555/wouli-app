@@ -34,6 +34,7 @@ function App() {
               <Route path="/auth" element={<Auth />} />
               <Route path="/app" element={<UserApp />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/profil" element={<Profile />} />
               <Route path="/event/:id" element={<EventDetails />} />
               <Route path="/explore" element={<Explore />} />
               <Route path="/search" element={<Search />} />
