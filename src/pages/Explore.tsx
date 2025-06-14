@@ -15,7 +15,7 @@ import { getEventInteractionStatus } from '../services/eventInteractionService';
 const Explore = () => {
   const { user } = useAuth();
   const {
-    allEvents,
+    filteredEvents: allEvents,
     loading,
     error,
     currentIndex,
