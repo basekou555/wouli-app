@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, MapPin, ExternalLink } from 'lucide-react';
 import ImageUpload from '@/components/ImageUpload';
 
 interface BusinessEvent {
@@ -12,10 +12,12 @@ interface BusinessEvent {
   description?: string;
   date: string;
   time: string;
-  venue: string;
+  venue?: string;
+  custom_venue?: string;
   category: string;
   event_type: string;
   price?: string;
+  external_url?: string;
   image_url?: string;
 }
 
@@ -30,6 +32,9 @@ interface BusinessConfig {
 interface EventCreationFormProps {
   config: BusinessConfig;
   onEventCreate: (event: BusinessEvent) => void;
+  editingEvent?: BusinessEvent;
+  onEventUpdate?: (eventId: string, event: Partial<BusinessEvent>) => void;
+  onCancelEdit?: () => void;
 }
 
 const EVENT_TYPES = [
@@ -39,18 +44,29 @@ const EVENT_TYPES = [
   'Activités'
 ];
 
-const EventCreationForm = ({ config, onEventCreate }: EventCreationFormProps) => {
+const VENUE_OPTIONS = [
+  'Blue Note Bar',
+  'Club Nyx',
+  'FitMax Gym',
+  'Autre (personnalisé)'
+];
+
+const EventCreationForm = ({ config, onEventCreate, editingEvent, onEventUpdate, onCancelEdit }: EventCreationFormProps) => {
   const [newEvent, setNewEvent] = useState({
-    title: '',
-    date: '',
-    time: '',
-    venue: config.client_name,
-    description: '',
-    category: 'bar',
-    event_type: 'Soirées',
-    price: '',
-    image_url: ''
+    title: editingEvent?.title || '',
+    date: editingEvent?.date || '',
+    time: editingEvent?.time || '',
+    venue: editingEvent?.venue || config.client_name,
+    custom_venue: editingEvent?.custom_venue || '',
+    description: editingEvent?.description || '',
+    category: editingEvent?.category || 'bar',
+    event_type: editingEvent?.event_type || 'Soirées',
+    price: editingEvent?.price || '',
+    external_url: editingEvent?.external_url || '',
+    image_url: editingEvent?.image_url || ''
   });
+
+  const [useCustomVenue, setUseCustomVenue] = useState(!!editingEvent?.custom_venue);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,22 +74,35 @@ const EventCreationForm = ({ config, onEventCreate }: EventCreationFormProps) =>
       return;
     }
 
-    onEventCreate({
+    const eventData = {
       ...newEvent,
-      venue: config.client_name
-    });
+      venue: useCustomVenue ? undefined : newEvent.venue,
+      custom_venue: useCustomVenue ? newEvent.custom_venue : undefined
+    };
 
-    setNewEvent({ 
-      title: '', 
-      date: '', 
-      time: '', 
-      venue: config.client_name, 
-      description: '', 
-      category: 'bar', 
-      event_type: 'Soirées',
-      price: '', 
-      image_url: '' 
-    });
+    if (editingEvent && onEventUpdate) {
+      onEventUpdate(editingEvent.id, eventData);
+    } else {
+      onEventCreate(eventData);
+    }
+
+    // Reset form only if creating new event
+    if (!editingEvent) {
+      setNewEvent({ 
+        title: '', 
+        date: '', 
+        time: '', 
+        venue: config.client_name, 
+        custom_venue: '',
+        description: '', 
+        category: 'bar', 
+        event_type: 'Soirées',
+        price: '', 
+        external_url: '',
+        image_url: '' 
+      });
+      setUseCustomVenue(false);
+    }
   };
 
   if (!config.features.includes('events')) {
@@ -85,7 +114,7 @@ const EventCreationForm = ({ config, onEventCreate }: EventCreationFormProps) =>
       <CardHeader>
         <CardTitle className="flex items-center">
           <PlusCircle className="h-5 w-5 mr-2" style={{ color: config.brand_color }} />
-          Créer un événement
+          {editingEvent ? 'Modifier l\'événement' : 'Créer un événement'}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -139,6 +168,57 @@ const EventCreationForm = ({ config, onEventCreate }: EventCreationFormProps) =>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
+              <MapPin className="h-4 w-4 inline mr-1" />
+              Lieu de l'événement *
+            </label>
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  id="preset-venue"
+                  name="venue-type"
+                  checked={!useCustomVenue}
+                  onChange={() => setUseCustomVenue(false)}
+                />
+                <label htmlFor="preset-venue">Lieu prédéfini</label>
+              </div>
+              {!useCustomVenue && (
+                <select
+                  value={newEvent.venue}
+                  onChange={(e) => setNewEvent({ ...newEvent, venue: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {VENUE_OPTIONS.filter(option => option !== 'Autre (personnalisé)').map((venue) => (
+                    <option key={venue} value={venue}>
+                      {venue}
+                    </option>
+                  ))}
+                </select>
+              )}
+              
+              <div className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  id="custom-venue"
+                  name="venue-type"
+                  checked={useCustomVenue}
+                  onChange={() => setUseCustomVenue(true)}
+                />
+                <label htmlFor="custom-venue">Lieu personnalisé</label>
+              </div>
+              {useCustomVenue && (
+                <Input
+                  value={newEvent.custom_venue}
+                  onChange={(e) => setNewEvent({ ...newEvent, custom_venue: e.target.value })}
+                  placeholder="Ex: Le Sucre, Villa Florentine..."
+                  required
+                />
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Type d'événement
             </label>
             <select
@@ -167,6 +247,19 @@ const EventCreationForm = ({ config, onEventCreate }: EventCreationFormProps) =>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
+              <ExternalLink className="h-4 w-4 inline mr-1" />
+              Lien billeterie/réservation
+            </label>
+            <Input
+              type="url"
+              value={newEvent.external_url}
+              onChange={(e) => setNewEvent({ ...newEvent, external_url: e.target.value })}
+              placeholder="https://billetterie.example.com"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Description
             </label>
             <Textarea
@@ -177,13 +270,24 @@ const EventCreationForm = ({ config, onEventCreate }: EventCreationFormProps) =>
             />
           </div>
 
-          <Button 
-            type="submit" 
-            className="w-full"
-            style={{ backgroundColor: config.brand_color }}
-          >
-            Créer l'événement
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              type="submit" 
+              className="flex-1"
+              style={{ backgroundColor: config.brand_color }}
+            >
+              {editingEvent ? 'Mettre à jour' : 'Créer l\'événement'}
+            </Button>
+            {editingEvent && onCancelEdit && (
+              <Button 
+                type="button" 
+                variant="outline"
+                onClick={onCancelEdit}
+              >
+                Annuler
+              </Button>
+            )}
+          </div>
         </form>
       </CardContent>
     </Card>

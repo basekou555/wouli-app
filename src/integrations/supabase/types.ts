@@ -81,9 +81,11 @@ export type Database = {
         Row: {
           category: string
           created_at: string
+          custom_venue: string | null
           date: string
           description: string | null
           event_type: string
+          external_url: string | null
           id: string
           image_url: string | null
           likes: number
@@ -93,15 +95,17 @@ export type Database = {
           title: string
           updated_at: string
           user_id: string
-          venue: string
+          venue: string | null
           views: number
         }
         Insert: {
           category: string
           created_at?: string
+          custom_venue?: string | null
           date: string
           description?: string | null
           event_type: string
+          external_url?: string | null
           id?: string
           image_url?: string | null
           likes?: number
@@ -111,15 +115,17 @@ export type Database = {
           title: string
           updated_at?: string
           user_id: string
-          venue: string
+          venue?: string | null
           views?: number
         }
         Update: {
           category?: string
           created_at?: string
+          custom_venue?: string | null
           date?: string
           description?: string | null
           event_type?: string
+          external_url?: string | null
           id?: string
           image_url?: string | null
           likes?: number
@@ -129,7 +135,7 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
-          venue?: string
+          venue?: string | null
           views?: number
         }
         Relationships: []

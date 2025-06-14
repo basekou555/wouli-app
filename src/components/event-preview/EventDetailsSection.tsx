@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Calendar, MapPin, Clock, Euro } from 'lucide-react';
+import { Calendar, MapPin, Clock, Euro, ExternalLink } from 'lucide-react';
 import { UnifiedEvent } from '@/types/unified';
 import { formatEventDate } from '@/utils/dateFormatting';
 
@@ -40,6 +40,20 @@ const EventDetailsSection: React.FC<EventDetailsSectionProps> = ({ event }) => {
           <div className="flex items-center text-gray-700">
             <Euro className="h-5 w-5 mr-3 text-orange-500" />
             <span>{event.price_text}</span>
+          </div>
+        )}
+
+        {event.external_url && (
+          <div className="flex items-center text-gray-700">
+            <ExternalLink className="h-5 w-5 mr-3 text-orange-500" />
+            <a 
+              href={event.external_url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-500 hover:underline"
+            >
+              Billeterie / Plus d'infos
+            </a>
           </div>
         )}
       </div>

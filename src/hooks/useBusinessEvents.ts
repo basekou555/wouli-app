@@ -4,8 +4,8 @@ import { useToast } from '@/hooks/use-toast';
 import { BusinessEvent } from '@/types/events';
 import { ApiError } from '@/types/api';
 import { createApiError } from './utils/errorHandling';
-import { fetchBusinessEvents, createBusinessEvent, deleteBusinessEvent } from '@/services/businessEventsService';
-import { UseBusinessEventsReturn, CreateEventData } from './types/businessEvents';
+import { fetchBusinessEvents } from '@/services/businessEventsService';
+import { UseBusinessEventsReturn } from './types/businessEvents';
 import { useBusinessEventActions } from './business/useBusinessEventActions';
 
 export const useBusinessEvents = (): UseBusinessEventsReturn => {
@@ -14,7 +14,7 @@ export const useBusinessEvents = (): UseBusinessEventsReturn => {
   const [error, setError] = useState<ApiError | null>(null);
   const { toast } = useToast();
 
-  const { createEventAction, deleteEventAction } = useBusinessEventActions(events, setEvents, setError, toast);
+  const { createEventAction, updateEventAction, deleteEventAction } = useBusinessEventActions(events, setEvents, setError, toast);
 
   const fetchEvents = async () => {
     try {
@@ -42,6 +42,7 @@ export const useBusinessEvents = (): UseBusinessEventsReturn => {
     loading,
     error,
     createEvent: createEventAction,
+    updateEvent: updateEventAction,
     deleteEvent: deleteEventAction,
     refetch: fetchEvents,
     clearError: () => setError(null)

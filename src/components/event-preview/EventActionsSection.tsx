@@ -1,17 +1,45 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Users, ExternalLink } from 'lucide-react';
+import { Users, ExternalLink, ArrowLeft } from 'lucide-react';
 import { UnifiedEvent } from '@/types/unified';
+import { useNavigate } from 'react-router-dom';
 
 interface EventActionsSectionProps {
   event: UnifiedEvent;
   onParticipate: () => void;
+  showBackButton?: boolean;
 }
 
-const EventActionsSection: React.FC<EventActionsSectionProps> = ({ event, onParticipate }) => {
+const EventActionsSection: React.FC<EventActionsSectionProps> = ({ 
+  event, 
+  onParticipate, 
+  showBackButton = true 
+}) => {
+  const navigate = useNavigate();
+
+  const handleBack = () => {
+    // Check if there's a previous page in history
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/search');
+    }
+  };
+
   return (
     <div className="space-y-4">
+      {showBackButton && (
+        <Button 
+          variant="outline" 
+          onClick={handleBack}
+          className="w-full"
+        >
+          <ArrowLeft className="h-5 w-5 mr-2" />
+          Retour
+        </Button>
+      )}
+
       <Button 
         onClick={onParticipate}
         className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3"

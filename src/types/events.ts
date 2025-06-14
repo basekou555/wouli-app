@@ -27,9 +27,11 @@ export interface UserEvent extends BaseEvent {
 
 export interface BusinessEvent extends BaseEvent {
   time: string;
-  venue: string;
+  venue?: string;
+  custom_venue?: string;
   event_type: 'a-boire' | 'a-manger' | 'soirees' | 'activites';
   price?: string;
+  external_url?: string;
   user_id: string;
 }
 

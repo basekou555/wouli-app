@@ -55,7 +55,7 @@ export const fetchBusinessEvents = async (): Promise<BusinessEvent[]> => {
   // Map Supabase data to BusinessEvent type with proper type casting
   const mappedEvents: BusinessEvent[] = (data || []).map(event => ({
     ...event,
-    location: event.venue, // Map venue to location for consistency
+    location: event.custom_venue || event.venue || 'Lieu à définir',
     category: event.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
     event_type: event.event_type as 'a-boire' | 'a-manger' | 'soirees' | 'activites'
   }));
@@ -84,8 +84,17 @@ export const createBusinessEvent = async (
     .from('business_events')
     .insert({
       user_id: user.id,
-      ...eventData,
-      venue: eventData.venue, // Use venue field for Supabase
+      title: eventData.title,
+      description: eventData.description,
+      date: eventData.date,
+      time: eventData.time,
+      venue: eventData.venue,
+      custom_venue: eventData.custom_venue,
+      category: eventData.category,
+      event_type: eventData.event_type,
+      price: eventData.price,
+      external_url: eventData.external_url,
+      image_url: eventData.image_url,
       views: 0,
       likes: 0,
       participants: 0
@@ -98,7 +107,48 @@ export const createBusinessEvent = async (
   // Map the returned data to BusinessEvent type with proper type casting
   return {
     ...data,
-    location: data.venue,
+    location: data.custom_venue || data.venue || 'Lieu à définir',
+    category: data.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
+    event_type: data.event_type as 'a-boire' | 'a-manger' | 'soirees' | 'activites'
+  };
+};
+
+export const updateBusinessEvent = async (
+  eventId: string,
+  eventData: Partial<Omit<BusinessEvent, 'id' | 'user_id'>>
+): Promise<BusinessEvent> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const { data, error } = await supabase
+    .from('business_events')
+    .update({
+      title: eventData.title,
+      description: eventData.description,
+      date: eventData.date,
+      time: eventData.time,
+      venue: eventData.venue,
+      custom_venue: eventData.custom_venue,
+      category: eventData.category,
+      event_type: eventData.event_type,
+      price: eventData.price,
+      external_url: eventData.external_url,
+      image_url: eventData.image_url,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', eventId)
+    .eq('user_id', user.id)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return {
+    ...data,
+    location: data.custom_venue || data.venue || 'Lieu à définir',
     category: data.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
     event_type: data.event_type as 'a-boire' | 'a-manger' | 'soirees' | 'activites'
   };

@@ -18,6 +18,7 @@ import UserHistory from "./pages/UserHistory";
 import NotFound from "./pages/NotFound";
 import BusinessDashboard from "./pages/BusinessDashboard";
 import BusinessEventDetails from "./pages/BusinessEventDetails";
+import BusinessEventEdit from "./pages/BusinessEventEdit";
 import ProfileSettings from "./pages/ProfileSettings";
 import UserProfileSettings from "./pages/UserProfileSettings";
 import DemoSetup from "./pages/DemoSetup";
@@ -54,6 +55,7 @@ function App() {
                 <Route path="/history" element={<UserHistory />} />
                 <Route path="/business" element={<BusinessDashboard />} />
                 <Route path="/business/event/:id" element={<BusinessEventDetails />} />
+                <Route path="/business/event/:id/edit" element={<BusinessEventEdit />} />
                 <Route path="/profile-settings" element={<ProfileSettings />} />
                 <Route path="/user-settings" element={<UserProfileSettings />} />
                 <Route path="/demo-setup" element={<DemoSetup />} />

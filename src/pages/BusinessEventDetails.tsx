@@ -1,254 +1,225 @@
 
 import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Calendar, Clock, MapPin, Users, Eye, Heart, Search, TrendingUp, Edit3, Copy, Share2 } from 'lucide-react';
-import { mockEvents } from '../data/mockEvents';
-import { categories } from '../data/mockEvents';
+import { Calendar, MapPin, Clock, Euro, ArrowLeft, Edit, Share2, ExternalLink, Eye, Heart, Users } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const BusinessEventDetails = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams();
   const navigate = useNavigate();
-  
-  // Pour ce MVP, on utilise les mockEvents. Dans une vraie app, on ferait un appel API
-  const event = mockEvents.find(e => e.id === id);
+  const location = useLocation();
+  const { toast } = useToast();
+
+  // Get event from location state
+  const event = location.state?.event;
 
   if (!event) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Événement non trouvé</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Événement introuvable</h2>
           <Button onClick={() => navigate('/business')}>
-            Retour au dashboard
+            Retour au tableau de bord
           </Button>
         </div>
       </div>
     );
   }
 
-  const categoryInfo = categories.find(c => c.id === event.category);
+  const handleEdit = () => {
+    navigate(`/business/event/${id}/edit`, { state: { event } });
+  };
+
+  const handleShare = () => {
+    const url = `${window.location.origin}/event/${id}`;
+    if (navigator.share) {
+      navigator.share({
+        title: event.title,
+        text: event.description,
+        url: url,
+      });
+    } else {
+      navigator.clipboard.writeText(url);
+      toast({
+        title: "Lien copié !",
+        description: "Le lien de l'événement a été copié dans le presse-papier",
+      });
+    }
+  };
+
+  const getLocationDisplay = () => {
+    return event.custom_venue || event.venue || 'Lieu à définir';
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white shadow-sm p-4">
-        <div className="flex items-center justify-between">
+      <div className="bg-white shadow-sm p-6">
+        <div className="flex justify-between items-center">
           <div className="flex items-center">
             <Button 
               variant="ghost" 
-              size="icon"
               onClick={() => navigate('/business')}
-              className="mr-3"
+              className="mr-4"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Détails de l'événement</h1>
-              <p className="text-sm text-gray-600">Analysez les performances de votre événement</p>
+              <h1 className="text-3xl font-bold text-gray-900">{event.title}</h1>
+              <p className="text-gray-600 mt-2">{event.event_type}</p>
             </div>
           </div>
-          <div className="flex space-x-2">
-            <Button variant="outline" size="sm">
-              <Edit3 className="h-4 w-4 mr-1" />
+          <div className="flex gap-2">
+            <Button onClick={handleEdit} variant="outline">
+              <Edit className="h-4 w-4 mr-2" />
               Modifier
             </Button>
-            <Button variant="outline" size="sm">
-              <Share2 className="h-4 w-4 mr-1" />
+            <Button onClick={handleShare} variant="outline">
+              <Share2 className="h-4 w-4 mr-2" />
               Partager
             </Button>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto p-6">
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Colonne principale */}
+      <div className="container mx-auto p-6 max-w-4xl">
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Main content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Image et infos principales */}
-            <Card>
-              <CardContent className="p-0">
-                <div className="relative h-64 md:h-80">
-                  <img
-                    src={event.image}
+            {/* Event image */}
+            {event.image_url && (
+              <Card>
+                <CardContent className="p-0">
+                  <img 
+                    src={event.image_url} 
                     alt={event.title}
-                    className="w-full h-full object-cover rounded-t-lg"
+                    className="w-full h-64 object-cover rounded-lg"
                   />
-                  <div className="absolute top-4 right-4">
-                    <span className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium">
-                      {categoryInfo?.icon} {categoryInfo?.name}
-                    </span>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <h1 className="text-2xl font-bold text-gray-900 mb-2">{event.title}</h1>
-                  <p className="text-gray-600 mb-4">{event.description}</p>
-                  
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div className="flex items-center text-gray-600">
-                      <Calendar className="h-4 w-4 mr-2 text-purple-500" />
-                      <span className="text-sm">{new Date(event.date).toLocaleDateString('fr-FR')}</span>
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                      <Clock className="h-4 w-4 mr-2 text-purple-500" />
-                      <span className="text-sm">{event.time}</span>
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                      <MapPin className="h-4 w-4 mr-2 text-purple-500" />
-                      <span className="text-sm">{event.venue}</span>
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                      <Users className="h-4 w-4 mr-2 text-purple-500" />
-                      <span className="text-sm">{event.participants} participants</span>
-                    </div>
-                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-                  {event.price && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                      <p className="text-green-800 font-medium">{event.price}</p>
-                    </div>
-                  )}
-
-                  {event.tags.length > 0 && (
-                    <div className="mt-4">
-                      <h3 className="font-medium text-gray-900 mb-2">Tags</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {event.tags.map((tag, index) => (
-                          <span key={index} className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs">
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Insights et recommandations */}
+            {/* Event details */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <TrendingUp className="h-5 w-5 mr-2 text-blue-500" />
-                  Insights et recommandations
-                </CardTitle>
+                <CardTitle>Détails de l'événement</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="font-medium text-blue-900 mb-2">📈 Taux d'engagement</h4>
-                  <p className="text-sm text-blue-800">
-                    Votre événement a un taux d'engagement de {Math.round((event.likes / event.views) * 100)}% 
-                    (moyenne: 8%). C'est {event.likes / event.views > 0.08 ? 'excellent' : 'correct'} !
-                  </p>
-                </div>
-                
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <h4 className="font-medium text-green-900 mb-2">🎯 Visibilité</h4>
-                  <p className="text-sm text-green-800">
-                    Votre événement apparaît {event.searchAppearances} fois dans les recherches. 
-                    Les tags populaires comme "{event.tags[0]}" améliorent votre visibilité.
-                  </p>
+                <div className="flex items-center text-gray-700">
+                  <Calendar className="h-5 w-5 mr-3 text-orange-500" />
+                  <span>{formatDate(event.date)}</span>
                 </div>
 
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                  <h4 className="font-medium text-orange-900 mb-2">💡 Conseil</h4>
-                  <p className="text-sm text-orange-800">
-                    {event.participants < 50 
-                      ? "Partagez votre événement sur vos réseaux sociaux pour augmenter la participation."
-                      : "Excellente participation ! Pensez à créer des événements récurrents."}
-                  </p>
+                <div className="flex items-center text-gray-700">
+                  <Clock className="h-5 w-5 mr-3 text-orange-500" />
+                  <span>{event.time}</span>
                 </div>
+
+                <div className="flex items-center text-gray-700">
+                  <MapPin className="h-5 w-5 mr-3 text-orange-500" />
+                  <span>{getLocationDisplay()}</span>
+                </div>
+
+                {event.price && (
+                  <div className="flex items-center text-gray-700">
+                    <Euro className="h-5 w-5 mr-3 text-orange-500" />
+                    <span>{event.price}</span>
+                  </div>
+                )}
+
+                {event.external_url && (
+                  <div className="flex items-center text-gray-700">
+                    <ExternalLink className="h-5 w-5 mr-3 text-orange-500" />
+                    <a 
+                      href={event.external_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:underline"
+                    >
+                      Billeterie / Réservation
+                    </a>
+                  </div>
+                )}
+
+                {event.description && (
+                  <div className="mt-6">
+                    <h3 className="font-semibold text-lg mb-2">Description</h3>
+                    <p className="text-gray-700 leading-relaxed">{event.description}</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
-          
-          {/* Sidebar avec statistiques */}
+
+          {/* Sidebar */}
           <div className="space-y-6">
-            {/* Statistiques en temps réel */}
+            {/* Statistics */}
             <Card>
               <CardHeader>
-                <CardTitle>Statistiques en temps réel</CardTitle>
+                <CardTitle>Statistiques</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                  <div className="flex items-center">
-                    <Eye className="h-5 w-5 text-blue-500 mr-2" />
-                    <span className="text-sm font-medium">Vues</span>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Eye className="h-5 w-5 mr-2 text-blue-500" />
+                      <span>Vues</span>
+                    </div>
+                    <span className="font-bold text-lg">{event.views}</span>
                   </div>
-                  <span className="text-xl font-bold text-blue-600">{event.views}</span>
-                </div>
-                
-                <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
-                  <div className="flex items-center">
-                    <Heart className="h-5 w-5 text-red-500 mr-2" />
-                    <span className="text-sm font-medium">Likes</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Heart className="h-5 w-5 mr-2 text-red-500" />
+                      <span>Likes</span>
+                    </div>
+                    <span className="font-bold text-lg">{event.likes}</span>
                   </div>
-                  <span className="text-xl font-bold text-red-600">{event.likes}</span>
-                </div>
-                
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                  <div className="flex items-center">
-                    <Users className="h-5 w-5 text-green-500 mr-2" />
-                    <span className="text-sm font-medium">Participants</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Users className="h-5 w-5 mr-2 text-green-500" />
+                      <span>Participants</span>
+                    </div>
+                    <span className="font-bold text-lg">{event.participants}</span>
                   </div>
-                  <span className="text-xl font-bold text-green-600">{event.participants}</span>
-                </div>
-                
-                <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                  <div className="flex items-center">
-                    <Search className="h-5 w-5 text-orange-500 mr-2" />
-                    <span className="text-sm font-medium">Recherches</span>
-                  </div>
-                  <span className="text-xl font-bold text-orange-600">{event.searchAppearances}</span>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Actions rapides */}
+            {/* Quick actions */}
             <Card>
               <CardHeader>
                 <CardTitle>Actions rapides</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <Button className="w-full" variant="outline">
-                  <Copy className="h-4 w-4 mr-2" />
-                  Dupliquer cet événement
-                </Button>
-                
-                <Button className="w-full" variant="outline">
-                  <Edit3 className="h-4 w-4 mr-2" />
+              <CardContent className="space-y-2">
+                <Button onClick={handleEdit} className="w-full" variant="outline">
+                  <Edit className="h-4 w-4 mr-2" />
                   Modifier l'événement
                 </Button>
-                
-                <Button className="w-full" variant="outline">
+                <Button onClick={handleShare} className="w-full" variant="outline">
                   <Share2 className="h-4 w-4 mr-2" />
                   Partager l'événement
                 </Button>
-              </CardContent>
-            </Card>
-
-            {/* Métriques supplémentaires */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Détails d'audience</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm text-gray-600">
-                <div className="flex justify-between">
-                  <span>Taux de conversion:</span>
-                  <span className="font-medium">{Math.round((event.participants / event.views) * 100)}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Portée estimée:</span>
-                  <span className="font-medium">{Math.floor(event.views * 1.3)} personnes</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Âge moyen:</span>
-                  <span className="font-medium">22-26 ans</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Zone géographique:</span>
-                  <span className="font-medium">Lyon & périphérie</span>
-                </div>
+                <Button 
+                  asChild
+                  className="w-full" 
+                  variant="outline"
+                >
+                  <Link to={`/event/${id}`} target="_blank">
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Voir en tant qu'utilisateur
+                  </Link>
+                </Button>
               </CardContent>
             </Card>
           </div>

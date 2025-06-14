@@ -2,8 +2,8 @@
 import { BusinessEvent } from '@/types/events';
 import { ApiError } from '@/types/api';
 import { createApiError } from '../utils/errorHandling';
-import { createBusinessEvent, deleteBusinessEvent } from '@/services/businessEventsService';
-import { CreateEventData } from '../types/businessEvents';
+import { createBusinessEvent, updateBusinessEvent, deleteBusinessEvent } from '@/services/businessEventsService';
+import { CreateEventData, UpdateEventData } from '../types/businessEvents';
 
 export const useBusinessEventActions = (
   events: BusinessEvent[],
@@ -26,6 +26,31 @@ export const useBusinessEventActions = (
       return { data: newEvent, error: null };
     } catch (error) {
       const apiError = createApiError(error, 'createEvent');
+      setError(apiError);
+      toast({
+        title: "Erreur",
+        description: apiError.message,
+        variant: "destructive"
+      });
+      return { data: null, error: apiError };
+    }
+  };
+
+  const updateEventAction = async (eventId: string, eventData: UpdateEventData) => {
+    try {
+      setError(null);
+      
+      const updatedEvent = await updateBusinessEvent(eventId, eventData);
+      setEvents(events.map(event => event.id === eventId ? updatedEvent : event));
+      
+      toast({
+        title: "✅ Événement modifié !",
+        description: `"${updatedEvent.title}" a été mis à jour avec succès`,
+      });
+      
+      return { data: updatedEvent, error: null };
+    } catch (error) {
+      const apiError = createApiError(error, 'updateEvent');
       setError(apiError);
       toast({
         title: "Erreur",
@@ -63,6 +88,7 @@ export const useBusinessEventActions = (
 
   return {
     createEventAction,
+    updateEventAction,
     deleteEventAction
   };
 };

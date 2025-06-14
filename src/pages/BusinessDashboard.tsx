@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useBusinessConfig } from '@/hooks/useBusinessConfig';
 import { useBusinessEvents } from '@/hooks/useBusinessEvents';
 import BusinessProfile from '@/components/business/BusinessProfile';
@@ -10,10 +10,12 @@ import PerformanceAnalytics from '@/components/business/PerformanceAnalytics';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import ErrorMessage from '@/components/ErrorMessage';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { BusinessEvent } from '@/types/events';
 
 const BusinessDashboard = () => {
   const { config, loading: configLoading, error: configError } = useBusinessConfig();
-  const { events, loading: eventsLoading, error: eventsError, createEvent, deleteEvent, clearError } = useBusinessEvents();
+  const { events, loading: eventsLoading, error: eventsError, createEvent, updateEvent, deleteEvent, clearError } = useBusinessEvents();
+  const [editingEvent, setEditingEvent] = useState<BusinessEvent | null>(null);
 
   const isLoading = configLoading || eventsLoading;
   const hasError = configError || eventsError;
@@ -42,9 +44,25 @@ const BusinessDashboard = () => {
     return result;
   };
 
+  const handleEventUpdate = async (eventId: string, eventData: Partial<BusinessEvent>) => {
+    const result = await updateEvent(eventId, eventData);
+    if (result.data) {
+      setEditingEvent(null);
+    }
+    return result;
+  };
+
   const handleDeleteEvent = async (id: string) => {
     const result = await deleteEvent(id);
     return result;
+  };
+
+  const handleEditEvent = (event: BusinessEvent) => {
+    setEditingEvent(event);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingEvent(null);
   };
 
   return (
@@ -63,8 +81,19 @@ const BusinessDashboard = () => {
           <StatisticsCards config={config} events={events} />
 
           <div className="grid lg:grid-cols-2 gap-8">
-            <EventCreationForm config={config} onEventCreate={handleEventCreate} />
-            <EventList config={config} events={events} onDeleteEvent={handleDeleteEvent} />
+            <EventCreationForm 
+              config={config} 
+              onEventCreate={handleEventCreate}
+              editingEvent={editingEvent}
+              onEventUpdate={handleEventUpdate}
+              onCancelEdit={handleCancelEdit}
+            />
+            <EventList 
+              config={config} 
+              events={events} 
+              onDeleteEvent={handleDeleteEvent}
+              onEditEvent={handleEditEvent}
+            />
           </div>
 
           <PerformanceAnalytics config={config} events={events} />

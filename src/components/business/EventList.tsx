@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, MapPin, Eye, Heart, ExternalLink, Trash2, Tag, Clock } from 'lucide-react';
+import { Calendar, MapPin, Eye, Heart, ExternalLink, Trash2, Tag, Clock, Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface BusinessEvent {
@@ -11,10 +11,12 @@ interface BusinessEvent {
   description?: string;
   date: string;
   time: string;
-  venue: string;
+  venue?: string;
+  custom_venue?: string;
   category: string;
   event_type: string;
   price?: string;
+  external_url?: string;
   image_url?: string;
   views: number;
   likes: number;
@@ -33,9 +35,10 @@ interface EventListProps {
   config: BusinessConfig;
   events: BusinessEvent[];
   onDeleteEvent: (id: string) => void;
+  onEditEvent: (event: BusinessEvent) => void;
 }
 
-const EventList = ({ config, events, onDeleteEvent }: EventListProps) => {
+const EventList = ({ config, events, onDeleteEvent, onEditEvent }: EventListProps) => {
   const navigate = useNavigate();
 
   const handleDeleteEvent = (id: string) => {
@@ -45,6 +48,10 @@ const EventList = ({ config, events, onDeleteEvent }: EventListProps) => {
   const handleViewDetails = (event: BusinessEvent) => {
     // Navigate to event details with event data
     navigate(`/business/event/${event.id}`, { state: { event } });
+  };
+
+  const getLocationDisplay = (event: BusinessEvent) => {
+    return event.custom_venue || event.venue || 'Lieu à définir';
   };
 
   return (
@@ -78,8 +85,18 @@ const EventList = ({ config, events, onDeleteEvent }: EventListProps) => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleViewDetails(event)}
+                            onClick={() => onEditEvent(event)}
                             className="text-blue-600 hover:bg-blue-50"
+                            title="Modifier"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewDetails(event)}
+                            className="text-green-600 hover:bg-green-50"
+                            title="Voir les détails"
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -88,6 +105,7 @@ const EventList = ({ config, events, onDeleteEvent }: EventListProps) => {
                             size="sm"
                             onClick={() => handleDeleteEvent(event.id!)}
                             className="text-red-500 hover:bg-red-50"
+                            title="Supprimer"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -103,7 +121,7 @@ const EventList = ({ config, events, onDeleteEvent }: EventListProps) => {
                         </div>
                         <div className="flex items-center">
                           <MapPin className="h-4 w-4 mr-2" />
-                          {event.venue}
+                          {getLocationDisplay(event)}
                         </div>
                         <div className="flex items-center">
                           <Tag className="h-4 w-4 mr-2" />
@@ -111,6 +129,19 @@ const EventList = ({ config, events, onDeleteEvent }: EventListProps) => {
                         </div>
                         {event.price && (
                           <p className="text-sm font-medium text-green-600">{event.price}</p>
+                        )}
+                        {event.external_url && (
+                          <div className="flex items-center">
+                            <ExternalLink className="h-4 w-4 mr-2 text-blue-500" />
+                            <a 
+                              href={event.external_url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-blue-500 hover:underline text-sm truncate"
+                            >
+                              Lien billeterie
+                            </a>
+                          </div>
                         )}
                       </div>
                       
