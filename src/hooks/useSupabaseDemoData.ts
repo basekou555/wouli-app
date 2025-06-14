@@ -1,12 +1,12 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { BusinessEvent } from '@/types/events';
+import { BusinessConfig } from '@/types/business';
 
 export const useSupabaseDemoData = () => {
   const [events, setEvents] = useState<BusinessEvent[]>([]);
-  const [configs, setConfigs] = useState<any[]>([]);
+  const [configs, setConfigs] = useState<BusinessConfig[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -47,12 +47,18 @@ export const useSupabaseDemoData = () => {
         user_id: event.user_id
       }));
 
+      // Transform configs with enhanced default features
+      const transformedConfigs: BusinessConfig[] = (businessConfigs || []).map(config => ({
+        ...config,
+        features: config.features.length > 0 ? config.features : ['events', 'stats', 'analytics', 'redirections', 'ranking']
+      }));
+
       setEvents(transformedEvents);
-      setConfigs(businessConfigs || []);
+      setConfigs(transformedConfigs);
 
       toast({
         title: "✅ Données Supabase chargées",
-        description: `${transformedEvents.length} événements et ${businessConfigs?.length || 0} établissements récupérés`,
+        description: `${transformedEvents.length} événements et ${transformedConfigs.length} établissements récupérés`,
       });
 
       return transformedEvents;
@@ -67,6 +73,87 @@ export const useSupabaseDemoData = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const updateBusinessConfig = async (configId: string, updates: Partial<BusinessConfig>) => {
+    try {
+      const { error } = await supabase
+        .from('business_configs')
+        .update(updates)
+        .eq('id', configId);
+
+      if (error) throw error;
+
+      // Update local state
+      setConfigs(prev => prev.map(config => 
+        config.id === configId ? { ...config, ...updates } : config
+      ));
+
+      toast({
+        title: "✅ Configuration mise à jour",
+        description: "Les modifications ont été sauvegardées",
+      });
+    } catch (error) {
+      console.error('Error updating business config:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de sauvegarder la configuration",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const generateTestEvents = async (count: number) => {
+    setIsLoading(true);
+    try {
+      // Generate test events with realistic data
+      const testEvents = Array.from({ length: count }, (_, i) => ({
+        title: `Événement Test ${i + 1}`,
+        description: `Description pour l'événement de test numéro ${i + 1}`,
+        date: new Date(Date.now() + i * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        time: `${18 + (i % 6)}:00:00`,
+        venue: `Lieu Test ${i + 1}`,
+        category: ['a-boire', 'a-manger', 'soirees', 'activites'][i % 4],
+        event_type: ['a-boire', 'a-manger', 'soirees', 'activites'][i % 4],
+        price: `${10 + (i * 5)}€`,
+        views: Math.floor(Math.random() * 100) + 50,
+        likes: Math.floor(Math.random() * 20) + 5,
+        participants: Math.floor(Math.random() * 30) + 10
+      }));
+
+      // Here you would normally insert these into Supabase
+      // For demo purposes, we'll just add them to local state
+      const newEvents = testEvents.map((event, i) => ({
+        ...event,
+        id: `test-${Date.now()}-${i}`,
+        location: event.venue,
+        user_id: 'demo-user'
+      })) as BusinessEvent[];
+
+      setEvents(prev => [...prev, ...newEvents]);
+
+      toast({
+        title: "✅ Événements générés",
+        description: `${count} événements de test ont été créés`,
+      });
+    } catch (error) {
+      console.error('Error generating test events:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de générer les événements de test",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const clearDemoData = () => {
+    setEvents([]);
+    toast({
+      title: "🗑️ Données effacées",
+      description: "Toutes les données de démo ont été supprimées",
+    });
   };
 
   const getDemoConfig = (businessType?: string) => {
@@ -106,6 +193,9 @@ export const useSupabaseDemoData = () => {
 
   return {
     loadDemoEvents,
+    updateBusinessConfig,
+    generateTestEvents,
+    clearDemoData,
     getDemoConfig,
     getEventsByVenue,
     getEventsByCategory,

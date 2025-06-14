@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -29,13 +28,13 @@ export const useBusinessConfig = () => {
       
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        // Use default config if not authenticated
+        // Use default config with analytics enabled if not authenticated
         setConfig({
           client_name: 'Blue Note Bar',
           client_type: 'Bar/Restaurant',
           location: 'Lyon',
           brand_color: '#FF7A1F',
-          features: ['events', 'stats', 'redirections']
+          features: ['events', 'stats', 'analytics', 'redirections', 'ranking']
         });
         setLoading(false);
         return;
@@ -52,25 +51,30 @@ export const useBusinessConfig = () => {
       }
 
       if (data) {
+        // Ensure analytics is enabled for existing configs
+        const enhancedFeatures = data.features.includes('analytics') 
+          ? data.features 
+          : [...data.features, 'analytics', 'ranking'];
+
         setConfig({
           id: data.id,
           client_name: data.client_name,
           client_type: data.client_type,
           location: data.location,
           brand_color: data.brand_color,
-          features: data.features,
+          features: enhancedFeatures,
           user_id: data.user_id,
           created_at: data.created_at,
           updated_at: data.updated_at
         });
       } else {
-        // Create default config for new user
+        // Create default config with analytics for new user
         const defaultConfig = {
           client_name: 'Mon Établissement',
           client_type: 'Bar/Restaurant',
           location: 'Lyon',
           brand_color: '#FF7A1F',
-          features: ['events', 'stats', 'redirections']
+          features: ['events', 'stats', 'analytics', 'redirections', 'ranking']
         };
         
         const { data: newConfig, error: insertError } = await supabase
@@ -96,13 +100,13 @@ export const useBusinessConfig = () => {
       }
     } catch (error) {
       handleError(error, 'fetchConfig');
-      // Fallback to default config
+      // Fallback to default config with analytics
       setConfig({
         client_name: 'Blue Note Bar',
         client_type: 'Bar/Restaurant',
         location: 'Lyon',
         brand_color: '#FF7A1F',
-        features: ['events', 'stats', 'redirections']
+        features: ['events', 'stats', 'analytics', 'redirections', 'ranking']
       });
     } finally {
       setLoading(false);
