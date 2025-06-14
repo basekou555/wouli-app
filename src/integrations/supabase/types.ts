@@ -41,6 +41,99 @@ export type Database = {
           },
         ]
       }
+      business_configs: {
+        Row: {
+          brand_color: string
+          client_name: string
+          client_type: string
+          created_at: string
+          features: string[]
+          id: string
+          location: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          brand_color?: string
+          client_name: string
+          client_type: string
+          created_at?: string
+          features?: string[]
+          id?: string
+          location: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          brand_color?: string
+          client_name?: string
+          client_type?: string
+          created_at?: string
+          features?: string[]
+          id?: string
+          location?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      business_events: {
+        Row: {
+          category: string
+          created_at: string
+          date: string
+          description: string | null
+          event_type: string
+          id: string
+          image_url: string | null
+          likes: number
+          participants: number
+          price: string | null
+          time: string
+          title: string
+          updated_at: string
+          user_id: string
+          venue: string
+          views: number
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          date: string
+          description?: string | null
+          event_type: string
+          id?: string
+          image_url?: string | null
+          likes?: number
+          participants?: number
+          price?: string | null
+          time: string
+          title: string
+          updated_at?: string
+          user_id: string
+          venue: string
+          views?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          date?: string
+          description?: string | null
+          event_type?: string
+          id?: string
+          image_url?: string | null
+          likes?: number
+          participants?: number
+          price?: string | null
+          time?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          venue?: string
+          views?: number
+        }
+        Relationships: []
+      }
       event_likes: {
         Row: {
           created_at: string | null

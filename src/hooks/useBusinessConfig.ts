@@ -34,7 +34,7 @@ export const useBusinessConfig = () => {
       }
 
       const { data, error } = await supabase
-        .from('business_configs' as any)
+        .from('business_configs')
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
@@ -64,7 +64,7 @@ export const useBusinessConfig = () => {
         };
         
         const { data: newConfig, error: insertError } = await supabase
-          .from('business_configs' as any)
+          .from('business_configs')
           .insert({
             user_id: user.id,
             ...defaultConfig
@@ -111,7 +111,7 @@ export const useBusinessConfig = () => {
 
       if (config?.id) {
         const { error } = await supabase
-          .from('business_configs' as any)
+          .from('business_configs')
           .update({
             client_name: newConfig.client_name,
             client_type: newConfig.client_type,

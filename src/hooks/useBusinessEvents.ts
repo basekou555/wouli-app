@@ -64,7 +64,7 @@ export const useBusinessEvents = () => {
       }
 
       const { data, error } = await supabase
-        .from('business_events' as any)
+        .from('business_events')
         .select('*')
         .eq('user_id', user.id)
         .order('date', { ascending: true });
@@ -74,7 +74,7 @@ export const useBusinessEvents = () => {
         throw error;
       }
       
-      setEvents((data || []) as BusinessEvent[]);
+      setEvents(data || []);
     } catch (error) {
       console.error('Error fetching events:', error);
       toast({
@@ -110,7 +110,7 @@ export const useBusinessEvents = () => {
       }
 
       const { data, error } = await supabase
-        .from('business_events' as any)
+        .from('business_events')
         .insert({
           user_id: user.id,
           ...eventData,
@@ -126,7 +126,7 @@ export const useBusinessEvents = () => {
         throw error;
       }
 
-      const newEvent = data as BusinessEvent;
+      const newEvent = data;
       setEvents([...events, newEvent]);
       toast({
         title: "✅ Événement créé !",
@@ -156,7 +156,7 @@ export const useBusinessEvents = () => {
       }
 
       const { error } = await supabase
-        .from('business_events' as any)
+        .from('business_events')
         .delete()
         .eq('id', eventId);
 
