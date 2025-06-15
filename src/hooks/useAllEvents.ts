@@ -42,7 +42,7 @@ export const useAllEvents = (source: EventSource = 'all') => {
     }
   };
 
-  const { incrementViews, likeEvent, participateEvent } = useEventActions(events, fetchEvents);
+  const { incrementViews, likeEvent, participateEvent } = useEventActions(fetchEvents);
   
   // Enable real-time updates
   useRealTimeEvents(events, setEvents);
