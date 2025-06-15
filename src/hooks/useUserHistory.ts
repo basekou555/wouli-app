@@ -1,15 +1,13 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Tables } from '@/integrations/supabase/types';
+import { UnifiedEvent } from '@/types/unified';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
-type Event = Tables<'events'>;
-
 interface UserHistoryData {
-  likedEvents: Event[];
-  participatingEvents: Event[];
+  likedEvents: UnifiedEvent[];
+  participatingEvents: UnifiedEvent[];
   loading: boolean;
 }
 
@@ -21,6 +19,57 @@ export const useUserHistory = () => {
   });
   const { user, session } = useAuth();
   const { toast } = useToast();
+
+  const mapBusinessEventToUnified = (businessEvent: any): UnifiedEvent => {
+    return {
+      id: businessEvent.id,
+      title: businessEvent.title,
+      description: businessEvent.description,
+      date: `${businessEvent.date}T${businessEvent.time}`,
+      location: businessEvent.venue || businessEvent.custom_venue || 'Lieu non spécifié',
+      category: businessEvent.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
+      image_url: businessEvent.image_url,
+      views: businessEvent.views || 0,
+      likes: businessEvent.likes || 0,
+      participants: businessEvent.participants || 0,
+      created_at: businessEvent.created_at,
+      updated_at: businessEvent.updated_at,
+      source: 'business',
+      organizer: 'Établissement',
+      organizer_type: 'business',
+      venue: businessEvent.venue,
+      time: businessEvent.time,
+      event_type: businessEvent.event_type as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
+      price_text: businessEvent.price,
+      external_url: businessEvent.external_url
+    };
+  };
+
+  const mapUserEventToUnified = (userEvent: any): UnifiedEvent => {
+    return {
+      id: userEvent.id,
+      title: userEvent.title,
+      description: userEvent.description,
+      date: userEvent.date,
+      location: userEvent.location,
+      category: userEvent.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
+      image_url: userEvent.image_url,
+      views: userEvent.views || 0,
+      likes: userEvent.likes || 0,
+      participants: userEvent.participants || 0,
+      created_at: userEvent.created_at,
+      updated_at: userEvent.updated_at,
+      source: 'user',
+      organizer: 'Utilisateur',
+      organizer_type: 'user',
+      end_date: userEvent.end_date,
+      price_text: userEvent.price ? `${userEvent.price}€` : undefined,
+      max_participants: userEvent.max_participants,
+      address: userEvent.address,
+      tags: userEvent.tags,
+      external_url: userEvent.external_url
+    };
+  };
 
   const fetchUserHistory = async () => {
     if (!user || !session) {
@@ -45,58 +94,139 @@ export const useUserHistory = () => {
         return;
       }
 
-      // Récupérer les événements likés
+      // Récupérer les événements likés depuis les deux tables
       console.log('📋 Récupération des événements likés...');
-      const { data: likesData, error: likesError } = await supabase
-        .from('event_likes')
-        .select(`
-          event_id,
-          events (*)
-        `)
-        .eq('user_id', user.id);
+      const [userEventLikes, businessEventLikes] = await Promise.all([
+        // Likes sur événements users
+        supabase
+          .from('event_likes')
+          .select(`
+            event_id,
+            events (*)
+          `)
+          .eq('user_id', user.id),
+        
+        // Likes sur événements business
+        supabase
+          .from('event_likes')
+          .select(`
+            event_id,
+            business_events (*)
+          `)
+          .eq('user_id', user.id)
+      ]);
 
-      if (likesError) {
-        console.error('❌ Erreur lors de la récupération des likes:', likesError);
-        if (likesError.message.includes('row-level security')) {
+      if (userEventLikes.error) {
+        console.error('❌ Erreur lors de la récupération des likes users:', userEventLikes.error);
+        if (userEventLikes.error.message.includes('row-level security')) {
           toast({
             title: "Erreur d'autorisation",
             description: "Problème d'accès aux données. Reconnectez-vous.",
             variant: "destructive"
           });
         }
-        throw likesError;
+        throw userEventLikes.error;
       }
 
-      // Récupérer les événements auxquels l'utilisateur participe
+      if (businessEventLikes.error) {
+        console.error('❌ Erreur lors de la récupération des likes business:', businessEventLikes.error);
+        if (businessEventLikes.error.message.includes('row-level security')) {
+          toast({
+            title: "Erreur d'autorisation",
+            description: "Problème d'accès aux données. Reconnectez-vous.",
+            variant: "destructive"
+          });
+        }
+        throw businessEventLikes.error;
+      }
+
+      // Récupérer les événements de participation depuis les deux tables
       console.log('📋 Récupération des événements de participation...');
-      const { data: participantsData, error: participantsError } = await supabase
-        .from('event_participants')
-        .select(`
-          event_id,
-          events (*)
-        `)
-        .eq('user_id', user.id);
+      const [userEventParticipations, businessEventParticipations] = await Promise.all([
+        // Participations sur événements users
+        supabase
+          .from('event_participants')
+          .select(`
+            event_id,
+            events (*)
+          `)
+          .eq('user_id', user.id),
+        
+        // Participations sur événements business
+        supabase
+          .from('event_participants')
+          .select(`
+            event_id,
+            business_events (*)
+          `)
+          .eq('user_id', user.id)
+      ]);
 
-      if (participantsError) {
-        console.error('❌ Erreur lors de la récupération des participations:', participantsError);
-        if (participantsError.message.includes('row-level security')) {
+      if (userEventParticipations.error) {
+        console.error('❌ Erreur lors de la récupération des participations users:', userEventParticipations.error);
+        if (userEventParticipations.error.message.includes('row-level security')) {
           toast({
             title: "Erreur d'autorisation",
             description: "Problème d'accès aux données. Reconnectez-vous.",
             variant: "destructive"
           });
         }
-        throw participantsError;
+        throw userEventParticipations.error;
       }
 
-      // Extraire les événements valides
-      const likedEvents = likesData
-        ?.map(item => item.events)
-        .filter(Boolean) as Event[] || [];
+      if (businessEventParticipations.error) {
+        console.error('❌ Erreur lors de la récupération des participations business:', businessEventParticipations.error);
+        if (businessEventParticipations.error.message.includes('row-level security')) {
+          toast({
+            title: "Erreur d'autorisation",
+            description: "Problème d'accès aux données. Reconnectez-vous.",
+            variant: "destructive"
+          });
+        }
+        throw businessEventParticipations.error;
+      }
+
+      // Construire la liste des événements likés
+      const likedEvents: UnifiedEvent[] = [];
       
-      const participatingEvents = participantsData
-        ?.map(item => item.events)
-        .filter(Boolean) as Event[] || [];
+      // Ajouter les événements users likés
+      userEventLikes.data
+        ?.filter(item => item.events)
+        .forEach(item => {
+          if (item.events) {
+            likedEvents.push(mapUserEventToUnified(item.events));
+          }
+        });
+      
+      // Ajouter les événements business likés
+      businessEventLikes.data
+        ?.filter(item => item.business_events)
+        .forEach(item => {
+          if (item.business_events) {
+            likedEvents.push(mapBusinessEventToUnified(item.business_events));
+          }
+        });
+
+      // Construire la liste des événements de participation
+      const participatingEvents: UnifiedEvent[] = [];
+      
+      // Ajouter les événements users de participation
+      userEventParticipations.data
+        ?.filter(item => item.events)
+        .forEach(item => {
+          if (item.events) {
+            participatingEvents.push(mapUserEventToUnified(item.events));
+          }
+        });
+      
+      // Ajouter les événements business de participation
+      businessEventParticipations.data
+        ?.filter(item => item.business_events)
+        .forEach(item => {
+          if (item.business_events) {
+            participatingEvents.push(mapBusinessEventToUnified(item.business_events));
+          }
+        });
 
       console.log('📊 Historique récupéré - Likés:', likedEvents.length, 'Participants:', participatingEvents.length);
 
