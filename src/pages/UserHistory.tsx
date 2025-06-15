@@ -9,9 +9,7 @@ import { Link } from 'react-router-dom';
 import BottomNavigation from '../components/BottomNavigation';
 import { useUserHistory } from '../hooks/useUserHistory';
 import { PageSkeleton } from '../components/LoadingSkeleton';
-import { Tables } from '@/integrations/supabase/types';
-
-type Event = Tables<'events'>;
+import { UnifiedEvent } from '@/types/unified';
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
@@ -27,7 +25,7 @@ const UserHistory = () => {
   const { likedEvents, participatingEvents, loading, removeLikedEvent, removeParticipation } = useUserHistory();
 
   const EventCard = ({ event, onRemove, removeText, removeIcon }: {
-    event: Event;
+    event: UnifiedEvent;
     onRemove: (eventId: string) => void;
     removeText: string;
     removeIcon: React.ReactNode;
