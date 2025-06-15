@@ -19,12 +19,12 @@ export const useUserHistory = () => {
     participatingEvents: [],
     loading: true
   });
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { toast } = useToast();
 
   const fetchUserHistory = async () => {
-    if (!user) {
-      console.log('👤 Aucun utilisateur connecté pour l\'historique');
+    if (!user || !session) {
+      console.log('👤 Aucun utilisateur connecté ou session expirée pour l\'historique');
       setData(prev => ({ ...prev, loading: false }));
       return;
     }
@@ -32,7 +32,21 @@ export const useUserHistory = () => {
     try {
       console.log('🔄 Récupération de l\'historique pour l\'utilisateur:', user.id);
 
+      // Vérifier l'état de la session
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!currentSession) {
+        console.error('❌ Session expirée lors de la récupération de l\'historique');
+        toast({
+          title: "Session expirée",
+          description: "Veuillez vous reconnecter pour voir votre historique",
+          variant: "destructive"
+        });
+        setData(prev => ({ ...prev, loading: false }));
+        return;
+      }
+
       // Récupérer les événements likés
+      console.log('📋 Récupération des événements likés...');
       const { data: likesData, error: likesError } = await supabase
         .from('event_likes')
         .select(`
@@ -43,10 +57,18 @@ export const useUserHistory = () => {
 
       if (likesError) {
         console.error('❌ Erreur lors de la récupération des likes:', likesError);
+        if (likesError.message.includes('row-level security')) {
+          toast({
+            title: "Erreur d'autorisation",
+            description: "Problème d'accès aux données. Reconnectez-vous.",
+            variant: "destructive"
+          });
+        }
         throw likesError;
       }
 
       // Récupérer les événements auxquels l'utilisateur participe
+      console.log('📋 Récupération des événements de participation...');
       const { data: participantsData, error: participantsError } = await supabase
         .from('event_participants')
         .select(`
@@ -57,6 +79,13 @@ export const useUserHistory = () => {
 
       if (participantsError) {
         console.error('❌ Erreur lors de la récupération des participations:', participantsError);
+        if (participantsError.message.includes('row-level security')) {
+          toast({
+            title: "Erreur d'autorisation",
+            description: "Problème d'accès aux données. Reconnectez-vous.",
+            variant: "destructive"
+          });
+        }
         throw participantsError;
       }
 
@@ -88,10 +117,25 @@ export const useUserHistory = () => {
   };
 
   const removeLikedEvent = async (eventId: string) => {
-    if (!user) return;
+    if (!user || !session) {
+      console.error('❌ Utilisateur non connecté pour la suppression du like');
+      return;
+    }
 
     try {
       console.log('🗑️ Suppression du like pour l\'événement:', eventId);
+
+      // Vérifier l'état de la session
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!currentSession) {
+        console.error('❌ Session expirée lors de la suppression du like');
+        toast({
+          title: "Session expirée",
+          description: "Veuillez vous reconnecter",
+          variant: "destructive"
+        });
+        return;
+      }
 
       const { error } = await supabase
         .from('event_likes')
@@ -101,7 +145,20 @@ export const useUserHistory = () => {
 
       if (error) {
         console.error('❌ Erreur lors de la suppression du like:', error);
-        throw error;
+        if (error.message.includes('row-level security')) {
+          toast({
+            title: "Erreur d'autorisation",
+            description: "Problème d'autorisation. Reconnectez-vous.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Erreur",
+            description: "Impossible de retirer l'événement des favoris",
+            variant: "destructive"
+          });
+        }
+        return;
       }
 
       setData(prev => ({
@@ -119,17 +176,32 @@ export const useUserHistory = () => {
       console.error('❌ Erreur lors de la suppression du like:', error);
       toast({
         title: "Erreur",
-        description: "Impossible de retirer l'événement des favoris",
+        description: "Une erreur inattendue s'est produite",
         variant: "destructive"
       });
     }
   };
 
   const removeParticipation = async (eventId: string) => {
-    if (!user) return;
+    if (!user || !session) {
+      console.error('❌ Utilisateur non connecté pour la suppression de la participation');
+      return;
+    }
 
     try {
       console.log('🗑️ Suppression de la participation pour l\'événement:', eventId);
+
+      // Vérifier l'état de la session
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!currentSession) {
+        console.error('❌ Session expirée lors de la suppression de la participation');
+        toast({
+          title: "Session expirée",
+          description: "Veuillez vous reconnecter",
+          variant: "destructive"
+        });
+        return;
+      }
 
       const { error } = await supabase
         .from('event_participants')
@@ -139,7 +211,20 @@ export const useUserHistory = () => {
 
       if (error) {
         console.error('❌ Erreur lors de la suppression de la participation:', error);
-        throw error;
+        if (error.message.includes('row-level security')) {
+          toast({
+            title: "Erreur d'autorisation",
+            description: "Problème d'autorisation. Reconnectez-vous.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Erreur",
+            description: "Impossible d'annuler la participation",
+            variant: "destructive"
+          });
+        }
+        return;
       }
 
       setData(prev => ({
@@ -157,7 +242,7 @@ export const useUserHistory = () => {
       console.error('❌ Erreur lors de la suppression de la participation:', error);
       toast({
         title: "Erreur",
-        description: "Impossible d'annuler la participation",
+        description: "Une erreur inattendue s'est produite",
         variant: "destructive"
       });
     }
@@ -165,7 +250,7 @@ export const useUserHistory = () => {
 
   useEffect(() => {
     fetchUserHistory();
-  }, [user]);
+  }, [user, session]);
 
   return {
     ...data,
