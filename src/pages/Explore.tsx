@@ -10,7 +10,7 @@ import { useExploreFilters } from '../hooks/useExploreFilters';
 import { useEventActions } from '../hooks/useEventActions';
 import { useAuth } from '../contexts/AuthContext';
 import { useRealTimeEvents } from '../hooks/useRealTimeEvents';
-import { getEventInteractionStatus } from '../services/eventInteractionService';
+import { supabase } from '@/integrations/supabase/client';
 
 const Explore = () => {
   const { user } = useAuth();
@@ -46,7 +46,7 @@ const Explore = () => {
     });
   }, [allEvents, searchTerm, selectedCategory]);
 
-  const { incrementViews, likeEvent, participateEvent } = useEventActions(filteredEvents, refetch);
+  const { likeEvent, participateEvent, incrementViews } = useEventActions(refetch);
   const [userInteractions, setUserInteractions] = useState<{
     liked: Set<string>;
     participating: Set<string>;
@@ -70,24 +70,32 @@ const Explore = () => {
       console.log('🔄 Chargement du statut d\'interaction pour', filteredEvents.length, 'événements');
 
       try {
-        const statuses = await Promise.all(
-          filteredEvents.map(event => 
-            getEventInteractionStatus(event.id, user.id)
-          )
-        );
+        const eventIds = filteredEvents.map(event => event.id);
 
-        const liked = new Set<string>();
-        const participating = new Set<string>();
+        // Récupérer les likes de l'utilisateur pour ces événements
+        const { data: likesData, error: likesError } = await supabase
+          .from('event_likes')
+          .select('event_id')
+          .eq('user_id', user.id)
+          .in('event_id', eventIds);
 
-        filteredEvents.forEach((event, index) => {
-          const status = statuses[index];
-          if (status?.hasLiked) {
-            liked.add(event.id);
-          }
-          if (status?.hasParticipated) {
-            participating.add(event.id);
-          }
-        });
+        if (likesError) {
+          console.error('❌ Erreur lors de la récupération des likes:', likesError);
+        }
+
+        // Récupérer les participations de l'utilisateur pour ces événements
+        const { data: participationsData, error: participationsError } = await supabase
+          .from('event_participants')
+          .select('event_id')
+          .eq('user_id', user.id)
+          .in('event_id', eventIds);
+
+        if (participationsError) {
+          console.error('❌ Erreur lors de la récupération des participations:', participationsError);
+        }
+
+        const liked = new Set(likesData?.map(item => item.event_id) || []);
+        const participating = new Set(participationsData?.map(item => item.event_id) || []);
 
         console.log('📊 Statuts chargés - Likés:', liked.size, 'Participants:', participating.size);
         setUserInteractions({ liked, participating });
@@ -138,7 +146,6 @@ const Explore = () => {
 
   const handleViewEvent = async (eventId: string) => {
     console.log('👁️ Vue d\'événement dans Explore pour:', eventId);
-    // La source sera détectée automatiquement dans incrementViews
     await incrementViews(eventId);
   };
 

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
@@ -15,16 +16,22 @@ import { useToast } from '@/hooks/use-toast';
 
 type Event = Tables<'events'>;
 
+interface EventWithCounts extends Event {
+  likes_count?: number;
+  participants_count?: number;
+}
+
 const EventDetails = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const isPreview = searchParams.get('preview') === 'true';
-  const [event, setEvent] = useState<Event | null>(null);
+  const [event, setEvent] = useState<EventWithCounts | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('infos');
   const [showAllParticipants, setShowAllParticipants] = useState(false);
   const [hasLiked, setHasLiked] = useState(false);
   const [hasParticipated, setHasParticipated] = useState(false);
+  const [interactionLoading, setInteractionLoading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -45,69 +52,101 @@ const EventDetails = () => {
     }).format(date);
   };
 
-  useEffect(() => {
-    const fetchEvent = async () => {
-      if (!id) return;
+  const fetchEvent = async () => {
+    if (!id) return;
 
-      try {
-        const { data, error } = await supabase
-          .from('events')
-          .select('*')
-          .eq('id', id)
-          .single();
+    try {
+      console.log('🔄 Récupération de l\'événement:', id);
 
-        if (error) throw error;
-        setEvent(data);
+      // Récupérer l'événement
+      const { data: eventData, error: eventError } = await supabase
+        .from('events')
+        .select('*')
+        .eq('id', id)
+        .single();
 
-        // Increment views - first get current views, then increment
-        const { data: currentEvent, error: fetchError } = await supabase
-          .from('events')
-          .select('views')
-          .eq('id', id)
-          .single();
-        
-        if (!fetchError && currentEvent) {
-          const newViews = (currentEvent.views || 0) + 1;
-          await supabase
-            .from('events')
-            .update({ views: newViews })
-            .eq('id', id);
-        }
+      if (eventError) throw eventError;
+      if (!eventData) throw new Error('Event not found');
 
-        // Check if user has liked or participated
-        if (user) {
-          const [likesResult, participantsResult] = await Promise.all([
-            supabase
-              .from('event_likes')
-              .select('id')
-              .eq('event_id', id)
-              .eq('user_id', user.id)
-              .single(),
-            supabase
-              .from('event_participants')
-              .select('id')
-              .eq('event_id', id)
-              .eq('user_id', user.id)
-              .single()
-          ]);
+      // Récupérer le nombre total de likes
+      const { count: likesCount, error: likesError } = await supabase
+        .from('event_likes')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_id', id);
 
-          setHasLiked(!!likesResult.data);
-          setHasParticipated(!!participantsResult.data);
-        }
-      } catch (error) {
-        console.error('Error fetching event:', error);
-        toast({
-          title: "Erreur",
-          description: "Impossible de charger cet événement",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
+      if (likesError) {
+        console.error('❌ Erreur comptage likes:', likesError);
       }
-    };
 
-    fetchEvent();
-  }, [id, user]);
+      // Récupérer le nombre total de participants
+      const { count: participantsCount, error: participantsError } = await supabase
+        .from('event_participants')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_id', id);
+
+      if (participantsError) {
+        console.error('❌ Erreur comptage participants:', participantsError);
+      }
+
+      // Mettre à jour l'événement avec les nouveaux compteurs
+      const eventWithCounts: EventWithCounts = {
+        ...eventData,
+        likes_count: likesCount || 0,
+        participants_count: participantsCount || 0
+      };
+
+      setEvent(eventWithCounts);
+
+      console.log('📊 Événement récupéré avec compteurs:', {
+        likes: likesCount,
+        participants: participantsCount
+      });
+
+      // Incrémenter les vues seulement au premier chargement
+      if (!event) {
+        const newViews = (eventData.views || 0) + 1;
+        await supabase
+          .from('events')
+          .update({ views: newViews })
+          .eq('id', id);
+      }
+
+      // Vérifier si l'utilisateur a déjà interagi
+      if (user) {
+        const [likesResult, participantsResult] = await Promise.all([
+          supabase
+            .from('event_likes')
+            .select('id')
+            .eq('event_id', id)
+            .eq('user_id', user.id)
+            .maybeSingle(),
+          supabase
+            .from('event_participants')
+            .select('id')
+            .eq('event_id', id)
+            .eq('user_id', user.id)
+            .maybeSingle()
+        ]);
+
+        setHasLiked(!!likesResult.data);
+        setHasParticipated(!!participantsResult.data);
+
+        console.log('👤 Statut utilisateur:', {
+          hasLiked: !!likesResult.data,
+          hasParticipated: !!participantsResult.data
+        });
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors de la récupération de l\'événement:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger cet événement",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLike = async () => {
     if (!user || !event) {
@@ -119,35 +158,53 @@ const EventDetails = () => {
       return;
     }
 
+    setInteractionLoading(true);
+
     try {
+      console.log('❤️ Tentative de like pour:', event.id, 'hasLiked:', hasLiked);
+
       if (hasLiked) {
-        await supabase
+        // Retirer le like
+        const { error } = await supabase
           .from('event_likes')
           .delete()
           .eq('event_id', event.id)
           .eq('user_id', user.id);
+
+        if (error) throw error;
+
         setHasLiked(false);
         toast({
           title: "💔 Retiré des favoris",
           description: "L'événement a été retiré de tes favoris"
         });
       } else {
-        await supabase
+        // Ajouter le like
+        const { error } = await supabase
           .from('event_likes')
           .insert({ event_id: event.id, user_id: user.id });
+
+        if (error) throw error;
+
         setHasLiked(true);
         toast({
           title: "❤️ Ajouté aux favoris !",
           description: "L'événement a été ajouté à tes favoris"
         });
       }
+
+      // Rafraîchir les données pour mettre à jour les compteurs
+      await fetchEvent();
+      
     } catch (error) {
-      console.error('Error toggling like:', error);
+      console.error('❌ Erreur lors du like:', error);
       toast({
         title: "Erreur",
-        description: "Une erreur est survenue",
+        description: "Une erreur est survenue lors de l'interaction",
         variant: "destructive"
       });
+    } finally {
+      setInteractionLoading(false);
     }
   };
 
@@ -161,37 +218,59 @@ const EventDetails = () => {
       return;
     }
 
+    setInteractionLoading(true);
+
     try {
+      console.log('🎉 Tentative de participation pour:', event.id, 'hasParticipated:', hasParticipated);
+
       if (hasParticipated) {
-        await supabase
+        // Retirer la participation
+        const { error } = await supabase
           .from('event_participants')
           .delete()
           .eq('event_id', event.id)
           .eq('user_id', user.id);
+
+        if (error) throw error;
+
         setHasParticipated(false);
         toast({
           title: "Participation annulée",
           description: "Tu ne participes plus à cet événement"
         });
       } else {
-        await supabase
+        // Ajouter la participation
+        const { error } = await supabase
           .from('event_participants')
           .insert({ event_id: event.id, user_id: user.id, status: 'going' });
+
+        if (error) throw error;
+
         setHasParticipated(true);
         toast({
           title: "🎉 Participation confirmée !",
           description: "Tu participes à cet événement"
         });
       }
+
+      // Rafraîchir les données pour mettre à jour les compteurs
+      await fetchEvent();
+      
     } catch (error) {
-      console.error('Error toggling participation:', error);
+      console.error('❌ Erreur lors de la participation:', error);
       toast({
         title: "Erreur",
-        description: "Une erreur est survenue",
+        description: "Une erreur est survenue lors de l'interaction",
         variant: "destructive"
       });
+    } finally {
+      setInteractionLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchEvent();
+  }, [id, user]);
 
   if (loading) return <PageSkeleton />;
   if (!event) return <div className="p-8 text-center">Événement non trouvé</div>;
@@ -302,8 +381,8 @@ const EventDetails = () => {
                 <div className="flex items-start space-x-3">
                   <Users className="h-5 w-5 text-gray-500" />
                   <div>
-                    <p className="font-medium">{event.participants || 0} participants</p>
-                    <p className="text-sm text-gray-500">{event.likes || 0} likes</p>
+                    <p className="font-medium">{event.participants_count || 0} participants</p>
+                    <p className="text-sm text-gray-500">{event.likes_count || 0} likes</p>
                   </div>
                 </div>
 
@@ -326,16 +405,18 @@ const EventDetails = () => {
                   size="lg"
                   onClick={handleParticipate}
                   variant={hasParticipated ? "outline" : "default"}
+                  disabled={interactionLoading}
                 >
-                  {hasParticipated ? "✅ Tu participes" : "🗓️ Participer"}
+                  {interactionLoading ? "⏳" : hasParticipated ? "✅ Tu participes" : "🗓️ Participer"}
                 </Button>
                 
                 <Button 
                   variant="outline" 
                   className="w-full"
                   onClick={handleLike}
+                  disabled={interactionLoading}
                 >
-                  {hasLiked ? "❤️ Aimé" : "🤍 J'aime"}
+                  {interactionLoading ? "⏳" : hasLiked ? "❤️ Aimé" : "🤍 J'aime"}
                 </Button>
                 
                 <Button variant="ghost" className="w-full">
