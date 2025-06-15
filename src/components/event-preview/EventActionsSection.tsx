@@ -1,19 +1,21 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Users, ExternalLink, ArrowLeft } from 'lucide-react';
+import { Users, ExternalLink, ArrowLeft, Heart } from 'lucide-react';
 import { UnifiedEvent } from '@/types/unified';
 import { useNavigate } from 'react-router-dom';
 
 interface EventActionsSectionProps {
   event: UnifiedEvent;
   onParticipate: () => void;
+  onLike?: () => void;
   showBackButton?: boolean;
 }
 
 const EventActionsSection: React.FC<EventActionsSectionProps> = ({ 
   event, 
-  onParticipate, 
+  onParticipate,
+  onLike,
   showBackButton = true 
 }) => {
   const navigate = useNavigate();
@@ -40,13 +42,24 @@ const EventActionsSection: React.FC<EventActionsSectionProps> = ({
         </Button>
       )}
 
+      {onLike && (
+        <Button 
+          onClick={onLike}
+          variant="outline"
+          className="w-full border-red-200 text-red-600 hover:bg-red-50"
+        >
+          <Heart className="h-5 w-5 mr-2" />
+          J'aime ({event.likes})
+        </Button>
+      )}
+
       <Button 
         onClick={onParticipate}
         className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3"
         size="lg"
       >
         <Users className="h-5 w-5 mr-2" />
-        Je participe !
+        Je participe ! ({event.participants})
       </Button>
 
       {event.external_url && (

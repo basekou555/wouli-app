@@ -10,7 +10,7 @@ import { useEventPreview } from '@/hooks/useEventPreview';
 
 const EventPreview = () => {
   const { id } = useParams<{ id: string }>();
-  const { event, loading, error, handleParticipate } = useEventPreview(id);
+  const { event, loading, error, handleParticipate, handleLike } = useEventPreview(id);
 
   if (loading) {
     return (
@@ -31,6 +31,8 @@ const EventPreview = () => {
     );
   }
 
+  console.log('🎭 Rendu EventPreview avec événement:', event);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <EventHeroSection event={event} />
@@ -42,7 +44,11 @@ const EventPreview = () => {
             
             <div className="space-y-6">
               <EventStatsSection event={event} />
-              <EventActionsSection event={event} onParticipate={handleParticipate} />
+              <EventActionsSection 
+                event={event} 
+                onParticipate={handleParticipate}
+                onLike={handleLike}
+              />
             </div>
           </div>
         </div>

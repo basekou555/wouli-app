@@ -1,4 +1,3 @@
-
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -6,7 +5,7 @@ export const useEventActions = (refetch?: () => Promise<void>) => {
   const { toast } = useToast();
 
   const likeEvent = async (eventId: string, userId: string): Promise<boolean> => {
-    console.log('❤️ Tentative de like - Événement:', eventId, 'Utilisateur:', userId);
+    console.log('❤️ DEBUT likeEvent - Événement:', eventId, 'Utilisateur:', userId);
     
     if (!userId) {
       console.error('❌ Utilisateur non connecté pour le like');
@@ -20,6 +19,7 @@ export const useEventActions = (refetch?: () => Promise<void>) => {
 
     try {
       // Vérifier l'état d'authentification
+      console.log('🔍 Vérification de la session...');
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         console.error('❌ Aucune session active');
@@ -30,6 +30,7 @@ export const useEventActions = (refetch?: () => Promise<void>) => {
         });
         return false;
       }
+      console.log('✅ Session active confirmée pour:', session.user.email);
 
       // Vérifier si déjà liké
       console.log('🔍 Vérification du like existant...');
@@ -44,24 +45,24 @@ export const useEventActions = (refetch?: () => Promise<void>) => {
         console.error('❌ Erreur lors de la vérification du like:', checkError);
         toast({
           title: "Erreur de vérification",
-          description: "Impossible de vérifier le statut du like",
+          description: `Impossible de vérifier le statut du like: ${checkError.message}`,
           variant: "destructive"
         });
         return false;
       }
 
       if (existingLike) {
-        console.log('⚠️ Événement déjà liké');
+        console.log('⚠️ Événement déjà liké par cet utilisateur');
         toast({
           title: "Déjà aimé",
           description: "Tu as déjà aimé cet événement",
-          variant: "destructive"
         });
         return false;
       }
+      console.log('✅ Aucun like existant trouvé, procédure d\'ajout...');
 
       // Ajouter le like
-      console.log('➕ Ajout du like...');
+      console.log('➕ Insertion du like dans event_likes...');
       const { error: likeError } = await supabase
         .from('event_likes')
         .insert({ 
@@ -79,17 +80,49 @@ export const useEventActions = (refetch?: () => Promise<void>) => {
             description: "Problème d'autorisation. Veuillez vous reconnecter.",
             variant: "destructive"
           });
+        } else if (likeError.message.includes('duplicate key')) {
+          toast({
+            title: "Déjà aimé",
+            description: "Tu as déjà aimé cet événement",
+          });
         } else {
           toast({
             title: "Erreur",
-            description: "Impossible d'aimer cet événement",
+            description: `Impossible d'aimer cet événement: ${likeError.message}`,
             variant: "destructive"
           });
         }
         return false;
       }
 
-      console.log('✅ Like ajouté avec succès');
+      console.log('✅ Like ajouté avec succès dans event_likes');
+      
+      // Mettre à jour le compteur dans la table appropriée
+      console.log('🔄 Mise à jour du compteur de likes...');
+      
+      // D'abord, déterminer dans quelle table se trouve l'événement
+      const { data: businessEvent } = await supabase
+        .from('business_events')
+        .select('id')
+        .eq('id', eventId)
+        .maybeSingle();
+
+      const tableName = businessEvent ? 'business_events' : 'events';
+      console.log('📊 Table cible pour le compteur:', tableName);
+
+      // Utiliser la fonction RPC pour incrémenter le compteur
+      const { error: rpcError } = await supabase
+        .rpc('increment_event_likes_counter', { 
+          event_id: eventId, 
+          table_name: tableName 
+        });
+
+      if (rpcError) {
+        console.error('⚠️ Erreur lors de la mise à jour du compteur (non bloquant):', rpcError);
+      } else {
+        console.log('✅ Compteur de likes mis à jour avec succès');
+      }
+
       toast({
         title: "❤️ Événement aimé !",
         description: "L'événement a été ajouté à tes favoris"
@@ -101,12 +134,13 @@ export const useEventActions = (refetch?: () => Promise<void>) => {
         await refetch();
       }
       
+      console.log('✅ FIN likeEvent - Succès total');
       return true;
     } catch (error) {
       console.error('❌ Erreur générale lors du like:', error);
       toast({
         title: "Erreur",
-        description: "Une erreur inattendue s'est produite",
+        description: `Une erreur inattendue s'est produite: ${error.message}`,
         variant: "destructive"
       });
       return false;
@@ -114,7 +148,7 @@ export const useEventActions = (refetch?: () => Promise<void>) => {
   };
 
   const participateEvent = async (eventId: string, userId: string, status: 'going' | 'interested' = 'going'): Promise<boolean> => {
-    console.log('🎉 Tentative de participation - Événement:', eventId, 'Utilisateur:', userId);
+    console.log('🎉 DEBUT participateEvent - Événement:', eventId, 'Utilisateur:', userId, 'Status:', status);
     
     if (!userId) {
       console.error('❌ Utilisateur non connecté pour la participation');
@@ -128,6 +162,7 @@ export const useEventActions = (refetch?: () => Promise<void>) => {
 
     try {
       // Vérifier l'état d'authentification
+      console.log('🔍 Vérification de la session...');
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         console.error('❌ Aucune session active');
@@ -138,6 +173,7 @@ export const useEventActions = (refetch?: () => Promise<void>) => {
         });
         return false;
       }
+      console.log('✅ Session active confirmée pour:', session.user.email);
 
       // Vérifier si déjà participant
       console.log('🔍 Vérification de la participation existante...');
@@ -152,24 +188,24 @@ export const useEventActions = (refetch?: () => Promise<void>) => {
         console.error('❌ Erreur lors de la vérification de la participation:', checkError);
         toast({
           title: "Erreur de vérification",
-          description: "Impossible de vérifier le statut de participation",
+          description: `Impossible de vérifier le statut de participation: ${checkError.message}`,
           variant: "destructive"
         });
         return false;
       }
 
       if (existingParticipation) {
-        console.log('⚠️ L\'utilisateur participe déjà');
+        console.log('⚠️ L\'utilisateur participe déjà à cet événement');
         toast({
           title: "Déjà inscrit",
           description: "Tu participes déjà à cet événement",
-          variant: "destructive"
         });
         return false;
       }
+      console.log('✅ Aucune participation existante trouvée, procédure d\'ajout...');
 
       // Ajouter la participation
-      console.log('➕ Ajout de la participation...');
+      console.log('➕ Insertion de la participation dans event_participants...');
       const { error: participationError } = await supabase
         .from('event_participants')
         .insert({ 
@@ -188,17 +224,49 @@ export const useEventActions = (refetch?: () => Promise<void>) => {
             description: "Problème d'autorisation. Veuillez vous reconnecter.",
             variant: "destructive"
           });
+        } else if (participationError.message.includes('duplicate key')) {
+          toast({
+            title: "Déjà inscrit",
+            description: "Tu participes déjà à cet événement",
+          });
         } else {
           toast({
             title: "Erreur",
-            description: "Impossible de participer à cet événement",
+            description: `Impossible de participer à cet événement: ${participationError.message}`,
             variant: "destructive"
           });
         }
         return false;
       }
 
-      console.log('✅ Participation ajoutée avec succès');
+      console.log('✅ Participation ajoutée avec succès dans event_participants');
+      
+      // Mettre à jour le compteur dans la table appropriée
+      console.log('🔄 Mise à jour du compteur de participants...');
+      
+      // Déterminer dans quelle table se trouve l'événement
+      const { data: businessEvent } = await supabase
+        .from('business_events')
+        .select('id')
+        .eq('id', eventId)
+        .maybeSingle();
+
+      const tableName = businessEvent ? 'business_events' : 'events';
+      console.log('📊 Table cible pour le compteur:', tableName);
+
+      // Utiliser la fonction RPC pour incrémenter le compteur
+      const { error: rpcError } = await supabase
+        .rpc('increment_event_participants_counter', { 
+          event_id: eventId, 
+          table_name: tableName 
+        });
+
+      if (rpcError) {
+        console.error('⚠️ Erreur lors de la mise à jour du compteur (non bloquant):', rpcError);
+      } else {
+        console.log('✅ Compteur de participants mis à jour avec succès');
+      }
+
       toast({
         title: "🎉 Participation confirmée !",
         description: status === 'going' ? "Tu participes à cet événement" : "Tu es intéressé par cet événement"
@@ -210,12 +278,13 @@ export const useEventActions = (refetch?: () => Promise<void>) => {
         await refetch();
       }
       
+      console.log('✅ FIN participateEvent - Succès total');
       return true;
     } catch (error) {
       console.error('❌ Erreur générale lors de la participation:', error);
       toast({
         title: "Erreur",
-        description: "Une erreur inattendue s'est produite",
+        description: `Une erreur inattendue s'est produite: ${error.message}`,
         variant: "destructive"
       });
       return false;
