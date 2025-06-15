@@ -47,8 +47,13 @@ const Explore = () => {
   }, [allEvents, searchTerm, selectedCategory]);
 
   const { incrementViews, likeEvent, participateEvent } = useEventActions(filteredEvents, refetch);
-  const [likedEvents, setLikedEvents] = useState<string[]>([]);
-  const [participatingEvents, setParticipatingEvents] = useState<string[]>([]);
+  const [userInteractions, setUserInteractions] = useState<{
+    liked: Set<string>;
+    participating: Set<string>;
+  }>({
+    liked: new Set(),
+    participating: new Set()
+  });
 
   // Set up real-time updates for event stats
   useRealTimeEvents(filteredEvents, refetch);
@@ -56,49 +61,85 @@ const Explore = () => {
   // Load user interaction status for current events
   useEffect(() => {
     const loadInteractionStatus = async () => {
-      if (!user || !filteredEvents.length) return;
+      if (!user || !filteredEvents.length) {
+        console.log('👤 Pas d\'utilisateur connecté ou pas d\'événements');
+        setUserInteractions({ liked: new Set(), participating: new Set() });
+        return;
+      }
 
-      const statuses = await Promise.all(
-        filteredEvents.map(event => 
-          getEventInteractionStatus(event.id, user.id)
-        )
-      );
+      console.log('🔄 Chargement du statut d\'interaction pour', filteredEvents.length, 'événements');
 
-      const liked = filteredEvents
-        .filter((_, index) => statuses[index]?.hasLiked)
-        .map(event => event.id);
-      
-      const participating = filteredEvents
-        .filter((_, index) => statuses[index]?.hasParticipated)
-        .map(event => event.id);
+      try {
+        const statuses = await Promise.all(
+          filteredEvents.map(event => 
+            getEventInteractionStatus(event.id, user.id)
+          )
+        );
 
-      setLikedEvents(liked);
-      setParticipatingEvents(participating);
+        const liked = new Set<string>();
+        const participating = new Set<string>();
+
+        filteredEvents.forEach((event, index) => {
+          const status = statuses[index];
+          if (status?.hasLiked) {
+            liked.add(event.id);
+          }
+          if (status?.hasParticipated) {
+            participating.add(event.id);
+          }
+        });
+
+        console.log('📊 Statuts chargés - Likés:', liked.size, 'Participants:', participating.size);
+        setUserInteractions({ liked, participating });
+      } catch (error) {
+        console.error('❌ Erreur lors du chargement des statuts d\'interaction:', error);
+        setUserInteractions({ liked: new Set(), participating: new Set() });
+      }
     };
 
     loadInteractionStatus();
   }, [filteredEvents, user]);
 
   const handleLike = async (eventId: string) => {
-    if (!user) return;
+    if (!user) {
+      console.log('⚠️ Utilisateur non connecté pour le like');
+      return;
+    }
+    
+    console.log('❤️ Tentative de like dans Explore pour:', eventId);
     
     const success = await likeEvent(eventId, user.id);
     if (success) {
-      setLikedEvents(prev => [...prev, eventId]);
+      console.log('✅ Like réussi, mise à jour de l\'état local');
+      setUserInteractions(prev => ({
+        ...prev,
+        liked: new Set([...prev.liked, eventId])
+      }));
     }
   };
 
   const handleParticipate = async (eventId: string) => {
-    if (!user) return;
+    if (!user) {
+      console.log('⚠️ Utilisateur non connecté pour la participation');
+      return;
+    }
+    
+    console.log('🎉 Tentative de participation dans Explore pour:', eventId);
     
     const success = await participateEvent(eventId, user.id);
     if (success) {
-      setParticipatingEvents(prev => [...prev, eventId]);
+      console.log('✅ Participation réussie, mise à jour de l\'état local');
+      setUserInteractions(prev => ({
+        ...prev,
+        participating: new Set([...prev.participating, eventId])
+      }));
     }
   };
 
   const handleViewEvent = async (eventId: string) => {
-    await incrementViews(eventId, 'user');
+    console.log('👁️ Vue d\'événement dans Explore pour:', eventId);
+    // La source sera détectée automatiquement dans incrementViews
+    await incrementViews(eventId);
   };
 
   const currentEvent = filteredEvents[currentIndex];
@@ -131,8 +172,8 @@ const Explore = () => {
               onParticipate={() => handleParticipate(currentEvent.id)}
               onNext={() => setCurrentIndex(prev => prev + 1)}
               onView={() => handleViewEvent(currentEvent.id)}
-              isLiked={likedEvents.includes(currentEvent.id)}
-              isParticipating={participatingEvents.includes(currentEvent.id)}
+              isLiked={userInteractions.liked.has(currentEvent.id)}
+              isParticipating={userInteractions.participating.has(currentEvent.id)}
             />
           ) : (
             <EmptyState onReset={clearFilters} />

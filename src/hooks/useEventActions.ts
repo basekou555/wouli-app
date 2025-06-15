@@ -9,19 +9,25 @@ export const useEventActions = (
 ) => {
   const { toast } = useToast();
 
-  const incrementViews = async (eventId: string, source: 'user' | 'business') => {
+  const incrementViews = async (eventId: string, source?: 'user' | 'business') => {
+    console.log('🔄 Hook: Incrémentation des vues pour l\'événement:', eventId);
+    
     const newViews = await incrementEventViews(eventId, source);
     
     if (newViews !== null) {
+      console.log('✅ Hook: Vues incrémentées, rechargement des données');
       // Trigger a refetch to get updated data
       await refetch();
+    } else {
+      console.error('❌ Hook: Échec de l\'incrémentation des vues');
     }
   };
 
   const likeEvent = async (eventId: string, userId: string): Promise<boolean> => {
-    console.log('🔄 Hook: Tentative de like pour l\'événement:', eventId);
+    console.log('🔄 Hook: Tentative de like pour l\'événement:', eventId, 'utilisateur:', userId);
     
     if (!userId) {
+      console.error('❌ Hook: Utilisateur non connecté');
       toast({
         title: "Erreur d'authentification",
         description: "Vous devez être connecté pour aimer un événement",
@@ -33,6 +39,7 @@ export const useEventActions = (
     const success = await likeEventInDatabase(eventId, userId);
     
     if (success) {
+      console.log('✅ Hook: Like réussi, affichage du toast et rechargement');
       toast({
         title: "❤️ Événement aimé !",
         description: "L'événement a été ajouté à tes favoris"
@@ -42,6 +49,7 @@ export const useEventActions = (
       await refetch();
       return true;
     } else {
+      console.log('⚠️ Hook: Like échoué ou déjà existant');
       toast({
         title: "Déjà aimé",
         description: "Tu as déjà aimé cet événement",
@@ -52,9 +60,10 @@ export const useEventActions = (
   };
 
   const participateEvent = async (eventId: string, userId: string, status: 'going' | 'interested' = 'going'): Promise<boolean> => {
-    console.log('🔄 Hook: Tentative de participation pour l\'événement:', eventId);
+    console.log('🔄 Hook: Tentative de participation pour l\'événement:', eventId, 'utilisateur:', userId);
     
     if (!userId) {
+      console.error('❌ Hook: Utilisateur non connecté');
       toast({
         title: "Erreur d'authentification",
         description: "Vous devez être connecté pour participer à un événement",
@@ -66,6 +75,7 @@ export const useEventActions = (
     const success = await participateInEventDatabase(eventId, userId, status);
     
     if (success) {
+      console.log('✅ Hook: Participation réussie, affichage du toast et rechargement');
       toast({
         title: "🎉 Participation confirmée !",
         description: status === 'going' ? "Tu participes à cet événement" : "Tu es intéressé par cet événement"
@@ -75,6 +85,7 @@ export const useEventActions = (
       await refetch();
       return true;
     } else {
+      console.log('⚠️ Hook: Participation échouée ou déjà existante');
       toast({
         title: "Déjà inscrit",
         description: "Tu participes déjà à cet événement",

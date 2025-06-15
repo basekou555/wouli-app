@@ -42,17 +42,23 @@ export const useUserHistory = () => {
           `)
           .eq('user_id', user.id),
         
-        // Pour les business events, on doit faire une jointure manuelle car ils sont dans une table différente
+        // Pour les business events, on récupère d'abord les IDs puis les événements
         supabase
           .from('event_likes')
           .select('event_id')
           .eq('user_id', user.id)
       ]);
 
-      if (userEventsLikes.error) throw userEventsLikes.error;
-      if (businessEventsLikes.error) throw businessEventsLikes.error;
+      if (userEventsLikes.error) {
+        console.error('❌ Erreur lors de la récupération des likes d\'événements utilisateur:', userEventsLikes.error);
+        throw userEventsLikes.error;
+      }
+      if (businessEventsLikes.error) {
+        console.error('❌ Erreur lors de la récupération des likes d\'événements business:', businessEventsLikes.error);
+        throw businessEventsLikes.error;
+      }
 
-      // Récupérer les événements auxquels l'utilisateur participe depuis les deux tables
+      // Récupérer les événements auxquels l'utilisateur participe
       const [userEventsParticipants, businessEventsParticipants] = await Promise.all([
         supabase
           .from('event_participants')
@@ -68,10 +74,16 @@ export const useUserHistory = () => {
           .eq('user_id', user.id)
       ]);
 
-      if (userEventsParticipants.error) throw userEventsParticipants.error;
-      if (businessEventsParticipants.error) throw businessEventsParticipants.error;
+      if (userEventsParticipants.error) {
+        console.error('❌ Erreur lors de la récupération des participations d\'événements utilisateur:', userEventsParticipants.error);
+        throw userEventsParticipants.error;
+      }
+      if (businessEventsParticipants.error) {
+        console.error('❌ Erreur lors de la récupération des participations d\'événements business:', businessEventsParticipants.error);
+        throw businessEventsParticipants.error;
+      }
 
-      // Extraire les événements utilisateur
+      // Extraire les événements utilisateur (seuls disponibles pour l'instant)
       const likedUserEvents = userEventsLikes.data?.map(item => item.events).filter(Boolean) as Event[] || [];
       const participatingUserEvents = userEventsParticipants.data?.map(item => item.events).filter(Boolean) as Event[] || [];
 
@@ -106,7 +118,10 @@ export const useUserHistory = () => {
         .eq('event_id', eventId)
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erreur lors de la suppression du like:', error);
+        throw error;
+      }
 
       setData(prev => ({
         ...prev,
@@ -141,7 +156,10 @@ export const useUserHistory = () => {
         .eq('event_id', eventId)
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erreur lors de la suppression de la participation:', error);
+        throw error;
+      }
 
       setData(prev => ({
         ...prev,
