@@ -1,9 +1,16 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { securityMiddleware } from './securityMiddleware';
+import { secureLog } from '@/utils/security';
 
 // Fonction pour détecter automatiquement la source d'un événement
 const detectEventSource = async (eventId: string): Promise<'user' | 'business'> => {
-  console.log('🔍 Détection de la source pour l\'événement:', eventId);
+  secureLog('Détection de la source pour l\'événement', { eventId });
+
+  // Validation de sécurité de l'ID
+  if (!eventId || typeof eventId !== 'string' || eventId.length > 100) {
+    throw new Error('ID d\'événement invalide');
+  }
 
   // Vérifier d'abord dans la table events
   const { data: userEvent, error: userError } = await supabase
@@ -13,11 +20,11 @@ const detectEventSource = async (eventId: string): Promise<'user' | 'business'> 
     .maybeSingle();
 
   if (userError) {
-    console.warn('⚠️ Erreur lors de la vérification dans events:', userError);
+    secureLog('Erreur lors de la vérification dans events', { error: userError.message });
   }
 
   if (userEvent) {
-    console.log('✅ Événement trouvé dans la table events (source: user)');
+    secureLog('Événement trouvé dans la table events (source: user)');
     return 'user';
   }
 
@@ -29,29 +36,34 @@ const detectEventSource = async (eventId: string): Promise<'user' | 'business'> 
     .maybeSingle();
 
   if (businessError) {
-    console.warn('⚠️ Erreur lors de la vérification dans business_events:', businessError);
+    secureLog('Erreur lors de la vérification dans business_events', { error: businessError.message });
   }
 
   if (businessEvent) {
-    console.log('✅ Événement trouvé dans la table business_events (source: business)');
+    secureLog('Événement trouvé dans la table business_events (source: business)');
     return 'business';
   }
 
-  console.error('❌ Événement introuvable dans les deux tables');
+  secureLog('Événement introuvable dans les deux tables', { eventId });
   throw new Error(`Événement ${eventId} introuvable`);
 };
 
 export const incrementEventViews = async (eventId: string, source?: 'user' | 'business'): Promise<number | null> => {
   try {
-    console.log('👁️ Incrémentation des vues pour l\'événement:', eventId);
+    secureLog('Incrémentation des vues pour l\'événement', { eventId });
+
+    // Validation de sécurité
+    if (!eventId || typeof eventId !== 'string') {
+      throw new Error('ID d\'événement invalide');
+    }
 
     // Détecter automatiquement la source si pas fournie
     const eventSource = source || await detectEventSource(eventId);
     const tableName = eventSource === 'user' ? 'events' : 'business_events';
     
-    console.log(`📊 Mise à jour des vues dans la table: ${tableName}`);
+    secureLog('Mise à jour des vues dans la table', { tableName });
 
-    // Récupérer le compteur actuel
+    // Récupérer le compteur actuel avec validation
     const { data: currentEvent, error: fetchError } = await supabase
       .from(tableName)
       .select('views')
@@ -59,41 +71,58 @@ export const incrementEventViews = async (eventId: string, source?: 'user' | 'bu
       .single();
     
     if (fetchError) {
-      console.error('❌ Erreur lors de la récupération des vues actuelles:', fetchError);
+      secureLog('Erreur lors de la récupération des vues actuelles', { error: fetchError.message });
       throw fetchError;
     }
     
+    // Validation du compteur actuel
+    const currentViews = currentEvent?.views || 0;
+    if (currentViews < 0 || currentViews > 1000000) {
+      secureLog('Compteur de vues suspect détecté', { currentViews, eventId });
+    }
+    
     // Incrémenter les vues
-    const newViews = (currentEvent?.views || 0) + 1;
+    const newViews = Math.max(0, currentViews + 1);
     const { error } = await supabase
       .from(tableName)
       .update({ views: newViews })
       .eq('id', eventId);
     
     if (error) {
-      console.error('❌ Erreur lors de la mise à jour des vues:', error);
+      secureLog('Erreur lors de la mise à jour des vues', { error: error.message });
       throw error;
     }
 
-    console.log(`✅ Vues mises à jour: ${newViews}`);
+    secureLog('Vues mises à jour avec succès', { newViews });
     return newViews;
   } catch (error) {
-    console.error('❌ Erreur générale lors de l\'incrémentation des vues:', error);
+    secureLog('Erreur générale lors de l\'incrémentation des vues', { error: error.message });
     return null;
   }
 };
 
 export const likeEventInDatabase = async (eventId: string, userId: string): Promise<boolean> => {
   try {
-    console.log('❤️ Tentative de like pour l\'événement:', eventId, 'par l\'utilisateur:', userId);
+    secureLog('Tentative de like pour l\'événement', { eventId, userId });
 
-    // Vérifier l'authentification
-    if (!userId) {
-      console.error('❌ Utilisateur non authentifié');
+    // Validation de sécurité stricte
+    if (!userId || typeof userId !== 'string') {
+      secureLog('Utilisateur non authentifié ou ID invalide');
       return false;
     }
 
-    // Vérifier si déjà liké
+    if (!eventId || typeof eventId !== 'string') {
+      secureLog('ID d\'événement invalide');
+      return false;
+    }
+
+    // Vérification du rate limiting
+    if (!securityMiddleware.checkRateLimit(userId, 'like_event', 5, 60000)) {
+      secureLog('Rate limit dépassé pour les likes', { userId });
+      return false;
+    }
+
+    // Vérifier si déjà liké avec validation
     const { data: existingLike, error: checkError } = await supabase
       .from('event_likes')
       .select('id')
@@ -102,18 +131,18 @@ export const likeEventInDatabase = async (eventId: string, userId: string): Prom
       .maybeSingle();
 
     if (checkError) {
-      console.error('❌ Erreur lors de la vérification du like existant:', checkError);
+      secureLog('Erreur lors de la vérification du like existant', { error: checkError.message });
       return false;
     }
 
     if (existingLike) {
-      console.log('⚠️ Événement déjà liké par cet utilisateur');
+      secureLog('Événement déjà liké par cet utilisateur');
       return false;
     }
 
     // Détecter la source de l'événement
     const eventSource = await detectEventSource(eventId);
-    console.log(`📊 Source détectée: ${eventSource}`);
+    secureLog('Source détectée pour le like', { eventSource });
 
     // Ajouter le like
     const { error: likeError } = await supabase
@@ -121,11 +150,11 @@ export const likeEventInDatabase = async (eventId: string, userId: string): Prom
       .insert({ event_id: eventId, user_id: userId });
 
     if (likeError) {
-      console.error('❌ Erreur lors de l\'insertion du like:', likeError);
+      secureLog('Erreur lors de l\'insertion du like', { error: likeError.message });
       return false;
     }
 
-    console.log('✅ Like ajouté avec succès');
+    secureLog('Like ajouté avec succès');
 
     // Mettre à jour le compteur approprié
     const tableName = eventSource === 'user' ? 'events' : 'business_events';
@@ -136,15 +165,15 @@ export const likeEventInDatabase = async (eventId: string, userId: string): Prom
       });
 
     if (rpcError) {
-      console.error(`❌ Erreur lors de la mise à jour du compteur ${tableName}:`, rpcError);
+      secureLog('Erreur lors de la mise à jour du compteur de likes', { error: rpcError.message, tableName });
       // Ne pas faire échouer l'opération car le like a été enregistré
     } else {
-      console.log(`✅ Compteur de likes mis à jour pour ${tableName}`);
+      secureLog('Compteur de likes mis à jour avec succès', { tableName });
     }
 
     return true;
   } catch (error) {
-    console.error('❌ Erreur générale lors du like:', error);
+    secureLog('Erreur générale lors du like', { error: error.message });
     return false;
   }
 };
@@ -155,11 +184,28 @@ export const participateInEventDatabase = async (
   status: 'going' | 'interested' = 'going'
 ): Promise<boolean> => {
   try {
-    console.log('🎉 Tentative de participation pour l\'événement:', eventId, 'par l\'utilisateur:', userId, 'statut:', status);
+    secureLog('Tentative de participation pour l\'événement', { eventId, userId, status });
 
-    // Vérifier l'authentification
-    if (!userId) {
-      console.error('❌ Utilisateur non authentifié');
+    // Validation de sécurité stricte
+    if (!userId || typeof userId !== 'string') {
+      secureLog('Utilisateur non authentifié ou ID invalide');
+      return false;
+    }
+
+    if (!eventId || typeof eventId !== 'string') {
+      secureLog('ID d\'événement invalide');
+      return false;
+    }
+
+    // Validation du statut
+    if (!['going', 'interested'].includes(status)) {
+      secureLog('Statut de participation invalide', { status });
+      return false;
+    }
+
+    // Vérification du rate limiting
+    if (!securityMiddleware.checkRateLimit(userId, 'participate_event', 3, 60000)) {
+      secureLog('Rate limit dépassé pour les participations', { userId });
       return false;
     }
 
@@ -172,18 +218,18 @@ export const participateInEventDatabase = async (
       .maybeSingle();
 
     if (checkError) {
-      console.error('❌ Erreur lors de la vérification de la participation existante:', checkError);
+      secureLog('Erreur lors de la vérification de la participation existante', { error: checkError.message });
       return false;
     }
 
     if (existingParticipation) {
-      console.log('⚠️ L\'utilisateur participe déjà à cet événement');
+      secureLog('L\'utilisateur participe déjà à cet événement');
       return false;
     }
 
     // Détecter la source de l'événement
     const eventSource = await detectEventSource(eventId);
-    console.log(`📊 Source détectée: ${eventSource}`);
+    secureLog('Source détectée pour la participation', { eventSource });
 
     // Ajouter la participation
     const { error: participationError } = await supabase
@@ -191,11 +237,11 @@ export const participateInEventDatabase = async (
       .insert({ event_id: eventId, user_id: userId, status });
 
     if (participationError) {
-      console.error('❌ Erreur lors de l\'insertion de la participation:', participationError);
+      secureLog('Erreur lors de l\'insertion de la participation', { error: participationError.message });
       return false;
     }
 
-    console.log('✅ Participation ajoutée avec succès');
+    secureLog('Participation ajoutée avec succès');
 
     // Mettre à jour le compteur approprié
     const tableName = eventSource === 'user' ? 'events' : 'business_events';
@@ -206,25 +252,31 @@ export const participateInEventDatabase = async (
       });
 
     if (rpcError) {
-      console.error(`❌ Erreur lors de la mise à jour du compteur de participants ${tableName}:`, rpcError);
+      secureLog('Erreur lors de la mise à jour du compteur de participants', { error: rpcError.message, tableName });
       // Ne pas faire échouer l'opération car la participation a été enregistrée
     } else {
-      console.log(`✅ Compteur de participants mis à jour pour ${tableName}`);
+      secureLog('Compteur de participants mis à jour avec succès', { tableName });
     }
 
     return true;
   } catch (error) {
-    console.error('❌ Erreur générale lors de la participation:', error);
+    secureLog('Erreur générale lors de la participation', { error: error.message });
     return false;
   }
 };
 
 export const getEventInteractionStatus = async (eventId: string, userId: string) => {
   try {
-    console.log('🔍 Vérification du statut d\'interaction pour l\'événement:', eventId, 'utilisateur:', userId);
+    secureLog('Vérification du statut d\'interaction pour l\'événement', { eventId, userId });
+
+    // Validation de sécurité
+    if (!eventId || typeof eventId !== 'string') {
+      secureLog('ID d\'événement invalide pour le statut d\'interaction');
+      return { hasLiked: false, hasParticipated: false };
+    }
 
     if (!userId) {
-      console.log('⚠️ Utilisateur non connecté, retour des statuts par défaut');
+      secureLog('Utilisateur non connecté, retour des statuts par défaut');
       return { hasLiked: false, hasParticipated: false };
     }
 
@@ -244,11 +296,11 @@ export const getEventInteractionStatus = async (eventId: string, userId: string)
     ]);
 
     if (likesResult.error) {
-      console.error('❌ Erreur lors de la vérification des likes:', likesResult.error);
+      secureLog('Erreur lors de la vérification des likes', { error: likesResult.error.message });
     }
     
     if (participantsResult.error) {
-      console.error('❌ Erreur lors de la vérification des participants:', participantsResult.error);
+      secureLog('Erreur lors de la vérification des participants', { error: participantsResult.error.message });
     }
 
     const status = {
@@ -256,10 +308,10 @@ export const getEventInteractionStatus = async (eventId: string, userId: string)
       hasParticipated: !!participantsResult.data
     };
 
-    console.log('📊 Statut d\'interaction:', status);
+    secureLog('Statut d\'interaction récupéré', status);
     return status;
   } catch (error) {
-    console.error('❌ Erreur lors de la récupération du statut d\'interaction:', error);
+    secureLog('Erreur lors de la récupération du statut d\'interaction', { error: error.message });
     return {
       hasLiked: false,
       hasParticipated: false

@@ -362,6 +362,10 @@ export type Database = {
         Args: { event_id: number }
         Returns: undefined
       }
+      is_business_user: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
     }
     Enums: {
       event_category: "a-boire" | "a-manger" | "soirees" | "activites"
