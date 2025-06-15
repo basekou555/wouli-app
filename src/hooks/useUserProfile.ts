@@ -71,113 +71,127 @@ export const useUserProfile = () => {
         });
       }
 
-      // Récupérer les activités récentes - chercher dans les deux tables
+      // Récupérer les activités récentes - chercher dans les deux tables séparément
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-      const [userEventLikes, businessEventLikes, userEventParticipations, businessEventParticipations] = await Promise.all([
-        // Likes sur les événements users
-        supabase
-          .from('event_likes')
-          .select(`
-            created_at,
-            events!inner (title, location)
-          `)
-          .eq('user_id', user.id)
-          .gte('created_at', oneWeekAgo.toISOString())
-          .order('created_at', { ascending: false })
-          .limit(3),
-        
-        // Likes sur les événements business
-        supabase
-          .from('event_likes')
-          .select(`
-            created_at,
-            business_events!inner (title, venue)
-          `)
-          .eq('user_id', user.id)
-          .gte('created_at', oneWeekAgo.toISOString())
-          .order('created_at', { ascending: false })
-          .limit(3),
-        
-        // Participations sur les événements users
-        supabase
-          .from('event_participants')
-          .select(`
-            created_at,
-            events!inner (title, location)
-          `)
-          .eq('user_id', user.id)
-          .gte('created_at', oneWeekAgo.toISOString())
-          .order('created_at', { ascending: false })
-          .limit(3),
-        
-        // Participations sur les événements business
-        supabase
-          .from('event_participants')
-          .select(`
-            created_at,
-            business_events!inner (title, venue)
-          `)
-          .eq('user_id', user.id)
-          .gte('created_at', oneWeekAgo.toISOString())
-          .order('created_at', { ascending: false })
-          .limit(3)
-      ]);
-
       const activities: UserActivity[] = [];
 
-      // Ajouter les likes d'événements users
-      userEventLikes.data?.forEach(like => {
-        if (like.events) {
-          activities.push({
-            id: `like-user-${like.created_at}`,
-            type: 'like',
-            event: like.events.title,
-            venue: like.events.location,
-            date: like.created_at || ''
-          });
-        }
-      });
+      // Récupérer les likes sur les événements users
+      const { data: userEventLikes } = await supabase
+        .from('event_likes')
+        .select('created_at, event_id')
+        .eq('user_id', user.id)
+        .gte('created_at', oneWeekAgo.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(5);
 
-      // Ajouter les likes d'événements business
-      businessEventLikes.data?.forEach(like => {
-        if (like.business_events) {
-          activities.push({
-            id: `like-business-${like.created_at}`,
-            type: 'like',
-            event: like.business_events.title,
-            venue: like.business_events.venue || 'Lieu non spécifié',
-            date: like.created_at || ''
-          });
-        }
-      });
+      if (userEventLikes) {
+        for (const like of userEventLikes) {
+          const { data: eventData } = await supabase
+            .from('events')
+            .select('title, location')
+            .eq('id', like.event_id)
+            .single();
 
-      // Ajouter les participations d'événements users
-      userEventParticipations.data?.forEach(participation => {
-        if (participation.events) {
-          activities.push({
-            id: `participation-user-${participation.created_at}`,
-            type: 'participation',
-            event: participation.events.title,
-            venue: participation.events.location,
-            date: participation.created_at || ''
-          });
+          if (eventData) {
+            activities.push({
+              id: `like-user-${like.created_at}`,
+              type: 'like',
+              event: eventData.title,
+              venue: eventData.location,
+              date: like.created_at || ''
+            });
+          }
         }
-      });
+      }
 
-      // Ajouter les participations d'événements business
-      businessEventParticipations.data?.forEach(participation => {
-        if (participation.business_events) {
-          activities.push({
-            id: `participation-business-${participation.created_at}`,
-            type: 'participation',
-            event: participation.business_events.title,
-            venue: participation.business_events.venue || 'Lieu non spécifié',
-            date: participation.created_at || ''
-          });
+      // Récupérer les likes sur les événements business
+      const { data: businessEventLikes } = await supabase
+        .from('event_likes')
+        .select('created_at, event_id')
+        .eq('user_id', user.id)
+        .gte('created_at', oneWeekAgo.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (businessEventLikes) {
+        for (const like of businessEventLikes) {
+          const { data: eventData } = await supabase
+            .from('business_events')
+            .select('title, venue')
+            .eq('id', like.event_id)
+            .single();
+
+          if (eventData) {
+            activities.push({
+              id: `like-business-${like.created_at}`,
+              type: 'like',
+              event: eventData.title,
+              venue: eventData.venue || 'Lieu non spécifié',
+              date: like.created_at || ''
+            });
+          }
         }
-      });
+      }
+
+      // Récupérer les participations sur les événements users
+      const { data: userEventParticipations } = await supabase
+        .from('event_participants')
+        .select('created_at, event_id')
+        .eq('user_id', user.id)
+        .gte('created_at', oneWeekAgo.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (userEventParticipations) {
+        for (const participation of userEventParticipations) {
+          const { data: eventData } = await supabase
+            .from('events')
+            .select('title, location')
+            .eq('id', participation.event_id)
+            .single();
+
+          if (eventData) {
+            activities.push({
+              id: `participation-user-${participation.created_at}`,
+              type: 'participation',
+              event: eventData.title,
+              venue: eventData.location,
+              date: participation.created_at || ''
+            });
+          }
+        }
+      }
+
+      // Récupérer les participations sur les événements business
+      const { data: businessEventParticipations } = await supabase
+        .from('event_participants')
+        .select('created_at, event_id')
+        .eq('user_id', user.id)
+        .gte('created_at', oneWeekAgo.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (businessEventParticipations) {
+        for (const participation of businessEventParticipations) {
+          const { data: eventData } = await supabase
+            .from('business_events')
+            .select('title, venue')
+            .eq('id', participation.event_id)
+            .single();
+
+          if (eventData) {
+            activities.push({
+              id: `participation-business-${participation.created_at}`,
+              type: 'participation',
+              event: eventData.title,
+              venue: eventData.venue || 'Lieu non spécifié',
+              date: participation.created_at || ''
+            });
+          }
+        }
+      }
 
       // Trier par date décroissante et limiter à 5
       activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
