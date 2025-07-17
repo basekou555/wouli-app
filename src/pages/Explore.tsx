@@ -8,7 +8,7 @@ import ExploreFilters from '../components/explore/ExploreFilters';
 import EmptyState from '../components/explore/EmptyState';
 import { useSwipeCards } from '../hooks/useSwipeCards';
 import { useExploreFilters } from '../hooks/useExploreFilters';
-import { useEventActions } from '../hooks/useEventActions';
+import { useSimpleEventInteractions } from '../hooks/useSimpleEventInteractions';
 import { useAuth } from '../contexts/AuthContext';
 import { useRealTimeEvents } from '../hooks/useRealTimeEvents';
 import { supabase } from '@/integrations/supabase/client';
@@ -51,7 +51,7 @@ const Explore = () => {
     });
   }, [allEvents, searchTerm, selectedCategory]);
 
-  const { likeEvent, participateEvent, incrementViews } = useEventActions(refetch);
+  const { handleLike: simpleLike, handleParticipate: simpleParticipate, handleIncrementViews } = useSimpleEventInteractions();
   const [userInteractions, setUserInteractions] = useState<{
     liked: Set<string>;
     participating: Set<string>;
@@ -173,13 +173,15 @@ const Explore = () => {
     
     console.log('❤️ Tentative de like dans Explore pour:', eventId);
     
-    const success = await likeEvent(eventId, user.id);
+    const event = filteredEvents.find(e => e.id === eventId);
+    const success = await simpleLike(eventId, event?.title);
     if (success) {
       console.log('✅ Like réussi, mise à jour de l\'état local');
       setUserInteractions(prev => ({
         ...prev,
         liked: new Set([...prev.liked, eventId])
       }));
+      await refetch(); // Refetch pour mettre à jour les compteurs
     }
   };
 
@@ -197,19 +199,21 @@ const Explore = () => {
     
     console.log('🎉 Tentative de participation dans Explore pour:', eventId);
     
-    const success = await participateEvent(eventId, user.id);
+    const event = filteredEvents.find(e => e.id === eventId);
+    const success = await simpleParticipate(eventId, event?.title);
     if (success) {
       console.log('✅ Participation réussie, mise à jour de l\'état local');
       setUserInteractions(prev => ({
         ...prev,
         participating: new Set([...prev.participating, eventId])
       }));
+      await refetch(); // Refetch pour mettre à jour les compteurs
     }
   };
 
   const handleViewEvent = async (eventId: string) => {
     console.log('👁️ Vue d\'événement dans Explore pour:', eventId);
-    await incrementViews(eventId);
+    await handleIncrementViews(eventId);
   };
 
   const currentEvent = filteredEvents[currentIndex];

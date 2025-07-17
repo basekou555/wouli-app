@@ -9,23 +9,3 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
-
-// Remplace ces valeurs par des valeurs réelles de ta base
-const eventId = "4f0c30dd-b9d5-4577-969d-7f21500c2248";
-const userId = "b8750c46-6717-4427-aac4-3e5c1e5a86c5";
-
-async function likeEvent(eventId: string, userId: string) {
-  const { data, error } = await supabase
-    .from("event_likes")
-    .insert([{ event_id: eventId, user_id: userId }]);
-
-  if (error) {
-    console.error("Erreur lors de l'ajout du like :", error.message);
-    return false;
-  }
-  console.log("Like ajouté avec succès :", data);
-  return true;
-}
-
-// Lance le test
-likeEvent(eventId, userId);

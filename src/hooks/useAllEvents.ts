@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { EventSource, UnifiedEvent } from '@/types/unified';
 import { ApiError } from '@/types/api';
 import { fetchUserEvents, fetchBusinessEvents } from '@/services/eventService';
-import { useEventActions } from '@/hooks/useEventActions';
+import { useSimpleEventInteractions } from '@/hooks/useSimpleEventInteractions';
 import { useRealTimeEvents } from '@/hooks/useRealTimeEvents';
 
 export const useAllEvents = (source: EventSource = 'all') => {
@@ -42,7 +42,7 @@ export const useAllEvents = (source: EventSource = 'all') => {
     }
   };
 
-  const { incrementViews, likeEvent, participateEvent } = useEventActions(fetchEvents);
+  const { handleIncrementViews, handleLike, handleParticipate } = useSimpleEventInteractions();
   
   // Enable real-time updates
   useRealTimeEvents(events, setEvents);
@@ -67,9 +67,9 @@ export const useAllEvents = (source: EventSource = 'all') => {
     loading,
     error,
     refetch: fetchEvents,
-    incrementViews,
-    likeEvent,
-    participateEvent,
+    incrementViews: handleIncrementViews,
+    likeEvent: handleLike,
+    participateEvent: handleParticipate,
     clearError: () => setError(null)
   };
 };

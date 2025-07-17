@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { UnifiedEvent } from '@/types/unified';
 import { useToast } from '@/hooks/use-toast';
-import { useEventActions } from '@/hooks/useEventActions';
+import { useSimpleEventInteractions } from '@/hooks/useSimpleEventInteractions';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const useEventPreview = (eventId: string | undefined) => {
@@ -13,12 +13,8 @@ export const useEventPreview = (eventId: string | undefined) => {
   const { toast } = useToast();
   const { user } = useAuth();
   
-  // Utiliser les vraies actions d'événements avec refetch
-  const { likeEvent, participateEvent, incrementViews } = useEventActions(async () => {
-    if (eventId) {
-      await fetchEvent();
-    }
-  });
+  // Utiliser les nouvelles actions simplifiées
+  const { handleLike: simpleLike, handleParticipate: simpleParticipate, handleIncrementViews } = useSimpleEventInteractions();
 
   const fetchEvent = async () => {
     if (!eventId) return;
@@ -69,7 +65,7 @@ export const useEventPreview = (eventId: string | undefined) => {
         setEvent(mappedEvent);
         
         // Incrémenter les vues automatiquement
-        await incrementViews(eventId);
+        await handleIncrementViews(eventId);
         return;
       }
 
@@ -110,7 +106,7 @@ export const useEventPreview = (eventId: string | undefined) => {
         setEvent(mappedEvent);
         
         // Incrémenter les vues automatiquement
-        await incrementViews(eventId);
+        await handleIncrementViews(eventId);
         return;
       }
 
@@ -149,11 +145,11 @@ export const useEventPreview = (eventId: string | undefined) => {
     }
 
     console.log('🎉 Tentative de participation à l\'événement:', eventId);
-    const success = await participateEvent(eventId, user.id);
+    const success = await simpleParticipate(eventId, event?.title);
     
     if (success) {
       console.log('✅ Participation réussie');
-      // Le refetch sera appelé automatiquement par useEventActions
+      await fetchEvent(); // Refetch pour mettre à jour les compteurs
     }
   };
 
@@ -178,11 +174,11 @@ export const useEventPreview = (eventId: string | undefined) => {
     }
 
     console.log('❤️ Tentative de like de l\'événement:', eventId);
-    const success = await likeEvent(eventId, user.id);
+    const success = await simpleLike(eventId, event?.title);
     
     if (success) {
       console.log('✅ Like réussi');
-      // Le refetch sera appelé automatiquement par useEventActions
+      await fetchEvent(); // Refetch pour mettre à jour les compteurs
     }
   };
 
