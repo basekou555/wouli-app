@@ -33,8 +33,8 @@ export default function DebugSupabase() {
     setLoading("auth");
     try {
       // On tente de s'inscrire/se connecter avec un email bidon (mode magic link désactivé)
-      const email = `debug-${Date.now()}@test.com`;
-      const password = "debugtest123";
+      const email = `debug${Date.now()}@test.com`;
+      const password = "DebugTest123!";
       const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
       setResults((r: any) => ({ ...r, auth: { success: true, data } }));

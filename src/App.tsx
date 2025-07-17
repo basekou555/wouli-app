@@ -22,6 +22,7 @@ import BusinessEventEdit from "./pages/BusinessEventEdit";
 import ProfileSettings from "./pages/ProfileSettings";
 import UserProfileSettings from "./pages/UserProfileSettings";
 import DemoSetup from "./pages/DemoSetup";
+import DebugSupabasePage from "./pages/DebugSupabasePage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -59,6 +60,7 @@ function App() {
                 <Route path="/profile-settings" element={<ProfileSettings />} />
                 <Route path="/user-settings" element={<UserProfileSettings />} />
                 <Route path="/demo-setup" element={<DemoSetup />} />
+                <Route path="/app/debugsupabase" element={<DebugSupabasePage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
