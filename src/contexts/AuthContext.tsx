@@ -3,8 +3,6 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { authSecurityService } from '@/services/authSecurityService';
-import { secureLog } from '@/utils/security';
 
 interface AuthContextType {
   user: User | null;
@@ -32,49 +30,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
 
   useEffect(() => {
-    secureLog('🔐 Initialisation AuthContext sécurisé...');
+    console.log('[WOULI-SECURE] 🔐 Initialisation AuthContext sécurisé...');
     
-    // Configuration du listener d'authentification avec monitoring de sécurité
+    // Configuration du listener d'authentification
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        secureLog('🔐 Auth state change sécurisé', { event, hasSession: !!session });
+        console.log('[WOULI-SECURE] 🔐 Auth state change sécurisé', { event, hasSession: !!session });
         
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Logging de sécurité pour les événements d'authentification
+        // Logging pour les événements d'authentification
         if (event === 'SIGNED_IN' && session) {
-          secureLog('✅ Connexion sécurisée réussie', { 
+          console.log('[WOULI-SECURE] ✅ Connexion sécurisée réussie', { 
             userId: session.user.id, 
             email: session.user.email 
           });
         } else if (event === 'SIGNED_OUT') {
-          secureLog('🚪 Déconnexion sécurisée');
+          console.log('[WOULI-SECURE] 🚪 Déconnexion sécurisée');
         } else if (event === 'TOKEN_REFRESHED') {
-          secureLog('🔄 Token rafraîchi de manière sécurisée');
+          console.log('[WOULI-SECURE] 🔄 Token rafraîchi de manière sécurisée');
         }
         
         setLoading(false);
       }
     );
 
-    // Vérification de la session initiale avec gestion d'erreur sécurisée
+    // Vérification de la session initiale
     const getInitialSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
-          secureLog('❌ Erreur lors de la récupération sécurisée de la session', { error: error.message });
+          console.log('[WOULI-SECURE] ❌ Erreur lors de la récupération de la session', { error: error.message });
           if (error.message.includes('refresh_token_not_found')) {
-            secureLog('🧹 Nettoyage sécurisé des tokens expirés...');
+            console.log('[WOULI-SECURE] 🧹 Nettoyage des tokens expirés...');
             await supabase.auth.signOut();
           }
         } else {
-          secureLog('📋 Session initiale sécurisée', { hasSession: !!session });
+          console.log('[WOULI-SECURE] 📋 Session initiale sécurisée', { hasSession: !!session });
           setSession(session);
           setUser(session?.user ?? null);
         }
       } catch (error) {
-        secureLog('❌ Erreur inattendue lors de la récupération sécurisée de la session', { error });
+        console.log('[WOULI-SECURE] ❌ Erreur inattendue lors de la récupération de la session', { error });
       } finally {
         setLoading(false);
       }
@@ -83,21 +81,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     getInitialSession();
 
     return () => {
-      secureLog('🧹 Nettoyage du listener d\'authentification sécurisé');
+      console.log('[WOULI-SECURE] 🧹 Nettoyage du listener d\'authentification');
       subscription.unsubscribe();
     };
   }, []);
 
   const signUp = async (email: string, password: string, username: string) => {
     try {
-      secureLog('📝 Tentative d\'inscription sécurisée', { email });
+      console.log('[WOULI-SECURE] 📝 Tentative d\'inscription', { email });
       
-      const result = await authSecurityService.secureSignUp(email, password, username);
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: { username }
+        }
+      });
 
-      if (result.error) {
+      if (error) {
         toast({
           title: "Erreur d'inscription",
-          description: result.error.message,
+          description: error.message,
           variant: "destructive"
         });
       } else {
@@ -107,23 +114,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
 
-      return result;
+      return { error };
     } catch (error) {
-      secureLog('❌ Erreur inattendue lors de l\'inscription sécurisée', { error });
+      console.log('[WOULI-SECURE] ❌ Erreur inattendue lors de l\'inscription', { error });
       return { error };
     }
   };
 
   const signIn = async (email: string, password: string) => {
     try {
-      secureLog('🔐 Tentative de connexion sécurisée', { email });
+      console.log('[WOULI-SECURE] 🔐 Tentative de connexion', { email });
       
-      const result = await authSecurityService.secureSignIn(email, password);
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
 
-      if (result.error) {
+      if (error) {
         toast({
           title: "Erreur de connexion",
-          description: result.error.message,
+          description: error.message,
           variant: "destructive"
         });
       } else {
@@ -133,19 +143,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
 
-      return result;
+      return { error };
     } catch (error) {
-      secureLog('❌ Erreur inattendue lors de la connexion sécurisée', { error });
+      console.log('[WOULI-SECURE] ❌ Erreur inattendue lors de la connexion', { error });
       return { error };
     }
   };
 
   const signOut = async () => {
     try {
-      secureLog('🚪 Déconnexion sécurisée...');
+      console.log('[WOULI-SECURE] 🚪 Déconnexion...');
       const { error } = await supabase.auth.signOut();
       if (error) {
-        secureLog('❌ Erreur de déconnexion sécurisée', { error: error.message });
+        console.log('[WOULI-SECURE] ❌ Erreur de déconnexion', { error: error.message });
         toast({
           title: "Erreur de déconnexion",
           description: error.message,
@@ -158,7 +168,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
     } catch (error) {
-      secureLog('❌ Erreur inattendue lors de la déconnexion sécurisée', { error });
+      console.log('[WOULI-SECURE] ❌ Erreur inattendue lors de la déconnexion', { error });
     }
   };
 

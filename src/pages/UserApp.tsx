@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Heart, X, MapPin, Calendar, Users, Filter, ArrowLeft, Clock, Tag, Euro, Building } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
-import { categories } from '../data/mockEvents';
+import { WOULI_CATEGORIES as categories } from '../data/wouliCategories';
 import { UnifiedEvent } from '@/types/unified';
 import { useAllEvents } from '@/hooks/useAllEvents';
 import BottomNavigation from '../components/BottomNavigation';

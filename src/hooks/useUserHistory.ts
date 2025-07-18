@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { mapBusinessEventToUnified, mapUserEventToUnified } from './utils/eventMappers';
 import { fetchLikedEvents, fetchParticipatingEvents } from './services/userHistoryService';
-import { useUserHistoryActions } from './useUserHistoryActions';
+
 
 interface UserHistoryData {
   likedEvents: UnifiedEvent[];
@@ -21,7 +21,7 @@ export const useUserHistory = () => {
   });
   const { user, session } = useAuth();
   const { toast } = useToast();
-  const { removeLikedEvent: removeLikedAction, removeParticipatingEvent: removeParticipatingAction } = useUserHistoryActions();
+  
 
   const fetchUserHistory = async () => {
     if (!user || !session) {
@@ -134,21 +134,19 @@ export const useUserHistory = () => {
   };
 
   const removeLikedEvent = async (eventId: string) => {
-    await removeLikedAction(eventId, () => {
-      setData(prev => ({
-        ...prev,
-        likedEvents: prev.likedEvents.filter(event => event.id !== eventId)
-      }));
-    });
+    // Actions simplifiées - suppression locale seulement pour le moment
+    setData(prev => ({
+      ...prev,
+      likedEvents: prev.likedEvents.filter(event => event.id !== eventId)
+    }));
   };
 
   const removeParticipation = async (eventId: string) => {
-    await removeParticipatingAction(eventId, () => {
-      setData(prev => ({
-        ...prev,
-        participatingEvents: prev.participatingEvents.filter(event => event.id !== eventId)
-      }));
-    });
+    // Actions simplifiées - suppression locale seulement pour le moment
+    setData(prev => ({
+      ...prev,
+      participatingEvents: prev.participatingEvents.filter(event => event.id !== eventId)
+    }));
   };
 
   useEffect(() => {
