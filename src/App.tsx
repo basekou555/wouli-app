@@ -21,6 +21,9 @@ import BusinessEventDetails from "./pages/BusinessEventDetails";
 import BusinessEventEdit from "./pages/BusinessEventEdit";
 import ProfileSettings from "./pages/ProfileSettings";
 import UserProfileSettings from "./pages/UserProfileSettings";
+import BusinessSignup from "./pages/BusinessSignup";
+import ProtectedRoute from "./components/ProtectedRoute";
+import AuthRedirect from "./components/AuthRedirect";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -43,20 +46,82 @@ function App() {
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Home />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/app" element={<UserApp />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/profil" element={<Profile />} />
-                <Route path="/event/:id" element={<EventDetails />} />
+                <Route path="/auth" element={
+                  <AuthRedirect>
+                    <Auth />
+                  </AuthRedirect>
+                } />
+                <Route path="/business/signup" element={
+                  <AuthRedirect>
+                    <BusinessSignup />
+                  </AuthRedirect>
+                } />
+                
+                {/* User Routes */}
+                <Route path="/app" element={
+                  <ProtectedRoute>
+                    <UserApp />
+                  </ProtectedRoute>
+                } />
+                <Route path="/profile" element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                } />
+                <Route path="/profil" element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                } />
+                <Route path="/event/:id" element={
+                  <ProtectedRoute>
+                    <EventDetails />
+                  </ProtectedRoute>
+                } />
                 <Route path="/explore" element={<Navigate to="/search" replace />} />
-                <Route path="/search" element={<Search />} />
-                <Route path="/user/:id" element={<UserProfile />} />
-                <Route path="/history" element={<UserHistory />} />
-                <Route path="/business" element={<BusinessDashboard />} />
-                <Route path="/business/event/:id" element={<BusinessEventDetails />} />
-                <Route path="/business/event/:id/edit" element={<BusinessEventEdit />} />
-                <Route path="/profile-settings" element={<ProfileSettings />} />
-                <Route path="/user-settings" element={<UserProfileSettings />} />
+                <Route path="/search" element={
+                  <ProtectedRoute>
+                    <Search />
+                  </ProtectedRoute>
+                } />
+                <Route path="/user/:id" element={
+                  <ProtectedRoute>
+                    <UserProfile />
+                  </ProtectedRoute>
+                } />
+                <Route path="/history" element={
+                  <ProtectedRoute>
+                    <UserHistory />
+                  </ProtectedRoute>
+                } />
+                <Route path="/profile-settings" element={
+                  <ProtectedRoute>
+                    <ProfileSettings />
+                  </ProtectedRoute>
+                } />
+                <Route path="/user-settings" element={
+                  <ProtectedRoute>
+                    <UserProfileSettings />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Business Routes - Protected */}
+                <Route path="/business" element={
+                  <ProtectedRoute requireBusiness={true}>
+                    <BusinessDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/business/event/:id" element={
+                  <ProtectedRoute requireBusiness={true}>
+                    <BusinessEventDetails />
+                  </ProtectedRoute>
+                } />
+                <Route path="/business/event/:id/edit" element={
+                  <ProtectedRoute requireBusiness={true}>
+                    <BusinessEventEdit />
+                  </ProtectedRoute>
+                } />
+                
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>

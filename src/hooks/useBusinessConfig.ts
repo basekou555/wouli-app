@@ -28,13 +28,10 @@ export const useBusinessConfig = () => {
       
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        // Use default config with analytics enabled if not authenticated
-        setConfig({
-          client_name: 'Blue Note Bar',
-          client_type: 'Bar/Restaurant',
-          location: 'Lyon',
-          brand_color: '#FF7A1F',
-          features: ['events', 'stats', 'analytics', 'redirections', 'ranking']
+        console.log('[WOULI-BUSINESS] ⚠️ Utilisateur non connecté');
+        setError({
+          message: 'Vous devez être connecté pour accéder à cette page',
+          code: 'UNAUTHENTICATED'
         });
         setLoading(false);
         return;
@@ -51,63 +48,28 @@ export const useBusinessConfig = () => {
       }
 
       if (data) {
-        // Ensure analytics is enabled for existing configs
-        const enhancedFeatures = data.features.includes('analytics') 
-          ? data.features 
-          : [...data.features, 'analytics', 'ranking'];
-
+        console.log('[WOULI-BUSINESS] ✅ Configuration trouvée:', data);
         setConfig({
           id: data.id,
           client_name: data.client_name,
           client_type: data.client_type,
           location: data.location,
           brand_color: data.brand_color,
-          features: enhancedFeatures,
+          features: data.features,
           user_id: data.user_id,
           created_at: data.created_at,
           updated_at: data.updated_at
         });
       } else {
-        // Create default config with analytics for new user
-        const defaultConfig = {
-          client_name: 'Mon Établissement',
-          client_type: 'Bar/Restaurant',
-          location: 'Lyon',
-          brand_color: '#FF7A1F',
-          features: ['events', 'stats', 'analytics', 'redirections', 'ranking']
-        };
-        
-        const { data: newConfig, error: insertError } = await supabase
-          .from('business_configs')
-          .insert({
-            user_id: user.id,
-            ...defaultConfig
-          })
-          .select()
-          .single();
-
-        if (insertError) {
-          throw insertError;
-        }
-        
-        setConfig({
-          id: newConfig.id,
-          ...defaultConfig,
-          user_id: newConfig.user_id,
-          created_at: newConfig.created_at,
-          updated_at: newConfig.updated_at
+        console.log('[WOULI-BUSINESS] ❌ Aucune configuration business trouvée');
+        setError({
+          message: 'Aucune configuration business trouvée. Veuillez vous inscrire comme établissement.',
+          code: 'NO_BUSINESS_CONFIG'
         });
       }
     } catch (error) {
+      console.log('[WOULI-BUSINESS] ❌ Erreur fetchConfig:', error);
       handleError(error, 'fetchConfig');
-      // Fallback to default config with analytics
-      setConfig({
-        client_name: 'Blue Note Bar',
-        client_type: 'Bar/Restaurant',
-        location: 'Lyon',
-        brand_color: '#FF7A1F',
-        features: ['events', 'stats', 'analytics', 'redirections', 'ranking']
-      });
     } finally {
       setLoading(false);
     }

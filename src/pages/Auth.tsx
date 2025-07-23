@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Eye, EyeOff, ArrowLeft, Building, Info } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Auth = () => {
@@ -13,22 +14,28 @@ const Auth = () => {
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [signupData, setSignupData] = useState({ email: '', password: '', username: '' });
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, signUp, user, userType, isBusinessUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  const message = location.state?.message;
+  const messageType = location.state?.type;
 
   useEffect(() => {
-    if (user) {
-      navigate('/app');
+    if (user && userType) {
+      if (isBusinessUser) {
+        navigate('/business');
+      } else {
+        navigate('/app');
+      }
     }
-  }, [user, navigate]);
+  }, [user, userType, isBusinessUser, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     const { error } = await signIn(loginData.email, loginData.password);
-    if (!error) {
-      navigate('/app');
-    }
+    // Navigation is handled by useEffect based on user type
     setLoading(false);
   };
 
@@ -54,6 +61,13 @@ const Auth = () => {
           <h1 className="text-3xl font-bold text-gradient">Wouli</h1>
           <p className="text-gray-600 mt-2">Connecte-toi pour découvrir les événements près de toi</p>
         </div>
+
+        {message && (
+          <Alert className={messageType === 'success' ? 'border-green-200 bg-green-50' : 'border-blue-200 bg-blue-50'}>
+            <Info className="h-4 w-4" />
+            <AlertDescription>{message}</AlertDescription>
+          </Alert>
+        )}
 
         <Card>
           <CardHeader>
@@ -145,6 +159,29 @@ const Auth = () => {
                 </form>
               </TabsContent>
             </Tabs>
+            
+            <div className="mt-6 text-center">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">ou</span>
+                </div>
+              </div>
+              
+              <div className="mt-4">
+                <Link to="/business/signup">
+                  <Button variant="outline" className="w-full">
+                    <Building className="h-4 w-4 mr-2" />
+                    Créer un compte établissement
+                  </Button>
+                </Link>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Vous êtes propriétaire d'un restaurant, bar, club ou organisateur d'événements ?
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

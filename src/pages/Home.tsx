@@ -46,10 +46,10 @@ const Home = () => {
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
-            <Link to="/business">
+            <Link to="/business/signup">
               <Button size="lg" variant="outline" className="text-lg px-8 py-3">
                 <Building className="mr-2 h-5 w-5" />
-                Espace établissement
+                Créer mon compte établissement
               </Button>
             </Link>
           </div>
