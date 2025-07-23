@@ -275,6 +275,7 @@ export const updateBusinessEvent = async (
     external_url: data.external_url,
     user_id: data.created_by
   };
+};
 
 export const deleteBusinessEvent = async (eventId: string): Promise<void> => {
   const { data: { user } } = await supabase.auth.getUser();
