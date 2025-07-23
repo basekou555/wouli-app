@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import Home from "./pages/Home";
@@ -48,7 +48,7 @@ function App() {
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/profil" element={<Profile />} />
                 <Route path="/event/:id" element={<EventDetails />} />
-                <Route path="/explore" element={<Explore />} />
+                <Route path="/explore" element={<Navigate to="/search" replace />} />
                 <Route path="/search" element={<Search />} />
                 <Route path="/user/:id" element={<UserProfile />} />
                 <Route path="/history" element={<UserHistory />} />

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { EventSource, UnifiedEvent } from '@/types/unified';
 import { ApiError } from '@/types/api';
-import { fetchUserEvents, fetchBusinessEvents } from '@/services/eventService';
+import { fetchAllEvents, fetchUserEvents, fetchBusinessEvents } from '@/services/unifiedEventService';
 import { useSimpleEventInteractions } from '@/hooks/useSimpleEventInteractions';
 import { useRealTimeEvents } from '@/hooks/useRealTimeEvents';
 
@@ -16,18 +16,15 @@ export const useAllEvents = (source: EventSource = 'all') => {
       setLoading(true);
       setError(null);
       
-      const allEvents: UnifiedEvent[] = [];
+      let allEvents: UnifiedEvent[] = [];
 
-      // Fetch user events if needed
-      if (source === 'all' || source === 'user') {
-        const userEvents = await fetchUserEvents();
-        allEvents.push(...userEvents);
-      }
-
-      // Fetch business events if needed
-      if (source === 'all' || source === 'business') {
-        const businessEvents = await fetchBusinessEvents();
-        allEvents.push(...businessEvents);
+      if (source === 'all') {
+        // Optimized: single query for all events
+        allEvents = await fetchAllEvents();
+      } else if (source === 'user') {
+        allEvents = await fetchUserEvents();
+      } else if (source === 'business') {
+        allEvents = await fetchBusinessEvents();
       }
 
       // Sort all events by date
