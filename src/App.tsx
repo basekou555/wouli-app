@@ -17,6 +17,7 @@ import UserProfile from "./pages/UserProfile";
 import UserHistory from "./pages/UserHistory";
 import NotFound from "./pages/NotFound";
 import BusinessDashboard from "./pages/BusinessDashboard";
+import BusinessEvents from "./pages/BusinessEvents";
 import BusinessEventDetails from "./pages/BusinessEventDetails";
 import BusinessEventEdit from "./pages/BusinessEventEdit";
 import ProfileSettings from "./pages/ProfileSettings";
@@ -113,7 +114,7 @@ function App() {
                 } />
                 <Route path="/business/events" element={
                   <ProtectedRoute requireBusiness={true}>
-                    <BusinessDashboard />
+                    <BusinessEvents />
                   </ProtectedRoute>
                 } />
                 <Route path="/business/analytics" element={
