@@ -111,6 +111,21 @@ function App() {
                     <BusinessDashboard />
                   </ProtectedRoute>
                 } />
+                <Route path="/business/events" element={
+                  <ProtectedRoute requireBusiness={true}>
+                    <BusinessDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/business/analytics" element={
+                  <ProtectedRoute requireBusiness={true}>
+                    <BusinessDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/business/settings" element={
+                  <ProtectedRoute requireBusiness={true}>
+                    <BusinessDashboard />
+                  </ProtectedRoute>
+                } />
                 <Route path="/business/event/:id" element={
                   <ProtectedRoute requireBusiness={true}>
                     <BusinessEventDetails />
