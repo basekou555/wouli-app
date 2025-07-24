@@ -37,11 +37,22 @@ export const useBusinessConfig = () => {
         return;
       }
 
-      const { data, error } = await supabase
-        .from('business_configs')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      // Récupérer la config business et le profil séparément
+      const [configResult, profileResult] = await Promise.all([
+        supabase
+          .from('business_configs')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle(),
+        supabase
+          .from('profiles')
+          .select('username, bio, website, phone, avatar_url, city')
+          .eq('id', user.id)
+          .single()
+      ]);
+
+      const { data, error } = configResult;
+      const { data: profileData } = profileResult;
 
       if (error && error.code !== 'PGRST116') {
         throw error;
@@ -58,7 +69,14 @@ export const useBusinessConfig = () => {
           features: data.features,
           user_id: data.user_id,
           created_at: data.created_at,
-          updated_at: data.updated_at
+          updated_at: data.updated_at,
+          // Données du profil
+          username: profileData?.username || '',
+          bio: profileData?.bio || '',
+          website: profileData?.website || '',
+          phone: profileData?.phone || '',
+          avatar_url: profileData?.avatar_url || '',
+          city: profileData?.city || ''
         });
       } else {
         console.log('[WOULI-BUSINESS] ⚠️ Aucune configuration business trouvée, création par défaut');

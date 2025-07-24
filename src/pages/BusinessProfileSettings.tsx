@@ -7,11 +7,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings, Users, MapPin, Palette, Globe, Save, Eye, ArrowLeft, Bell, Shield, CreditCard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useBusinessConfig } from '@/hooks/useBusinessConfig';
+import { useProfile } from '@/hooks/useProfile';
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { CardDescription } from "@/components/ui/card";
 
 const BusinessProfileSettings = () => {
   const navigate = useNavigate();
   const { config, loading, updateConfig } = useBusinessConfig();
+  const { profile, updateProfile } = useProfile();
 
   const [formData, setFormData] = React.useState(config || {
     client_name: '',
@@ -19,6 +24,14 @@ const BusinessProfileSettings = () => {
     location: '',
     brand_color: '#FF7A1F',
     features: []
+  });
+
+  const [profileData, setProfileData] = React.useState({
+    username: '',
+    bio: '',
+    website: '',
+    phone: '',
+    city: ''
   });
 
   const [notifications, setNotifications] = React.useState({
@@ -40,8 +53,37 @@ const BusinessProfileSettings = () => {
     }
   }, [config]);
 
-  const handleSaveConfig = () => {
-    updateConfig(formData);
+  React.useEffect(() => {
+    if (profile) {
+      setProfileData({
+        username: profile.username || '',
+        bio: profile.bio || '',
+        website: profile.website || '',
+        phone: profile.phone || '',
+        city: profile.city || ''
+      });
+    }
+  }, [profile]);
+
+  const handleSaveConfig = async () => {
+    await updateConfig(formData);
+  };
+
+  const handleSaveProfile = async () => {
+    await updateProfile({
+      username: profileData.username,
+      bio: profileData.bio,
+      website: profileData.website,
+      phone: profileData.phone,
+      city: profileData.city
+    });
+  };
+
+  const handleSaveAll = async () => {
+    await Promise.all([
+      handleSaveConfig(),
+      handleSaveProfile()
+    ]);
   };
 
   const businessTypes = [
@@ -94,7 +136,7 @@ const BusinessProfileSettings = () => {
               <p className="text-gray-600 mt-2">Gérez votre profil et vos préférences d'établissement</p>
             </div>
           </div>
-          <Button onClick={handleSaveConfig} className="bg-green-600 hover:bg-green-700">
+          <Button onClick={handleSaveAll} className="bg-green-600 hover:bg-green-700">
             <Save className="h-4 w-4 mr-2" />
             Sauvegarder
           </Button>
@@ -103,8 +145,9 @@ const BusinessProfileSettings = () => {
 
       <div className="container mx-auto p-6">
         <Tabs defaultValue="general" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="general">Général</TabsTrigger>
+            <TabsTrigger value="profile">Profil</TabsTrigger>
             <TabsTrigger value="features">Fonctionnalités</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="privacy">Confidentialité</TabsTrigger>
@@ -206,6 +249,72 @@ const BusinessProfileSettings = () => {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* Onglet Profil */}
+          <TabsContent value="profile" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Informations personnelles</CardTitle>
+                <CardDescription>
+                  Gérez vos informations de profil business
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="username">Nom d'utilisateur</Label>
+                    <Input
+                      id="username"
+                      value={profileData.username}
+                      onChange={(e) => setProfileData({...profileData, username: e.target.value})}
+                      placeholder="Votre nom d'utilisateur"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="city">Ville</Label>
+                    <Input
+                      id="city"
+                      value={profileData.city}
+                      onChange={(e) => setProfileData({...profileData, city: e.target.value})}
+                      placeholder="Votre ville"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="bio">Biographie</Label>
+                  <Textarea
+                    id="bio"
+                    value={profileData.bio}
+                    onChange={(e) => setProfileData({...profileData, bio: e.target.value})}
+                    placeholder="Décrivez votre établissement..."
+                    rows={3}
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="website">Site web</Label>
+                    <Input
+                      id="website"
+                      type="url"
+                      value={profileData.website}
+                      onChange={(e) => setProfileData({...profileData, website: e.target.value})}
+                      placeholder="https://votre-site.com"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="phone">Téléphone</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={profileData.phone}
+                      onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
+                      placeholder="+33 1 23 45 67 89"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="features" className="mt-6">

@@ -234,7 +234,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           emailRedirectTo: redirectUrl,
           data: { 
             username: businessData.username,
-            type: 'business'
+            type: 'business',
+            clientName: businessData.clientName,
+            clientType: businessData.clientType,
+            location: businessData.location,
+            brandColor: businessData.brandColor || '#FF7A1F'
           }
         }
       });

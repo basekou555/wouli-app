@@ -9,6 +9,13 @@ export interface BusinessConfig {
   user_id?: string;
   created_at?: string;
   updated_at?: string;
+  // Données du profil utilisateur
+  username?: string;
+  bio?: string;
+  website?: string;
+  phone?: string;
+  avatar_url?: string;
+  city?: string;
 }
 
 export interface BusinessStats {
