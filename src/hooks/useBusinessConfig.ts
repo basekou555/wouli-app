@@ -61,17 +61,43 @@ export const useBusinessConfig = () => {
           updated_at: data.updated_at
         });
       } else {
-        console.log('[WOULI-BUSINESS] ❌ Aucune configuration business trouvée');
-        setError({
-          message: 'Aucune configuration business trouvée. Veuillez vous inscrire comme établissement.',
-          code: 'NO_BUSINESS_CONFIG'
-        });
+        console.log('[WOULI-BUSINESS] ⚠️ Aucune configuration business trouvée, création par défaut');
+        // Créer une configuration par défaut
+        await createDefaultConfig(user.id);
       }
     } catch (error) {
       console.log('[WOULI-BUSINESS] ❌ Erreur fetchConfig:', error);
       handleError(error, 'fetchConfig');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const createDefaultConfig = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('business_configs')
+        .insert({
+          user_id: userId,
+          client_name: 'Mon Établissement',
+          client_type: 'restaurant',
+          location: 'Lyon',
+          brand_color: '#FF7A1F',
+          features: ['events', 'stats', 'redirections']
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setConfig(data);
+      console.log('[WOULI-BUSINESS] ✅ Configuration par défaut créée:', data);
+    } catch (error) {
+      console.error('[WOULI-BUSINESS] ❌ Erreur création config par défaut:', error);
+      setError({
+        message: 'Impossible de créer la configuration business',
+        code: 'CREATE_CONFIG_ERROR'
+      });
     }
   };
 

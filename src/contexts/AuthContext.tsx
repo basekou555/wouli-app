@@ -248,29 +248,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { error };
       }
 
-      // Wait a bit for the user to be created, then create business config
-      setTimeout(async () => {
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            const { error: configError } = await supabase
-              .from('business_configs')
-              .insert({
-                user_id: user.id,
-                client_name: businessData.clientName,
-                client_type: businessData.clientType,
-                location: businessData.location,
-                brand_color: businessData.brandColor || '#FF7A1F'
-              });
-
-            if (configError) {
-              console.log('[WOULI-SECURE] ❌ Erreur création business config', { error: configError.message });
-            }
-          }
-        } catch (configError) {
-          console.log('[WOULI-SECURE] ❌ Erreur inattendue création business config', { configError });
-        }
-      }, 2000);
+      // La configuration business est maintenant créée automatiquement par le trigger
 
       toast({
         title: "Inscription réussie !",
