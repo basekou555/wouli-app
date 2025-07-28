@@ -6,7 +6,7 @@ import SwipeCard from '../components/explore/SwipeCard';
 import ExploreHeader from '../components/explore/ExploreHeader';
 import ExploreFilters from '../components/explore/ExploreFilters';
 import EmptyState from '../components/explore/EmptyState';
-import { useSwipeCards } from '../hooks/useSwipeCards';
+import { useAllEventsWithFriends } from '../hooks/useAllEventsWithFriends';
 import { useExploreFilters } from '../hooks/useExploreFilters';
 import { useSimpleEventInteractions } from '../hooks/useSimpleEventInteractions';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,14 +19,15 @@ const Explore = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
+  
   const {
-    filteredEvents: allEvents,
+    events: allEvents,
     loading,
     error,
-    currentIndex,
-    setCurrentIndex,
     refetch
-  } = useSwipeCards();
+  } = useAllEventsWithFriends();
   
   const {
     selectedCategory,
@@ -181,6 +182,14 @@ const Explore = () => {
         ...prev,
         liked: new Set([...prev.liked, eventId])
       }));
+      
+      // Animate slide right for like
+      setSlideDirection('right');
+      setTimeout(() => {
+        setCurrentIndex(prev => Math.min(prev + 1, filteredEvents.length - 1));
+        setSlideDirection(null);
+      }, 300);
+      
       await refetch(); // Refetch pour mettre à jour les compteurs
     }
   };
@@ -209,6 +218,15 @@ const Explore = () => {
       }));
       await refetch(); // Refetch pour mettre à jour les compteurs
     }
+  };
+  
+  const handleDislike = () => {
+    // Animate slide left for dislike
+    setSlideDirection('left');
+    setTimeout(() => {
+      setCurrentIndex(prev => Math.min(prev + 1, filteredEvents.length - 1));
+      setSlideDirection(null);
+    }, 300);
   };
 
   const handleViewEvent = async (eventId: string) => {
@@ -250,7 +268,7 @@ const Explore = () => {
     return (
       <AppLayout>
         <div className="p-8 text-center text-red-500">
-          <p className="mb-4">{error.message}</p>
+          <p className="mb-4">{error}</p>
           <button 
             onClick={() => refetch()} 
             className="bg-primary text-white px-4 py-2 rounded"
@@ -281,15 +299,24 @@ const Explore = () => {
 
         <div className="flex-1 flex items-center justify-center p-4">
           {currentEvent ? (
-            <SwipeCard 
-              event={currentEvent}
-              onLike={() => handleLike(currentEvent.id)}
-              onParticipate={() => handleParticipate(currentEvent.id)}
-              onNext={() => setCurrentIndex(prev => prev + 1)}
-              onView={() => handleViewEvent(currentEvent.id)}
-              isLiked={userInteractions.liked.has(currentEvent.id)}
-              isParticipating={userInteractions.participating.has(currentEvent.id)}
-            />
+            <div 
+              className={`transition-all duration-300 ease-out ${
+                slideDirection === 'right' ? 'transform translate-x-full opacity-0' :
+                slideDirection === 'left' ? 'transform -translate-x-full opacity-0' :
+                'transform translate-x-0 opacity-100'
+              }`}
+            >
+              <SwipeCard 
+                event={currentEvent}
+                onLike={() => handleLike(currentEvent.id)}
+                onParticipate={() => handleParticipate(currentEvent.id)}
+                onNext={() => setCurrentIndex(prev => Math.min(prev + 1, filteredEvents.length - 1))}
+                onView={() => handleViewEvent(currentEvent.id)}
+                onDislike={handleDislike}
+                isLiked={userInteractions.liked.has(currentEvent.id)}
+                isParticipating={userInteractions.participating.has(currentEvent.id)}
+              />
+            </div>
           ) : (
             <EmptyState onReset={clearFilters} />
           )}
