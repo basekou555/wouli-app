@@ -5,6 +5,7 @@ import { UnifiedEvent } from '@/types/unified';
 import { useToast } from '@/hooks/use-toast';
 import { useSimpleEventInteractions } from '@/hooks/useSimpleEventInteractions';
 import { useAuth } from '@/contexts/AuthContext';
+import { getMockEventById } from '@/data/mockEventsWithDetails';
 
 export const useEventPreview = (eventId: string | undefined) => {
   const [event, setEvent] = useState<UnifiedEvent | null>(null);
@@ -22,6 +23,15 @@ export const useEventPreview = (eventId: string | undefined) => {
     try {
       setLoading(true);
       console.log('🔍 Récupération de l\'événement:', eventId);
+      
+      // Vérifier d'abord dans les mocks pour les événements demo
+      const mockEvent = getMockEventById(eventId);
+      if (mockEvent) {
+        console.log('✅ Événement mock trouvé:', mockEvent);
+        setEvent(mockEvent);
+        setLoading(false);
+        return;
+      }
       
       // Try to find in business_events first
       const { data: businessEvent, error: businessError } = await supabase

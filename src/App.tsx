@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import UserApp from "./pages/UserApp";
 import Profile from "./pages/Profile";
 import EventDetails from "./pages/EventDetails";
+import EventPreview from "./pages/EventPreview";
 import Explore from "./pages/Explore";
 import Search from "./pages/Search";
 import UserProfile from "./pages/UserProfile";
@@ -77,6 +78,11 @@ function App() {
                 <Route path="/event/:id" element={
                   <ProtectedRoute>
                     <EventDetails />
+                  </ProtectedRoute>
+                } />
+                <Route path="/events/:id" element={
+                  <ProtectedRoute>
+                    <EventPreview />
                   </ProtectedRoute>
                 } />
                 <Route path="/explore" element={<Navigate to="/search" replace />} />
