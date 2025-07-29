@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { UnifiedEvent } from '@/types/unified';
 import EventCardCompact from '../cards/EventCardCompact';
 
@@ -26,8 +27,14 @@ const EventCard: React.FC<EventCardProps> = ({
   onLike,
   onParticipate
 }) => {
+  const navigate = useNavigate();
+
   const handleDislike = () => {
     // In search mode, dislike doesn't do anything for now
+  };
+
+  const handleCardClick = () => {
+    navigate(`/events/${event.id}`);
   };
 
   return (
@@ -38,7 +45,9 @@ const EventCard: React.FC<EventCardProps> = ({
       onLike={onLike}
       onParticipate={onParticipate}
       onDislike={handleDislike}
+      onCardClick={handleCardClick}
       className="w-full"
+      isListFormat={true}
     />
   );
 };

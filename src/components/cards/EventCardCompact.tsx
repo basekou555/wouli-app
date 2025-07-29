@@ -20,8 +20,10 @@ interface EventCardCompactProps {
   onLike: () => void;
   onParticipate: () => void;
   onDislike: () => void;
+  onCardClick?: () => void;
   className?: string;
   animate?: boolean;
+  isListFormat?: boolean;
 }
 
 const EventCardCompact: React.FC<EventCardCompactProps> = ({
@@ -31,8 +33,10 @@ const EventCardCompact: React.FC<EventCardCompactProps> = ({
   onLike,
   onParticipate,
   onDislike,
+  onCardClick,
   className = '',
-  animate = false
+  animate = false,
+  isListFormat = false
 }) => {
   const formatDateTime = () => {
     const date = new Date(event.date);
@@ -71,49 +75,55 @@ const EventCardCompact: React.FC<EventCardCompactProps> = ({
   const friendsParticipating = event.friendsParticipating || [];
 
   return (
-    <Card className={`overflow-hidden bg-background shadow-sm hover:shadow-md transition-all duration-300 ${animate ? 'animate-fade-in' : ''} ${className}`}>
-      {/* Image Section - 70% of space */}
-      <div className="relative">
-        <div 
-          className="w-full bg-muted"
-          style={{ aspectRatio: '4/5' }}
-        >
-          <img
-            src={event.image_url || "https://picsum.photos/400/500?random=event"}
-            alt={event.title}
-            className="w-full h-full object-cover"
+    <Card className={`overflow-hidden bg-background shadow-sm hover:shadow-md transition-all duration-300 ${animate ? 'animate-pulse-dynamic' : ''} ${className}`}>
+      {/* Clickable Content Area - excludes action buttons */}
+      <div 
+        className="cursor-pointer"
+        onClick={onCardClick}
+      >
+        {/* Image Section - 70% of space */}
+        <div className="relative">
+          <div 
+            className="w-full bg-muted"
+            style={{ aspectRatio: isListFormat ? '3/2' : '4/5' }}
+          >
+            <img
+              src={event.image_url || "https://picsum.photos/400/500?random=event"}
+              alt={event.title}
+              className="w-full h-full object-cover"
+            />
+            <UrgentBadge eventDate={event.date} eventTime={event.time} />
+          </div>
+        </div>
+
+        {/* Info Section - 20% of space */}
+        <div className="p-3 space-y-2">
+          {/* Title + Price */}
+          <div className="flex items-center justify-between">
+            <h3 className={`font-semibold ${isListFormat ? 'text-sm' : 'text-base'} text-foreground truncate flex-1`}>
+              {event.title}
+            </h3>
+            {getPriceText() && (
+              <span className={`${isListFormat ? 'text-xs' : 'text-sm'} font-medium text-green-600 ml-2 whitespace-nowrap`}>
+                {getPriceText()}
+              </span>
+            )}
+          </div>
+
+          {/* Date/Time + Location */}
+          <div className={`${isListFormat ? 'text-xs' : 'text-sm'} text-muted-foreground`}>
+            {formatDateTime()} • {getLocationText()}
+          </div>
+
+          {/* Social Proof */}
+          <SocialProof 
+            friendsParticipating={friendsParticipating}
+            totalParticipants={event.participants}
           />
-          <UrgentBadge eventDate={event.date} eventTime={event.time} />
         </div>
       </div>
 
-      {/* Info Section - 20% of space */}
-      <div className="p-3 space-y-2">
-        {/* Title + Price */}
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-sm text-foreground truncate flex-1">
-            {event.title}
-          </h3>
-          {getPriceText() && (
-            <span className="text-xs font-medium text-green-600 ml-2 whitespace-nowrap">
-              {getPriceText()}
-            </span>
-          )}
-        </div>
-
-        {/* Date/Time + Location */}
-        <div className="text-xs text-muted-foreground">
-          {formatDateTime()} • {getLocationText()}
-        </div>
-
-        {/* Social Proof */}
-        <SocialProof 
-          friendsParticipating={friendsParticipating}
-          totalParticipants={event.participants}
-        />
-      </div>
-
-      {/* Actions Section - 10% of space */}
+      {/* Actions Section - 10% of space - NOT clickable for card navigation */}
       <div className="p-3 pt-0">
         <EventActions
           onDislike={onDislike}

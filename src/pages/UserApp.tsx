@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Filter } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
+import { useNavigate } from 'react-router-dom';
 import { WOULI_CATEGORIES as categories } from '../data/wouliCategories';
 import { useAllEventsWithFriends } from '@/hooks/useAllEventsWithFriends';
 import BottomNavigation from '../components/BottomNavigation';
@@ -13,7 +14,9 @@ const UserApp = () => {
   const [likedEvents, setLikedEvents] = useState<string[]>([]);
   const [participatingEvents, setParticipatingEvents] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const {
     events: allEvents,
@@ -31,11 +34,26 @@ const UserApp = () => {
     setShowFilters(false);
   };
   const handleLike = async (eventId: string) => {
+    if (isAnimating) return;
+    setIsAnimating(true);
+    
     if (!likedEvents.includes(eventId)) {
       setLikedEvents([...likedEvents, eventId]);
       await handleLikeEvent(eventId);
     }
-    nextCard();
+    
+    // Slide animation to the right
+    const cardElement = document.querySelector('.current-card');
+    if (cardElement) {
+      cardElement.classList.add('animate-slide-right');
+      setTimeout(() => {
+        nextCard();
+        setIsAnimating(false);
+      }, 400);
+    } else {
+      nextCard();
+      setIsAnimating(false);
+    }
   };
 
   const handleParticipate = async (eventId: string) => {
@@ -47,7 +65,25 @@ const UserApp = () => {
   };
 
   const handleDislike = () => {
-    nextCard();
+    if (isAnimating) return;
+    setIsAnimating(true);
+    
+    // Slide animation to the left
+    const cardElement = document.querySelector('.current-card');
+    if (cardElement) {
+      cardElement.classList.add('animate-slide-left');
+      setTimeout(() => {
+        nextCard();
+        setIsAnimating(false);
+      }, 400);
+    } else {
+      nextCard();
+      setIsAnimating(false);
+    }
+  };
+
+  const handleCardClick = (eventId: string) => {
+    navigate(`/events/${eventId}`);
   };
 
   const nextCard = () => {
@@ -114,7 +150,7 @@ const UserApp = () => {
             <div className="relative h-[600px]">
               {/* Current Card */}
               {currentIndex < filteredEvents.length && (
-                <div className="absolute inset-0 z-10">
+                <div className="absolute inset-0 z-10 current-card">
                   <EventCardCompact
                     event={filteredEvents[currentIndex]}
                     isLiked={likedEvents.includes(filteredEvents[currentIndex].id)}
@@ -122,6 +158,7 @@ const UserApp = () => {
                     onLike={() => handleLike(filteredEvents[currentIndex].id)}
                     onParticipate={() => handleParticipate(filteredEvents[currentIndex].id)}
                     onDislike={handleDislike}
+                    onCardClick={() => handleCardClick(filteredEvents[currentIndex].id)}
                     animate={true}
                   />
                 </div>
@@ -129,7 +166,7 @@ const UserApp = () => {
               
               {/* Next Card Preview */}
               {currentIndex + 1 < filteredEvents.length && (
-                <div className="absolute inset-0 z-0 transform scale-95 opacity-50">
+                <div className="absolute inset-0 z-0 transform scale-95 opacity-50 animate-slide-up-ease">
                   <EventCardCompact
                     event={filteredEvents[currentIndex + 1]}
                     isLiked={likedEvents.includes(filteredEvents[currentIndex + 1].id)}
@@ -137,6 +174,7 @@ const UserApp = () => {
                     onLike={() => {}}
                     onParticipate={() => {}}
                     onDislike={() => {}}
+                    onCardClick={() => handleCardClick(filteredEvents[currentIndex + 1].id)}
                   />
                 </div>
               )}
