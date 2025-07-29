@@ -5,6 +5,7 @@ import { ApiError } from '@/types/api';
 import { fetchAllEvents, fetchUserEvents, fetchBusinessEvents } from '@/services/unifiedEventService';
 import { useSimpleEventInteractions } from '@/hooks/useSimpleEventInteractions';
 import { useRealTimeEvents } from '@/hooks/useRealTimeEvents';
+import { mockEventsWithFriends } from '@/data/mockEventsWithFriends';
 
 export const useAllEvents = (source: EventSource = 'all') => {
   const [events, setEvents] = useState<UnifiedEvent[]>([]);
@@ -16,10 +17,26 @@ export const useAllEvents = (source: EventSource = 'all') => {
       setLoading(true);
       setError(null);
       
+      // TEMPORARY: Use mock data to see event cards design
+      // TODO: Replace with real database events when database is populated
+      setTimeout(() => {
+        const allEvents = mockEventsWithFriends.map(event => ({
+          ...event,
+          // Remove friendsParticipating from the unified event type
+          friendsParticipating: undefined
+        }));
+        
+        // Sort all events by date
+        allEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        
+        setEvents(allEvents);
+        setLoading(false);
+      }, 500);
+      
+      /* Original database code - commented for now
       let allEvents: UnifiedEvent[] = [];
 
       if (source === 'all') {
-        // Optimized: single query for all events
         allEvents = await fetchAllEvents();
       } else if (source === 'user') {
         allEvents = await fetchUserEvents();
@@ -27,14 +44,12 @@ export const useAllEvents = (source: EventSource = 'all') => {
         allEvents = await fetchBusinessEvents();
       }
 
-      // Sort all events by date
       allEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-      
       setEvents(allEvents);
+      */
     } catch (error) {
       handleError(error, 'fetchEvents');
       setEvents([]);
-    } finally {
       setLoading(false);
     }
   };
