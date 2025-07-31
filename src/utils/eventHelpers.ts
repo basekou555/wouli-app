@@ -1,6 +1,6 @@
-import { Event } from '@/types/event';
+import { UnifiedEvent } from '@/types/unified';
 
-export const formatDateTime = (event: Event): string => {
+export const formatDateTime = (event: UnifiedEvent): string => {
   const date = new Date(event.date);
   const now = new Date();
   
@@ -22,7 +22,7 @@ export const formatDateTime = (event: Event): string => {
   return `${dateText} ${timeText}`;
 };
 
-export const getEventStatus = (event: Event): string => {
+export const getEventStatus = (event: UnifiedEvent): string => {
   const now = new Date();
   const eventDate = new Date(event.date);
   
@@ -31,7 +31,7 @@ export const getEventStatus = (event: Event): string => {
   return 'Terminé';
 };
 
-export const getStatusVariant = (event: Event): 'default' | 'secondary' | 'destructive' => {
+export const getStatusVariant = (event: UnifiedEvent): 'default' | 'secondary' | 'destructive' => {
   const status = getEventStatus(event);
   switch (status) {
     case 'À venir': return 'default';
@@ -41,7 +41,7 @@ export const getStatusVariant = (event: Event): 'default' | 'secondary' | 'destr
   }
 };
 
-export const getPerformanceBadge = (event: Event): string => {
+export const getPerformanceBadge = (event: UnifiedEvent): string => {
   if (!event.conversion_rate) return '📊';
   if (event.conversion_rate > 0.3) return '🔥';
   if (event.conversion_rate > 0.2) return '⚡';

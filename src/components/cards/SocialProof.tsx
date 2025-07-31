@@ -1,6 +1,6 @@
 import React from 'react';
 import FriendsAvatars from './FriendsAvatars';
-import { Friend } from '@/types/event';
+import { Friend } from '@/types/unified';
 
 interface SocialProofProps {
   friendsParticipating: Friend[];

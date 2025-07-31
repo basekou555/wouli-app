@@ -4,7 +4,7 @@ import { Filter } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from 'react-router-dom';
 import { WOULI_CATEGORIES as categories } from '../data/wouliCategories';
-import { useAllEventsWithFriends } from '@/hooks/useAllEventsWithFriends';
+import { useAllEvents } from '@/hooks/useAllEvents';
 import BottomNavigation from '../components/BottomNavigation';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
 import WouliEventCard from '@/components/cards/WouliEventCard';
@@ -20,10 +20,10 @@ const UserApp = () => {
   const {
     events: allEvents,
     loading,
-    handleLike: handleLikeEvent,
-    handleParticipate: handleParticipateEvent,
-    handleIncrementViews
-  } = useAllEventsWithFriends();
+    likeEvent: handleLikeEvent,
+    participateEvent: handleParticipateEvent,
+    incrementViews: handleIncrementViews
+  } = useAllEvents();
 
   // Filter events based on selected category
   const filteredEvents = selectedCategory === 'all' ? allEvents : allEvents.filter(event => event.category === selectedCategory);

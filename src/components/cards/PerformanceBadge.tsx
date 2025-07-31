@@ -1,9 +1,9 @@
 import React from 'react';
-import { Event } from '@/types/event';
+import { UnifiedEvent } from '@/types/unified';
 import { getPerformanceBadge } from '@/utils/eventHelpers';
 
 interface PerformanceBadgeProps {
-  event: Event;
+  event: UnifiedEvent;
   className?: string;
 }
 
