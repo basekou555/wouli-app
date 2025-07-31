@@ -1,11 +1,6 @@
 import React from 'react';
 import FriendsAvatars from './FriendsAvatars';
-
-interface Friend {
-  name: string;
-  avatar: string;
-  id: string;
-}
+import { Friend } from '@/types/event';
 
 interface SocialProofProps {
   friendsParticipating: Friend[];
@@ -15,11 +10,16 @@ interface SocialProofProps {
 const SocialProof: React.FC<SocialProofProps> = ({ friendsParticipating, totalParticipants }) => {
   const getSocialText = () => {
     if (friendsParticipating.length > 0) {
-      return `${friendsParticipating.length} amis, ${totalParticipants} total`;
-    } else if (totalParticipants > 0) {
+      if (friendsParticipating.length === 1) {
+        return `${friendsParticipating[0].name} + ${totalParticipants - 1} autres`;
+      }
+      return `${friendsParticipating.length} amis + ${totalParticipants - friendsParticipating.length} autres`;
+    } else if (totalParticipants > 10) {
       return `${totalParticipants} personnes intéressées`;
+    } else if (totalParticipants > 0) {
+      return `${totalParticipants} ${totalParticipants === 1 ? 'personne' : 'personnes'} intéressées`;
     } else {
-      return "Sois le premier";
+      return "Sois le premier de tes amis";
     }
   };
 
