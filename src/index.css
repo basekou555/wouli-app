@@ -104,6 +104,19 @@
     @apply px-4 py-2;
   }
   
+  /* Gradient backgrounds */
+  .bg-gradient-primary {
+    background: var(--wouli-gradient);
+  }
+
+  /* Gradient text */
+  .text-gradient-primary {
+    background: var(--wouli-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
   /* Legacy components for compatibility */
   .nav-link {
     @apply text-neutral-600 hover:text-neutral-900 transition-colors duration-200;

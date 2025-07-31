@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search as SearchIcon } from 'lucide-react';
 import { UnifiedEvent } from '@/types/unified';
-import EventCard from './EventCard';
+import WouliEventCard from '../cards/WouliEventCard';
+import { useNavigate } from 'react-router-dom';
 
 interface SearchResultsProps {
   events: UnifiedEvent[];
@@ -29,7 +30,24 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   onParticipate,
   onClearFilters
 }) => {
+  const navigate = useNavigate();
   const hasActiveFilters = searchTerm || selectedCategory || selectedDate !== 'all';
+
+  const handleCardClick = (eventId: string) => {
+    navigate(`/events/${eventId}`);
+  };
+
+  const handleShare = (event: UnifiedEvent) => {
+    if (navigator.share) {
+      navigator.share({
+        title: event.title,
+        text: `Découvre cet événement sur Wouli: ${event.title}`,
+        url: window.location.origin + `/events/${event.id}`
+      });
+    } else {
+      navigator.clipboard.writeText(window.location.origin + `/events/${event.id}`);
+    }
+  };
 
   return (
     <div className="p-4">
@@ -45,15 +63,19 @@ const SearchResults: React.FC<SearchResultsProps> = ({
       </div>
 
       {events.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+        <div className="space-y-4">
           {events.map((event) => (
-            <EventCard
+            <WouliEventCard
               key={event.id}
               event={event}
+              variant="list"
               isLiked={likedEvents.includes(event.id)}
               isParticipating={participatingEvents.includes(event.id)}
               onLike={() => onLike(event.id)}
               onParticipate={() => onParticipate(event.id)}
+              onShare={() => handleShare(event)}
+              onCardClick={() => handleCardClick(event.id)}
+              className="w-full"
             />
           ))}
         </div>
