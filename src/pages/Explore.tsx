@@ -22,7 +22,6 @@ const Explore = () => {
   const navigate = useNavigate();
   
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
   
   const {
     events: allEvents,
@@ -185,12 +184,8 @@ const Explore = () => {
         liked: new Set([...prev.liked, eventId])
       }));
       
-      // Animate slide right for like
-      setSlideDirection('right');
-      setTimeout(() => {
-        setCurrentIndex(prev => Math.min(prev + 1, filteredEvents.length - 1));
-        setSlideDirection(null);
-      }, 300);
+      // Move to next card
+      setCurrentIndex(prev => Math.min(prev + 1, filteredEvents.length - 1));
       
       await refetch(); // Refetch pour mettre à jour les compteurs
     }
@@ -223,12 +218,7 @@ const Explore = () => {
   };
   
   const handleDislike = () => {
-    // Animate slide left for dislike
-    setSlideDirection('left');
-    setTimeout(() => {
-      setCurrentIndex(prev => Math.min(prev + 1, filteredEvents.length - 1));
-      setSlideDirection(null);
-    }, 300);
+    setCurrentIndex(prev => Math.min(prev + 1, filteredEvents.length - 1));
   };
 
   const handleViewEvent = async (eventId: string) => {
@@ -337,31 +327,21 @@ const Explore = () => {
                       }}
                       onCardClick={() => handleViewEvent(event.id)}
                       enableSwipe={isCurrentCard}
-                      onSwipeLeft={() => {
-                        setSlideDirection('left');
-                        setTimeout(() => {
-                          setCurrentIndex(prev => Math.min(prev + 1, filteredEvents.length - 1));
-                          setSlideDirection(null);
-                        }, 300);
-                      }}
+                      onSwipeLeft={() => setCurrentIndex(prev => Math.min(prev + 1, filteredEvents.length - 1))}
                       onSwipeRight={() => handleLike(event.id)}
-                      className={`w-full h-full ${
-                        isCurrentCard && slideDirection === 'right' ? 'animate-slide-out-right' :
-                        isCurrentCard && slideDirection === 'left' ? 'animate-slide-out-left' :
-                        ''
-                      }`}
+                      className="w-full h-full"
                     />
                   </div>
                 );
               })}
               
-              {/* Action buttons overlay */}
+              {/* Action buttons overlay - hidden during drag */}
               {currentEvent && (
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-4 z-40">
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-4 z-20 pointer-events-none">
                   <Button
                     variant="outline"
                     size="icon"
-                    className="rounded-full bg-background/80 backdrop-blur-sm border-2"
+                    className="rounded-full bg-background/80 backdrop-blur-sm border-2 pointer-events-auto"
                     onClick={handleDislike}
                   >
                     <X className="h-5 w-5" />
@@ -369,7 +349,7 @@ const Explore = () => {
                   <Button
                     variant="default"
                     size="icon" 
-                    className="rounded-full bg-gradient-primary border-2 border-white"
+                    className="rounded-full bg-gradient-primary border-2 border-white pointer-events-auto"
                     onClick={() => handleLike(currentEvent.id)}
                   >
                     <Heart className={`h-5 w-5 ${userInteractions.liked.has(currentEvent.id) ? 'fill-current' : ''}`} />

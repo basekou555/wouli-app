@@ -93,9 +93,14 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
     const offset = info.offset.x;
     const velocity = info.velocity.x;
     
-    if (offset > 100 || velocity > 500) {
+    console.log('🔄 Drag ended:', { offset, velocity });
+    
+    // Lower thresholds for better mobile experience
+    if (offset > 50 || velocity > 300) {
+      console.log('➡️ Swipe right detected');
       onSwipeRight?.();
-    } else if (offset < -100 || velocity < -500) {
+    } else if (offset < -50 || velocity < -300) {
+      console.log('⬅️ Swipe left detected');
       onSwipeLeft?.();
     }
   };
@@ -206,11 +211,14 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
     return enableSwipe ? (
       <motion.div
         drag="x"
-        dragConstraints={{ left: -200, right: 200 }}
-        dragElastic={0.2}
+        dragConstraints={{ left: -150, right: 150 }}
+        dragElastic={0.1}
+        dragMomentum={false}
         onDragEnd={handleDragEnd}
-        whileDrag={{ scale: 1.05 }}
-        className="cursor-grab active:cursor-grabbing"
+        whileDrag={{ scale: 1.02, rotate: 5 }}
+        whileTap={{ scale: 0.98 }}
+        className="cursor-grab active:cursor-grabbing touch-none"
+        style={{ touchAction: 'none' }}
       >
         <Card className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card ${className}`}>
           <SwipeCardContent />
