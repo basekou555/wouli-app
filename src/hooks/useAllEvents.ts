@@ -17,23 +17,7 @@ export const useAllEvents = (source: EventSource = 'all') => {
       setLoading(true);
       setError(null);
       
-      // TEMPORARY: Use mock data to see event cards design
-      // TODO: Replace with real database events when database is populated
-      setTimeout(() => {
-        const allEvents = mockEventsWithFriends.map(event => ({
-          ...event,
-          // Remove friendsParticipating from the unified event type
-          friendsParticipating: undefined
-        }));
-        
-        // Sort all events by date
-        allEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-        
-        setEvents(allEvents);
-        setLoading(false);
-      }, 500);
-      
-      /* Original database code - commented for now
+      // Use real database events
       let allEvents: UnifiedEvent[] = [];
 
       if (source === 'all') {
@@ -46,7 +30,7 @@ export const useAllEvents = (source: EventSource = 'all') => {
 
       allEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       setEvents(allEvents);
-      */
+      setLoading(false);
     } catch (error) {
       handleError(error, 'fetchEvents');
       setEvents([]);

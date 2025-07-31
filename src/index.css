@@ -117,6 +117,26 @@
     background-clip: text;
   }
 
+  /* Slide animations */
+  .animate-slide-out-right {
+    @apply animate-[slide-out-right_0.3s_ease-out_forwards];
+  }
+
+  .animate-slide-out-left {
+    @apply animate-[slide-out-left_0.3s_ease-out_forwards];
+  }
+
+  /* Keyframes for slide animations */
+  @keyframes slide-out-right {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+  }
+
+  @keyframes slide-out-left {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(-100%); opacity: 0; }
+  }
+
   /* Legacy components for compatibility */
   .nav-link {
     @apply text-neutral-600 hover:text-neutral-900 transition-colors duration-200;

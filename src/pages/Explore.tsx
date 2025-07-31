@@ -2,17 +2,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
-import SwipeCard from '../components/explore/SwipeCard';
+import WouliEventCard from '../components/cards/WouliEventCard';
 import ExploreHeader from '../components/explore/ExploreHeader';
 import ExploreFilters from '../components/explore/ExploreFilters';
 import EmptyState from '../components/explore/EmptyState';
-import { useAllEventsWithFriends } from '../hooks/useAllEventsWithFriends';
+import { useAllEvents } from '../hooks/useAllEvents';
 import { useExploreFilters } from '../hooks/useExploreFilters';
 import { useSimpleEventInteractions } from '../hooks/useSimpleEventInteractions';
 import { useAuth } from '../contexts/AuthContext';
 import { useRealTimeEvents } from '../hooks/useRealTimeEvents';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Heart, X } from 'lucide-react';
 
 const Explore = () => {
   const { user, session, loading: authLoading } = useAuth();
@@ -27,7 +29,7 @@ const Explore = () => {
     loading,
     error,
     refetch
-  } = useAllEventsWithFriends();
+  } = useAllEvents();
   
   const {
     selectedCategory,
@@ -268,7 +270,7 @@ const Explore = () => {
     return (
       <AppLayout>
         <div className="p-8 text-center text-red-500">
-          <p className="mb-4">{error}</p>
+          <p className="mb-4">{error?.message || 'Une erreur est survenue'}</p>
           <button 
             onClick={() => refetch()} 
             className="bg-primary text-white px-4 py-2 rounded"
@@ -297,27 +299,87 @@ const Explore = () => {
           />
         )}
 
-        <div className="flex-1 flex items-center justify-center p-4">
-          {currentEvent ? (
-            <div 
-              className={`transition-all duration-300 ease-out ${
-                slideDirection === 'right' ? 'transform translate-x-full opacity-0' :
-                slideDirection === 'left' ? 'transform -translate-x-full opacity-0' :
-                'transform translate-x-0 opacity-100'
-              }`}
-            >
-              <SwipeCard 
-                event={currentEvent}
-                onLike={() => handleLike(currentEvent.id)}
-                onParticipate={() => handleParticipate(currentEvent.id)}
-                onNext={() => setCurrentIndex(prev => Math.min(prev + 1, filteredEvents.length - 1))}
-                onView={() => handleViewEvent(currentEvent.id)}
-                onDislike={handleDislike}
-                isLiked={userInteractions.liked.has(currentEvent.id)}
-                isParticipating={userInteractions.participating.has(currentEvent.id)}
-              />
+        <div className="flex-1 flex items-center justify-center p-4 relative">
+          {filteredEvents.length > 0 && (
+            <div className="relative w-full max-w-sm mx-auto h-[600px]">
+              {/* Stack of cards - show next cards behind current one */}
+              {filteredEvents.slice(currentIndex, currentIndex + 3).map((event, stackIndex) => {
+                const isCurrentCard = stackIndex === 0;
+                const zIndex = 30 - stackIndex;
+                const scale = 1 - (stackIndex * 0.05);
+                const yOffset = stackIndex * 8;
+                
+                return (
+                  <div
+                    key={`${event.id}-${currentIndex + stackIndex}`}
+                    className="absolute inset-0"
+                    style={{
+                      zIndex,
+                      transform: `scale(${scale}) translateY(${yOffset}px)`,
+                      opacity: isCurrentCard ? 1 : 0.7
+                    }}
+                  >
+                    <WouliEventCard
+                      event={event}
+                      variant="swipe"
+                      isLiked={userInteractions.liked.has(event.id)}
+                      isParticipating={userInteractions.participating.has(event.id)}
+                      onLike={() => handleLike(event.id)}
+                      onParticipate={() => handleParticipate(event.id)}
+                      onShare={() => {
+                        if (navigator.share) {
+                          navigator.share({
+                            title: event.title,
+                            text: `Découvre ${event.title} sur Wouli !`,
+                            url: window.location.href
+                          });
+                        }
+                      }}
+                      onCardClick={() => handleViewEvent(event.id)}
+                      enableSwipe={isCurrentCard}
+                      onSwipeLeft={() => {
+                        setSlideDirection('left');
+                        setTimeout(() => {
+                          setCurrentIndex(prev => Math.min(prev + 1, filteredEvents.length - 1));
+                          setSlideDirection(null);
+                        }, 300);
+                      }}
+                      onSwipeRight={() => handleLike(event.id)}
+                      className={`w-full h-full ${
+                        isCurrentCard && slideDirection === 'right' ? 'animate-slide-out-right' :
+                        isCurrentCard && slideDirection === 'left' ? 'animate-slide-out-left' :
+                        ''
+                      }`}
+                    />
+                  </div>
+                );
+              })}
+              
+              {/* Action buttons overlay */}
+              {currentEvent && (
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-4 z-40">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="rounded-full bg-background/80 backdrop-blur-sm border-2"
+                    onClick={handleDislike}
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="icon" 
+                    className="rounded-full bg-gradient-primary border-2 border-white"
+                    onClick={() => handleLike(currentEvent.id)}
+                  >
+                    <Heart className={`h-5 w-5 ${userInteractions.liked.has(currentEvent.id) ? 'fill-current' : ''}`} />
+                  </Button>
+                </div>
+              )}
             </div>
-          ) : (
+          )}
+          
+          {filteredEvents.length === 0 && !loading && (
             <EmptyState onReset={clearFilters} />
           )}
         </div>
