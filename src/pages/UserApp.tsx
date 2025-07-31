@@ -7,14 +7,13 @@ import { WOULI_CATEGORIES as categories } from '../data/wouliCategories';
 import { useAllEventsWithFriends } from '@/hooks/useAllEventsWithFriends';
 import BottomNavigation from '../components/BottomNavigation';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
-import EventCardCompact from '@/components/cards/EventCardCompact';
+import WouliEventCard from '@/components/cards/WouliEventCard';
 const UserApp = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [likedEvents, setLikedEvents] = useState<string[]>([]);
   const [participatingEvents, setParticipatingEvents] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -34,26 +33,11 @@ const UserApp = () => {
     setShowFilters(false);
   };
   const handleLike = async (eventId: string) => {
-    if (isAnimating) return;
-    setIsAnimating(true);
-    
     if (!likedEvents.includes(eventId)) {
       setLikedEvents([...likedEvents, eventId]);
       await handleLikeEvent(eventId);
     }
-    
-    // Slide animation to the right
-    const cardElement = document.querySelector('.current-card');
-    if (cardElement) {
-      cardElement.classList.add('animate-slide-right');
-      setTimeout(() => {
-        nextCard();
-        setIsAnimating(false);
-      }, 400);
-    } else {
-      nextCard();
-      setIsAnimating(false);
-    }
+    nextCard();
   };
 
   const handleParticipate = async (eventId: string) => {
@@ -65,21 +49,7 @@ const UserApp = () => {
   };
 
   const handleDislike = () => {
-    if (isAnimating) return;
-    setIsAnimating(true);
-    
-    // Slide animation to the left
-    const cardElement = document.querySelector('.current-card');
-    if (cardElement) {
-      cardElement.classList.add('animate-slide-left');
-      setTimeout(() => {
-        nextCard();
-        setIsAnimating(false);
-      }, 400);
-    } else {
-      nextCard();
-      setIsAnimating(false);
-    }
+    nextCard();
   };
 
   const handleCardClick = (eventId: string) => {
@@ -150,30 +120,44 @@ const UserApp = () => {
             <div className="relative h-[600px]">
               {/* Current Card */}
               {currentIndex < filteredEvents.length && (
-                <div className="absolute inset-0 z-10 current-card">
-                  <EventCardCompact
+                <div className="absolute inset-0 z-10">
+                  <WouliEventCard
                     event={filteredEvents[currentIndex]}
+                    variant="swipe"
+                    enableSwipe={true}
                     isLiked={likedEvents.includes(filteredEvents[currentIndex].id)}
                     isParticipating={participatingEvents.includes(filteredEvents[currentIndex].id)}
                     onLike={() => handleLike(filteredEvents[currentIndex].id)}
+                    onSwipeLeft={handleDislike}
+                    onSwipeRight={() => handleLike(filteredEvents[currentIndex].id)}
                     onParticipate={() => handleParticipate(filteredEvents[currentIndex].id)}
-                    onDislike={handleDislike}
                     onCardClick={() => handleCardClick(filteredEvents[currentIndex].id)}
-                    animate={true}
+                    onShare={() => {
+                      if (navigator.share) {
+                        navigator.share({
+                          title: filteredEvents[currentIndex].title,
+                          text: `Découvre cet événement : ${filteredEvents[currentIndex].title}`,
+                          url: window.location.origin + `/events/${filteredEvents[currentIndex].id}`
+                        });
+                      }
+                    }}
                   />
                 </div>
               )}
               
               {/* Next Card Preview */}
               {currentIndex + 1 < filteredEvents.length && (
-                <div className="absolute inset-0 z-0 transform scale-95 opacity-50 animate-slide-up-ease">
-                  <EventCardCompact
+                <div className="absolute inset-0 z-0 transform scale-95 opacity-50 pointer-events-none">
+                  <WouliEventCard
                     event={filteredEvents[currentIndex + 1]}
+                    variant="swipe"
+                    enableSwipe={false}
                     isLiked={likedEvents.includes(filteredEvents[currentIndex + 1].id)}
                     isParticipating={participatingEvents.includes(filteredEvents[currentIndex + 1].id)}
                     onLike={() => {}}
+                    onSwipeLeft={() => {}}
+                    onSwipeRight={() => {}}
                     onParticipate={() => {}}
-                    onDislike={() => {}}
                     onCardClick={() => handleCardClick(filteredEvents[currentIndex + 1].id)}
                   />
                 </div>
