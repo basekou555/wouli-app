@@ -57,6 +57,27 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				// Wouli Design System
+				urgent: {
+					DEFAULT: 'hsl(var(--urgent))',
+					foreground: 'hsl(var(--urgent-foreground))'
+				},
+				success: {
+					DEFAULT: 'hsl(var(--success))',
+					foreground: 'hsl(var(--success-foreground))'
+				},
+				neutral: {
+					50: 'hsl(var(--neutral-50))',
+					100: 'hsl(var(--neutral-100))',
+					200: 'hsl(var(--neutral-200))',
+					300: 'hsl(var(--neutral-300))',
+					400: 'hsl(var(--neutral-400))',
+					500: 'hsl(var(--neutral-500))',
+					600: 'hsl(var(--neutral-600))',
+					700: 'hsl(var(--neutral-700))',
+					800: 'hsl(var(--neutral-800))',
+					900: 'hsl(var(--neutral-900))'
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
@@ -147,6 +168,21 @@ export default {
 					from: { transform: 'translateY(20px)', opacity: '0' },
 					to: { transform: 'translateY(0)', opacity: '1' },
 				},
+				// Wouli Swipe Animations
+				'swipe-left': {
+					'0%': { transform: 'translateX(0) rotate(0deg)', opacity: '1' },
+					'100%': { transform: 'translateX(-30px) rotate(-5deg)', opacity: '0.9' },
+				},
+				'swipe-right': {
+					'0%': { transform: 'translateX(0) rotate(0deg)', opacity: '1' },
+					'100%': { transform: 'translateX(30px) rotate(5deg)', opacity: '0.9' },
+				},
+				// Like Animation
+				'like-bounce': {
+					'0%': { transform: 'scale(1)' },
+					'50%': { transform: 'scale(1.2)' },
+					'100%': { transform: 'scale(1)' },
+				},
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
@@ -162,6 +198,10 @@ export default {
 				'scale': 'scale 0.3s ease-out forwards',
 				'scale-up': 'scale-up 0.5s ease-out forwards',
 				'slide-up-ease': 'slide-up-ease 0.4s ease-out forwards',
+				// Wouli Animations
+				'swipe-left': 'swipe-left 0.3s ease-out',
+				'swipe-right': 'swipe-right 0.3s ease-out',
+				'like-bounce': 'like-bounce 0.3s ease-out',
 			},
 		}
 	},
