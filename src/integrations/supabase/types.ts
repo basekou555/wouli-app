@@ -270,6 +270,65 @@ export type Database = {
           },
         ]
       }
+      events_pending: {
+        Row: {
+          address: string | null
+          category: Database["public"]["Enums"]["event_category"]
+          created_at: string
+          date: string
+          description: string | null
+          external_url: string | null
+          id: string
+          location: string
+          price: number | null
+          status: string
+          submitter_email: string | null
+          title: string
+          validated_at: string | null
+          validated_by: string | null
+        }
+        Insert: {
+          address?: string | null
+          category: Database["public"]["Enums"]["event_category"]
+          created_at?: string
+          date: string
+          description?: string | null
+          external_url?: string | null
+          id?: string
+          location: string
+          price?: number | null
+          status?: string
+          submitter_email?: string | null
+          title: string
+          validated_at?: string | null
+          validated_by?: string | null
+        }
+        Update: {
+          address?: string | null
+          category?: Database["public"]["Enums"]["event_category"]
+          created_at?: string
+          date?: string
+          description?: string | null
+          external_url?: string | null
+          id?: string
+          location?: string
+          price?: number | null
+          status?: string
+          submitter_email?: string | null
+          title?: string
+          validated_at?: string | null
+          validated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_pending_validated_by_fkey"
+            columns: ["validated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           address: string | null
