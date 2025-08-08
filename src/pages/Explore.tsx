@@ -315,6 +315,7 @@ const Explore = () => {
                       isLiked={userInteractions.liked.has(event.id)}
                       isParticipating={userInteractions.participating.has(event.id)}
                       onLike={() => handleLike(event.id)}
+                      onDislike={handleDislike}
                       onParticipate={() => handleParticipate(event.id)}
                       onShare={() => {
                         if (navigator.share) {

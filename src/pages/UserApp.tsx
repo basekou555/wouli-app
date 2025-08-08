@@ -128,6 +128,7 @@ const UserApp = () => {
                     isLiked={likedEvents.includes(filteredEvents[currentIndex].id)}
                     isParticipating={participatingEvents.includes(filteredEvents[currentIndex].id)}
                     onLike={() => handleLike(filteredEvents[currentIndex].id)}
+                    onDislike={handleDislike}
                     onSwipeLeft={handleDislike}
                     onSwipeRight={() => handleLike(filteredEvents[currentIndex].id)}
                     onParticipate={() => handleParticipate(filteredEvents[currentIndex].id)}
