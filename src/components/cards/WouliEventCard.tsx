@@ -5,6 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Heart, X, Share2, Eye, Users } from 'lucide-react';
 import { UnifiedEvent } from '@/types/unified';
+import { 
+  getUrgencyBadge, 
+  getSocialProofText, 
+  formatEventDateTime, 
+  getPriceDisplay, 
+  getLocationDisplay 
+} from '@/utils/eventCardHelpers';
 
 export type EventCardVariant = 'swipe' | 'list' | 'business';
 
@@ -39,54 +46,6 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
   onSwipeLeft,
   onSwipeRight
 }) => {
-  const formatDateTime = () => {
-    const date = new Date(event.date);
-    const now = new Date();
-    
-    const isToday = date.toDateString() === now.toDateString();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const isTomorrow = date.toDateString() === tomorrow.toDateString();
-    
-    let dateText = '';
-    if (isToday) dateText = 'Aujourd\'hui';
-    else if (isTomorrow) dateText = 'Demain';
-    else {
-      dateText = date.toLocaleDateString('fr-FR', { weekday: 'long' });
-    }
-    
-    const timeText = event.time || date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    return `${dateText} ${timeText}`;
-  };
-
-  const getLocationText = () => {
-    return event.venue || event.location?.split(',')[0].trim() || 'Lieu non spécifié';
-  };
-
-  const getPriceText = () => {
-    if (!event.price_text) return 'Gratuit';
-    if (event.price_text.toLowerCase().includes('gratuit') || event.price_text === '0€') return 'Gratuit';
-    return event.price_text;
-  };
-
-  const getSocialText = () => {
-    const friends = event.friendsParticipating || [];
-    const total = event.totalParticipants || event.participants || 0;
-    
-    if (friends.length > 0) {
-      if (friends.length === 1) {
-        return `${friends[0].name} + ${total - 1} autres`;
-      }
-      return `${friends.length} amis + ${total - friends.length} autres`;
-    } else if (total > 10) {
-      return `${total} personnes intéressées`;
-    } else if (total > 0) {
-      return `${total} ${total === 1 ? 'personne' : 'personnes'} intéressées`;
-    } else {
-      return "Sois le premier de tes amis";
-    }
-  };
-
   const handleDragEnd = (_: any, info: any) => {
     if (!enableSwipe) return;
     
@@ -105,26 +64,10 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
     }
   };
 
-  // Helper function for urgency badge
-  const getUrgencyBadge = () => {
-    const now = new Date();
-    const eventDateTime = new Date(`${event.date}${event.time ? `T${event.time}` : ''}`);
-    const hoursUntil = (eventDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-    
-    if (hoursUntil < 2) return "Maintenant";
-    if (hoursUntil < 4) return "Dans 2h";
-    
-    // Check if it's the same day
-    const isSameDay = now.toDateString() === eventDateTime.toDateString();
-    if (isSameDay) return "Ce soir";
-    
-    return null;
-  };
-
   // Card content for swipe variant
   const SwipeCardContent = () => {
-    const urgencyLabel = getUrgencyBadge();
-    const priceText = getPriceText();
+    const urgencyLabel = getUrgencyBadge(event.date, event.time);
+    const priceText = getPriceDisplay(event.price_text);
     const showPrice = priceText !== 'Gratuit';
     const friends = event.friendsParticipating || [];
     const totalParticipants = event.totalParticipants || event.participants || 0;
@@ -177,7 +120,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
           
           {/* Ligne 2: Heure • Lieu */}
           <div className="text-sm text-muted-foreground cursor-pointer" onClick={onCardClick}>
-            {formatDateTime()} • {getLocationText()}
+            {formatEventDateTime(event.date, event.time)} • {getLocationDisplay(event.venue, event.location)}
           </div>
           
           {/* Ligne 3: Social proof */}
@@ -289,38 +232,99 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
 
   // VARIANTE LIST
   if (variant === 'list') {
+    const urgencyLabel = getUrgencyBadge(event.date, event.time);
+    const priceText = getPriceDisplay(event.price_text);
+    const showPrice = priceText !== 'Gratuit';
+    const friends = event.friendsParticipating || [];
+    const totalParticipants = event.totalParticipants || event.participants || 0;
+
     return (
-      <Card className={`flex gap-3 p-3 rounded-lg hover:shadow-lg transition-all duration-300 bg-card cursor-pointer hover-scale ${className}`}>
+      <Card className={`flex gap-3 p-3 h-24 rounded-lg hover:shadow-lg transition-all duration-300 bg-card cursor-pointer hover-scale ${className}`}>
+        {/* Image carrée */}
         <div className="relative flex-shrink-0" onClick={onCardClick}>
           <img 
-            src={event.image_url || "https://picsum.photos/400/300?random=event"}
+            src={event.image_url || "https://picsum.photos/400/400?random=event"}
             alt={event.title}
-            className="w-24 h-16 rounded-lg object-cover" 
+            className="w-24 h-24 rounded-lg object-cover" 
           />
-          {event.isUrgent && (
-            <div className="absolute top-1 right-1 w-2 h-2 bg-gradient-to-r from-red-500 to-orange-500 rounded-full animate-pulse" />
+          
+          {/* Badge urgence mini */}
+          {urgencyLabel && (
+            <Badge className="absolute top-1 right-1 bg-red-500 text-white border-none text-[10px] px-1 py-0.5 rounded scale-75 animate-pulse">
+              {urgencyLabel}
+            </Badge>
+          )}
+          
+          {/* Bouton partage mini */}
+          {onShare && (
+            <Button 
+              size="sm"
+              className="absolute top-1 left-1 w-6 h-6 bg-white/90 backdrop-blur rounded-full p-0 hover:bg-white border-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                onShare();
+              }}
+            >
+              <Share2 className="h-3 w-3 text-gray-700" />
+            </Button>
           )}
         </div>
         
-        <div className="flex-1 min-w-0">
+        {/* Content */}
+        <div className="flex-1 min-w-0 flex flex-col justify-between">
           <div onClick={onCardClick}>
-            <h3 className="font-semibold text-base text-foreground truncate mb-1">{event.title}</h3>
-            <div className="text-sm text-muted-foreground mb-1">
-              {formatDateTime()} • {getLocationText()}
+            {/* Ligne 1: Titre • Prix */}
+            <div className="flex justify-between items-start gap-2 mb-1">
+              <h3 className="font-semibold text-sm text-foreground truncate flex-1">
+                {event.title}
+              </h3>
+              {showPrice && (
+                <span className="text-purple-500 font-medium text-sm whitespace-nowrap">
+                  • {priceText}
+                </span>
+              )}
             </div>
-            <div className="text-xs text-muted-foreground mb-2">
-              {getSocialText()}
+            
+            {/* Ligne 2: Date • Heure • Lieu */}
+            <div className="text-xs text-muted-foreground mb-1">
+              {formatEventDateTime(event.date, event.time)} • {getLocationDisplay(event.venue, event.location)}
+            </div>
+            
+            {/* Ligne 3: Social proof avec avatars mini */}
+            <div className="flex items-center space-x-2 mb-2">
+              {/* Avatars amis mini (w-5 h-5) */}
+              {friends.length > 0 && (
+                <div className="flex -space-x-1">
+                  {friends.slice(0, 3).map((friend) => (
+                    <div 
+                      key={friend.id} 
+                      className="w-5 h-5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-[10px] font-medium text-white border border-white"
+                    >
+                      {friend.avatar ? (
+                        <img src={friend.avatar} alt={friend.name} className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        friend.name.charAt(0).toUpperCase()
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Texte social proof */}
+              <span className="text-xs text-muted-foreground">
+                {getSocialProofText(friends, totalParticipants)}
+              </span>
             </div>
           </div>
           
-          {/* Actions 2 boutons seulement */}
+          {/* Actions - 2 boutons seulement */}
           <div className="flex gap-2">
             <Button 
               size="sm" 
-              className={`flex-1 text-xs transition-all ${
+              className={`flex-1 h-8 text-xs transition-all ${
                 isParticipating 
                   ? 'bg-green-500 hover:bg-green-600 text-white' 
-                  : 'bg-gradient-primary hover:opacity-90 text-white'
+                  : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white'
               }`}
               onClick={onParticipate}
             >
@@ -329,10 +333,10 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
             <Button 
               size="sm" 
               variant="outline"
-              className={`px-3 transition-all ${
+              className={`w-8 h-8 p-0 transition-all border-2 ${
                 isLiked 
                   ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' 
-                  : 'hover:bg-muted'
+                  : 'hover:bg-muted border-border'
               }`}
               onClick={onLike}
             >
@@ -393,7 +397,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
             </div>
             
             <div className="space-y-1 text-sm text-muted-foreground mb-3" onClick={onCardClick}>
-              <div>{formatDateTime()} • {getLocationText()}</div>
+              <div>{formatEventDateTime(event.date, event.time)} • {getLocationDisplay(event.venue, event.location)}</div>
               <div className="flex items-center gap-4">
                 {event.views !== undefined && (
                   <span className="flex items-center gap-1">
