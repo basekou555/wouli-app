@@ -105,106 +105,162 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
     }
   };
 
+  // Helper function for urgency badge
+  const getUrgencyBadge = () => {
+    const now = new Date();
+    const eventDateTime = new Date(`${event.date}${event.time ? `T${event.time}` : ''}`);
+    const hoursUntil = (eventDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+    
+    if (hoursUntil < 2) return "Maintenant";
+    if (hoursUntil < 4) return "Dans 2h";
+    
+    // Check if it's the same day
+    const isSameDay = now.toDateString() === eventDateTime.toDateString();
+    if (isSameDay) return "Ce soir";
+    
+    return null;
+  };
+
   // Card content for swipe variant
-  const SwipeCardContent = () => (
-    <>
-      <div className="relative cursor-pointer" onClick={onCardClick}>
-        <img 
-          src={event.image_url || "https://picsum.photos/400/500?random=event"}
-          alt={event.title}
-          className="w-full aspect-[4/5] object-cover" 
-        />
-        {event.isUrgent && (
-          <Badge className="absolute top-3 right-3 bg-gradient-to-r from-red-500 to-orange-500 text-white border-none animate-pulse">
-            Ce soir
-          </Badge>
-        )}
-        {onShare && (
-          <Button 
-            size="sm"
-            className="absolute top-3 left-3 w-10 h-10 bg-card/90 backdrop-blur rounded-full p-0 hover:bg-card border-border/50"
-            onClick={(e) => {
-              e.stopPropagation();
-              onShare();
-            }}
-          >
-            <Share2 className="h-4 w-4 text-foreground" />
-          </Button>
-        )}
-      </div>
-      
-      <div className="p-4 space-y-3">
-        {/* Titre + Prix */}
-        <div className="flex justify-between items-start gap-2" onClick={onCardClick}>
-          <h3 className="font-bold text-lg text-foreground flex-1 cursor-pointer">{event.title}</h3>
-          <span className="text-gradient-primary font-semibold whitespace-nowrap">{getPriceText()}</span>
+  const SwipeCardContent = () => {
+    const urgencyLabel = getUrgencyBadge();
+    const priceText = getPriceText();
+    const showPrice = priceText !== 'Gratuit';
+    const friends = event.friendsParticipating || [];
+    const totalParticipants = event.totalParticipants || event.participants || 0;
+
+    return (
+      <>
+        {/* Zone Image (70%) */}
+        <div className="relative aspect-[4/5] cursor-pointer" onClick={onCardClick}>
+          <img 
+            src={event.image_url || "https://picsum.photos/400/500?random=event"}
+            alt={event.title}
+            className="w-full h-full object-cover" 
+          />
+          
+          {/* Badge urgence - coin supérieur droit */}
+          {urgencyLabel && (
+            <Badge className="absolute top-3 right-3 bg-red-500 text-white border-none animate-pulse hover:animate-none text-xs font-medium px-2 py-1 rounded-lg shadow-lg">
+              {urgencyLabel}
+            </Badge>
+          )}
+          
+          {/* Bouton partage - coin supérieur gauche */}
+          {onShare && (
+            <Button 
+              size="sm"
+              className="absolute top-3 left-3 w-10 h-10 bg-white/90 backdrop-blur rounded-full p-0 hover:bg-white border-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                onShare();
+              }}
+            >
+              <Share2 className="h-4 w-4 text-gray-700" />
+            </Button>
+          )}
         </div>
         
-        {/* Timing + Lieu */}
-        <div className="text-sm text-muted-foreground cursor-pointer" onClick={onCardClick}>
-          {formatDateTime()} • {getLocationText()}
-        </div>
-        
-        {/* Social Proof */}
-        <div onClick={onCardClick} className="cursor-pointer">
-          <div className="flex items-center space-x-2">
-            {event.friendsParticipating && event.friendsParticipating.length > 0 && (
-              <div className="flex -space-x-1">
-                {event.friendsParticipating.slice(0, 3).map((friend) => (
-                  <div key={friend.id} className="w-6 h-6 rounded-full bg-gradient-primary flex items-center justify-center text-xs font-medium text-white border-2 border-card">
-                    {friend.avatar ? (
-                      <img src={friend.avatar} alt={friend.name} className="w-full h-full rounded-full object-cover" />
-                    ) : (
-                      friend.name.charAt(0).toUpperCase()
-                    )}
-                  </div>
-                ))}
-              </div>
+        {/* Zone Informations (20%) */}
+        <div className="p-4 space-y-2">
+          {/* Ligne 1: Titre • Prix */}
+          <div className="flex justify-between items-start gap-2" onClick={onCardClick}>
+            <h3 className="font-bold text-lg text-foreground truncate flex-1 cursor-pointer">
+              {event.title}
+            </h3>
+            {showPrice && (
+              <span className="text-purple-500 font-semibold whitespace-nowrap">
+                • {priceText}
+              </span>
             )}
-            <span className="text-xs text-muted-foreground">
-              {getSocialText()}
-            </span>
+          </div>
+          
+          {/* Ligne 2: Heure • Lieu */}
+          <div className="text-sm text-muted-foreground cursor-pointer" onClick={onCardClick}>
+            {formatDateTime()} • {getLocationText()}
+          </div>
+          
+          {/* Ligne 3: Social proof */}
+          <div onClick={onCardClick} className="cursor-pointer">
+            <div className="flex items-center space-x-2">
+              {/* Avatars amis (3 max, 24px, overlap -space-x-2) */}
+              {friends.length > 0 && (
+                <div className="flex -space-x-2">
+                  {friends.slice(0, 3).map((friend) => (
+                    <div 
+                      key={friend.id} 
+                      className="w-6 h-6 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-xs font-medium text-white border-2 border-white"
+                    >
+                      {friend.avatar ? (
+                        <img src={friend.avatar} alt={friend.name} className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        friend.name.charAt(0).toUpperCase()
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Texte social proof */}
+              <span className="text-xs text-muted-foreground">
+                {friends.length > 0 
+                  ? `${friends.length} amis, ${totalParticipants} total`
+                  : totalParticipants > 0 
+                    ? `${totalParticipants} personnes intéressées`
+                    : "Sois le premier"
+                }
+              </span>
+            </div>
           </div>
         </div>
         
-        {/* Actions 3 boutons */}
-        <div className="flex gap-3">
-          {onDislike && (
+        {/* Zone Actions (10%) */}
+        <div className="px-4 pb-4">
+          <div className="flex gap-3">
+            {/* Bouton × */}
+            {onDislike && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="h-11 flex-1 bg-gray-100 hover:bg-gray-200 border-gray-200"
+                onClick={onDislike}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+            
+            {/* Bouton Participer */}
+            <Button 
+              className={`h-11 font-semibold ${
+                onDislike ? 'flex-[2]' : 'flex-1'
+              } ${
+                isParticipating 
+                  ? 'bg-green-500 hover:bg-green-600 text-white' 
+                  : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white'
+              }`}
+              onClick={onParticipate}
+            >
+              {isParticipating ? '✅ Inscrit' : 'Participer'}
+            </Button>
+            
+            {/* Bouton ♡ */}
             <Button 
               variant="outline" 
               size="sm"
-              className="h-11 px-3 bg-muted hover:bg-muted/80"
-              onClick={onDislike}
+              className={`h-11 flex-1 border-2 ${
+                isLiked 
+                  ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' 
+                  : 'bg-background hover:bg-muted border-border'
+              }`}
+              onClick={onLike}
             >
-              <X className="h-4 w-4" />
+              <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
             </Button>
-          )}
-          <Button 
-            className={`flex-1 h-11 font-semibold ${
-              isParticipating 
-                ? 'bg-green-500 hover:bg-green-600 text-white' 
-                : 'bg-gradient-primary hover:opacity-90 text-white transition-all hover-scale'
-            }`}
-            onClick={onParticipate}
-          >
-            {isParticipating ? '✅ Inscrit' : 'Participer'}
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            className={`h-11 px-3 transition-all hover-scale ${
-              isLiked 
-                ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' 
-                : 'bg-background hover:bg-muted'
-            }`}
-            onClick={onLike}
-          >
-            <Heart className={`h-4 w-4 transition-transform ${isLiked ? 'fill-current text-red-500 animate-scale-in' : ''}`} />
-          </Button>
+          </div>
         </div>
-      </div>
-    </>
-  );
+      </>
+    );
+  };
 
   // VARIANTE SWIPE
   if (variant === 'swipe') {
