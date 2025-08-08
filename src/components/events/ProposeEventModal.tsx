@@ -7,13 +7,15 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { Database } from "@/integrations/supabase/types";
 
+type EventCategory = Database["public"]["Enums"]["event_category"];
 type ProposeEventModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
 
-type EventCategoryRow = { category: string | null };
+type EventCategoryRow = { category: EventCategory | null };
 
 const ProposeEventModal: React.FC<ProposeEventModalProps> = ({ open, onOpenChange }) => {
   const { toast } = useToast();
@@ -23,45 +25,52 @@ const ProposeEventModal: React.FC<ProposeEventModalProps> = ({ open, onOpenChang
   const [datetime, setDatetime] = useState(""); // HTML datetime-local value
   const [location, setLocation] = useState("Lyon");
   const [address, setAddress] = useState("");
-  const [category, setCategory] = useState<string>("");
+  const [category, setCategory] = useState<EventCategory | "">("");
   const [externalUrl, setExternalUrl] = useState("");
   const [email, setEmail] = useState("");
   const [description, setDescription] = useState("");
 
   // Categories fetched from existing events to ensure enum compatibility
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<EventCategory[]>([]);
   const [loadingCats, setLoadingCats] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    setLoadingCats(true);
-    console.log("[ProposeEventModal] Loading categories from events...");
-    supabase
-      .from("events")
-      .select("category")
-      .limit(200)
-      .then(({ data, error }) => {
+    let isMounted = true;
+    const loadCategories = async () => {
+      setLoadingCats(true);
+      try {
+        console.log("[ProposeEventModal] Loading categories from events...");
+        const { data, error } = await supabase
+          .from("events")
+          .select("category")
+          .limit(200);
         if (error) {
           console.error("Failed to load categories:", error.message);
           return;
         }
         const unique = Array.from(
           new Set(
-            (data as EventCategoryRow[] | null)?.map((d) => d.category).filter((v): v is string => !!v) ?? []
+            ((data as EventCategoryRow[] | null)?.map((d) => d.category).filter((v): v is EventCategory => !!v)) ?? []
           )
         );
+        if (!isMounted) return;
         if (unique.length === 0) {
-          // Fallback: keep empty and set a safe placeholder; insert will likely fail if enum mismatch,
-          // but we provide a sensible default that you can adjust later from the DB seed.
-          console.warn("No categories found in events; using fallback 'activities'");
-          setCategories(["activities"]);
-          setCategory("activities");
+          console.warn("No categories found in events; using fallback 'activites'");
+          setCategories(["activites" as EventCategory]);
+          setCategory("activites");
         } else {
           setCategories(unique);
           setCategory(unique[0]);
         }
-      })
-      .finally(() => setLoadingCats(false));
+      } finally {
+        if (isMounted) setLoadingCats(false);
+      }
+    };
+    loadCategories();
+    return () => {
+      isMounted = false;
+    };
   }, [open]);
 
   const isSubmitDisabled = useMemo(() => {
@@ -88,41 +97,38 @@ const ProposeEventModal: React.FC<ProposeEventModalProps> = ({ open, onOpenChang
     e.preventDefault();
     console.log("[ProposeEventModal] Submitting event proposal...");
 
-    const isoDate = new Date(datetime).toISOString();
+    try {
+      const isoDate = new Date(datetime).toISOString();
+      const payload: Database["public"]["Tables"]["events_pending"]["Insert"] = {
+        title: title.trim(),
+        description: description.trim() || null,
+        date: isoDate,
+        location: location.trim(),
+        address: address.trim() || null,
+        category: category as EventCategory,
+        price: 0,
+        external_url: externalUrl.trim() || null,
+        submitter_email: email.trim() || null,
+        status: "pending",
+      };
 
-    const payload = {
-      title: title.trim(),
-      description: description.trim() || null,
-      date: isoDate,
-      location: location.trim(),
-      address: address.trim() || null,
-      category, // must match enum public.event_category
-      price: 0,
-      external_url: externalUrl.trim() || null,
-      submitter_email: email.trim() || null,
-      status: "pending",
-    };
+      const { error } = await supabase.from("events_pending").insert(payload);
+      if (error) throw error;
 
-    supabase
-      .from("events_pending")
-      .insert([payload])
-      .then(({ error }) => {
-        if (error) {
-          console.error("[ProposeEventModal] Insert error:", error.message);
-          toast({
-            title: "Erreur lors de l’envoi",
-            description: error.message,
-            variant: "destructive",
-          });
-          return;
-        }
-        toast({
-          title: "Merci !",
-          description: "Votre événement a été soumis et sera vérifié par l’équipe.",
-        });
-        resetForm();
-        onOpenChange(false);
+      toast({
+        title: "Merci !",
+        description: "Votre événement a été soumis et sera vérifié par l’équipe.",
       });
+      resetForm();
+      onOpenChange(false);
+    } catch (err: any) {
+      console.error("[ProposeEventModal] Insert error:", err?.message || err);
+      toast({
+        title: "Erreur lors de l’envoi",
+        description: err?.message || "Veuillez réessayer.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -155,7 +161,7 @@ const ProposeEventModal: React.FC<ProposeEventModalProps> = ({ open, onOpenChang
 
           <div className="space-y-2">
             <Label>Catégorie</Label>
-            <Select value={category} onValueChange={setCategory} disabled={loadingCats || categories.length === 0}>
+            <Select value={category} onValueChange={(v) => setCategory(v as EventCategory)} disabled={loadingCats || categories.length === 0}>
               <SelectTrigger>
                 <SelectValue placeholder={loadingCats ? "Chargement..." : "Choisir une catégorie"} />
               </SelectTrigger>
