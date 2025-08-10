@@ -126,15 +126,33 @@
     @apply animate-[slide-out-left_0.3s_ease-out_forwards];
   }
 
+  .animate-slide-right {
+    @apply animate-[slide-right_0.3s_ease-out_forwards];
+  }
+
+  .animate-slide-left {
+    @apply animate-[slide-left_0.3s_ease-out_forwards];
+  }
+
   /* Keyframes for slide animations */
   @keyframes slide-out-right {
-    from { transform: translateX(0); opacity: 1; }
-    to { transform: translateX(100%); opacity: 0; }
+    from { transform: translateX(0) rotate(0deg); opacity: 1; }
+    to { transform: translateX(100%) rotate(15deg); opacity: 0; }
   }
 
   @keyframes slide-out-left {
-    from { transform: translateX(0); opacity: 1; }
-    to { transform: translateX(-100%); opacity: 0; }
+    from { transform: translateX(0) rotate(0deg); opacity: 1; }
+    to { transform: translateX(-100%) rotate(-15deg); opacity: 0; }
+  }
+
+  @keyframes slide-right {
+    from { transform: translateX(0) rotate(0deg); opacity: 1; }
+    to { transform: translateX(100px) rotate(15deg); opacity: 0; }
+  }
+
+  @keyframes slide-left {
+    from { transform: translateX(0) rotate(0deg); opacity: 1; }
+    to { transform: translateX(-100px) rotate(-15deg); opacity: 0; }
   }
 
   /* Legacy components for compatibility */
