@@ -83,7 +83,7 @@ export const useSwipeEvents = (): SwipeEventsResult => {
       .from('event_views')
       .upsert(
         { user_id: user.id, event_id: eventId },
-        { onConflict: 'user_id,event_id' }
+        { onConflict: 'user_id,event_id', ignoreDuplicates: true }
       );
     if (error) console.error('Failed marking as viewed', error);
   };
