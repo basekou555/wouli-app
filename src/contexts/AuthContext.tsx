@@ -46,41 +46,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
 
   useEffect(() => {
-    console.log('[WOULI-SECURE] 🔐 Initialisation AuthContext sécurisé...');
-    
     // Configuration du listener d'authentification
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('[WOULI-SECURE] 🔐 Auth state change sécurisé', { event, hasSession: !!session });
-        
         setSession(session);
         setUser(session?.user ?? null);
         
         // Fetch user profile and business config when user changes
         if (session?.user) {
-          // NE PAS setLoading(false) ici - laisser fetchUserProfileAndBusinessConfig le gérer
           setTimeout(() => {
             fetchUserProfileAndBusinessConfig(session.user.id);
           }, 0);
         } else {
           setProfile(null);
           setBusinessConfig(null);
-          setLoading(false); // OK ici car pas de fetch
+          setLoading(false);
         }
-        
-        // Logging pour les événements d'authentification
-        if (event === 'SIGNED_IN' && session) {
-          console.log('[WOULI-SECURE] ✅ Connexion sécurisée réussie', { 
-            userId: session.user.id, 
-            email: session.user.email 
-          });
-        } else if (event === 'SIGNED_OUT') {
-          console.log('[WOULI-SECURE] 🚪 Déconnexion sécurisée');
-        } else if (event === 'TOKEN_REFRESHED') {
-          console.log('[WOULI-SECURE] 🔄 Token rafraîchi de manière sécurisée');
-        }
-        
-        // NE PAS faire setLoading(false) ici !
       }
     );
 
@@ -89,41 +70,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
-          console.log('[WOULI-SECURE] ❌ Erreur lors de la récupération de la session', { error: error.message });
           if (error.message.includes('refresh_token_not_found')) {
-            console.log('[WOULI-SECURE] 🧹 Nettoyage des tokens expirés...');
             await supabase.auth.signOut();
           }
           setLoading(false);
         } else {
-          console.log('[WOULI-SECURE] 📋 Session initiale sécurisée', { hasSession: !!session });
           setSession(session);
           setUser(session?.user ?? null);
           if (session?.user) {
-            // NE PAS setLoading(false) ici - laisser fetchUserProfileAndBusinessConfig le gérer
             setTimeout(() => {
               fetchUserProfileAndBusinessConfig(session.user.id);
             }, 0);
           } else {
-            setLoading(false); // OK ici car pas de session
+            setLoading(false);
           }
         }
       } catch (error) {
-        console.log('[WOULI-SECURE] ❌ Erreur inattendue lors de la récupération de la session', { error });
+        console.error('Erreur récupération session:', error);
         setLoading(false);
       }
     };
 
     getInitialSession();
-
-    return () => {
-      console.log('[WOULI-SECURE] 🧹 Nettoyage du listener d\'authentification');
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const fetchUserProfileAndBusinessConfig = async (userId: string) => {
-    console.log('[WOULI] 🔄 Chargement du profil pour:', userId);
     let profileData = null;
     let businessData = null;
     
@@ -135,52 +107,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', userId)
         .single();
 
-      if (profileError) {
-        console.log('[WOULI-SECURE] ❌ Erreur récupération profil', { error: profileError.message });
-      } else {
+      if (!profileError && profile) {
         profileData = profile;
-        console.log('[WOULI] ✅ Profil chargé:', { 
-          type: profile.type, 
-          username: profile.username 
-        });
         setProfile(profile);
         
         // Fetch business config if user is business type
         if (profile?.type === 'business') {
-          console.log('[WOULI] 💼 User business détecté, chargement config...');
-          
           const { data: config, error: businessError } = await supabase
             .from('business_configs')
             .select('*')
             .eq('user_id', userId)
             .single();
 
-          if (businessError) {
-            console.log('[WOULI-SECURE] ❌ Erreur récupération business config', { error: businessError.message });
-          } else {
+          if (!businessError && config) {
             businessData = config;
-            console.log('[WOULI] ✅ Config business chargée:', config.client_name);
             setBusinessConfig(config);
           }
         }
       }
     } catch (error) {
-      console.log('[WOULI-SECURE] ❌ Erreur inattendue récupération données utilisateur', { error });
+      console.error('Erreur chargement profil:', error);
     } finally {
-      // IMPORTANT : setLoading(false) SEULEMENT ici
-      console.log('[WOULI] 🏁 Chargement terminé. Flags:', {
-        userType: profileData?.type || null,
-        isBusinessUser: profileData?.type === 'business',
-        hasBusinessConfig: !!businessData
-      });
       setLoading(false);
     }
   };
 
   const signUp = async (email: string, password: string, username: string) => {
     try {
-      console.log('[WOULI-SECURE] 📝 Tentative d\'inscription', { email });
-      
       const redirectUrl = `${window.location.origin}/`;
       
       const { error } = await supabase.auth.signUp({
@@ -207,15 +160,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       return { error };
     } catch (error) {
-      console.log('[WOULI-SECURE] ❌ Erreur inattendue lors de l\'inscription', { error });
+      console.error('Erreur inscription:', error);
       return { error };
     }
   };
 
   const signIn = async (email: string, password: string) => {
     try {
-      console.log('[WOULI-SECURE] 🔐 Tentative de connexion', { email });
-      
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -236,7 +187,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       return { error };
     } catch (error) {
-      console.log('[WOULI-SECURE] ❌ Erreur inattendue lors de la connexion', { error });
+      console.error('Erreur connexion:', error);
       return { error };
     }
   };
@@ -249,8 +200,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     brandColor?: string;
   }) => {
     try {
-      console.log('[WOULI-SECURE] 📝 Tentative d\'inscription business', { email });
-      
       const redirectUrl = `${window.location.origin}/business`;
       
       const { error } = await supabase.auth.signUp({
@@ -278,8 +227,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { error };
       }
 
-      // La configuration business est maintenant créée automatiquement par le trigger
-
       toast({
         title: "Inscription réussie !",
         description: "Vérifiez votre email pour confirmer votre compte établissement."
@@ -287,17 +234,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       return { error: null };
     } catch (error) {
-      console.log('[WOULI-SECURE] ❌ Erreur inattendue lors de l\'inscription business', { error });
+      console.error('Erreur inscription business:', error);
       return { error };
     }
   };
 
   const signOut = async () => {
     try {
-      console.log('[WOULI-SECURE] 🚪 Déconnexion...');
       const { error } = await supabase.auth.signOut();
       if (error) {
-        console.log('[WOULI-SECURE] ❌ Erreur de déconnexion', { error: error.message });
         toast({
           title: "Erreur de déconnexion",
           description: error.message,
@@ -312,7 +257,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
     } catch (error) {
-      console.log('[WOULI-SECURE] ❌ Erreur inattendue lors de la déconnexion', { error });
+      console.error('Erreur déconnexion:', error);
     }
   };
 

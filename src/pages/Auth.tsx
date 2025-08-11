@@ -23,19 +23,10 @@ const Auth = () => {
 
   useEffect(() => {
     if (user && userType && !authLoading) {
-      console.log('[WOULI] 🚀 Redirection après login:', { 
-        userType, 
-        isBusinessUser,
-        loading: authLoading 
-      });
-      
-      // Petit délai pour s'assurer que tout est stable
       setTimeout(() => {
         if (isBusinessUser) {
-          console.log('[WOULI] → Redirection vers /business');
           navigate('/business', { replace: true });
         } else {
-          console.log('[WOULI] → Redirection vers /app');
           navigate('/app', { replace: true });
         }
       }, 100);
@@ -46,11 +37,6 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
     const { error } = await signIn(loginData.email, loginData.password);
-    
-    if (!error) {
-      console.log('[WOULI] ✅ Login réussi, attente du chargement du profil...');
-      // PAS de navigation ici, le useEffect s'en charge
-    }
     setLoading(false);
   };
 
