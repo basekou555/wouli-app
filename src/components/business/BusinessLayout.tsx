@@ -5,6 +5,10 @@ import { BusinessAnalyticsProvider } from '@/contexts/BusinessAnalyticsContext';
 import { useBusinessConfig } from '@/hooks/useBusinessConfig';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import ErrorMessage from '@/components/ErrorMessage';
+import { Button } from '@/components/ui/button';
+import { LogOut } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 interface BusinessLayoutProps {
   children: React.ReactNode;
@@ -12,6 +16,13 @@ interface BusinessLayoutProps {
 
 export function BusinessLayout({ children }: BusinessLayoutProps) {
   const { config, loading, error } = useBusinessConfig();
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
 
   if (loading) {
     return (
@@ -50,6 +61,15 @@ export function BusinessLayout({ children }: BusinessLayoutProps) {
                   {config.client_type} • {config.location}
                 </p>
               </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSignOut}
+                className="ml-4"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Déconnexion
+              </Button>
             </header>
 
             {/* Main Content */}
