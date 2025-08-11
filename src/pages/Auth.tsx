@@ -14,7 +14,7 @@ const Auth = () => {
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [signupData, setSignupData] = useState({ email: '', password: '', username: '' });
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp, user, userType, isBusinessUser } = useAuth();
+  const { signIn, signUp, user, userType, isBusinessUser, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -22,20 +22,35 @@ const Auth = () => {
   const messageType = location.state?.type;
 
   useEffect(() => {
-    if (user && userType) {
-      if (isBusinessUser) {
-        navigate('/business');
-      } else {
-        navigate('/app');
-      }
+    if (user && userType && !authLoading) {
+      console.log('[WOULI] 🚀 Redirection après login:', { 
+        userType, 
+        isBusinessUser,
+        loading: authLoading 
+      });
+      
+      // Petit délai pour s'assurer que tout est stable
+      setTimeout(() => {
+        if (isBusinessUser) {
+          console.log('[WOULI] → Redirection vers /business');
+          navigate('/business', { replace: true });
+        } else {
+          console.log('[WOULI] → Redirection vers /app');
+          navigate('/app', { replace: true });
+        }
+      }, 100);
     }
-  }, [user, userType, isBusinessUser, navigate]);
+  }, [user, userType, isBusinessUser, authLoading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     const { error } = await signIn(loginData.email, loginData.password);
-    // Navigation is handled by useEffect based on user type
+    
+    if (!error) {
+      console.log('[WOULI] ✅ Login réussi, attente du chargement du profil...');
+      // PAS de navigation ici, le useEffect s'en charge
+    }
     setLoading(false);
   };
 

@@ -58,12 +58,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Fetch user profile and business config when user changes
         if (session?.user) {
+          // NE PAS setLoading(false) ici - laisser fetchUserProfileAndBusinessConfig le gérer
           setTimeout(() => {
             fetchUserProfileAndBusinessConfig(session.user.id);
           }, 0);
         } else {
           setProfile(null);
           setBusinessConfig(null);
+          setLoading(false); // OK ici car pas de fetch
         }
         
         // Logging pour les événements d'authentification
@@ -78,7 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log('[WOULI-SECURE] 🔄 Token rafraîchi de manière sécurisée');
         }
         
-        setLoading(false);
+        // NE PAS faire setLoading(false) ici !
       }
     );
 
@@ -92,19 +94,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.log('[WOULI-SECURE] 🧹 Nettoyage des tokens expirés...');
             await supabase.auth.signOut();
           }
+          setLoading(false);
         } else {
           console.log('[WOULI-SECURE] 📋 Session initiale sécurisée', { hasSession: !!session });
           setSession(session);
           setUser(session?.user ?? null);
           if (session?.user) {
+            // NE PAS setLoading(false) ici - laisser fetchUserProfileAndBusinessConfig le gérer
             setTimeout(() => {
               fetchUserProfileAndBusinessConfig(session.user.id);
             }, 0);
+          } else {
+            setLoading(false); // OK ici car pas de session
           }
         }
       } catch (error) {
         console.log('[WOULI-SECURE] ❌ Erreur inattendue lors de la récupération de la session', { error });
-      } finally {
         setLoading(false);
       }
     };
@@ -118,9 +123,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const fetchUserProfileAndBusinessConfig = async (userId: string) => {
+    console.log('[WOULI] 🔄 Chargement du profil pour:', userId);
+    let profileData = null;
+    let businessData = null;
+    
     try {
       // Fetch user profile
-      const { data: profileData, error: profileError } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
@@ -129,11 +138,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (profileError) {
         console.log('[WOULI-SECURE] ❌ Erreur récupération profil', { error: profileError.message });
       } else {
-        setProfile(profileData);
+        profileData = profile;
+        console.log('[WOULI] ✅ Profil chargé:', { 
+          type: profile.type, 
+          username: profile.username 
+        });
+        setProfile(profile);
         
         // Fetch business config if user is business type
-        if (profileData?.type === 'business') {
-          const { data: businessData, error: businessError } = await supabase
+        if (profile?.type === 'business') {
+          console.log('[WOULI] 💼 User business détecté, chargement config...');
+          
+          const { data: config, error: businessError } = await supabase
             .from('business_configs')
             .select('*')
             .eq('user_id', userId)
@@ -142,12 +158,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (businessError) {
             console.log('[WOULI-SECURE] ❌ Erreur récupération business config', { error: businessError.message });
           } else {
-            setBusinessConfig(businessData);
+            businessData = config;
+            console.log('[WOULI] ✅ Config business chargée:', config.client_name);
+            setBusinessConfig(config);
           }
         }
       }
     } catch (error) {
       console.log('[WOULI-SECURE] ❌ Erreur inattendue récupération données utilisateur', { error });
+    } finally {
+      // IMPORTANT : setLoading(false) SEULEMENT ici
+      console.log('[WOULI] 🏁 Chargement terminé. Flags:', {
+        userType: profileData?.type || null,
+        isBusinessUser: profileData?.type === 'business',
+        hasBusinessConfig: !!businessData
+      });
+      setLoading(false);
     }
   };
 
