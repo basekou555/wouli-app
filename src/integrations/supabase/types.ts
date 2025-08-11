@@ -84,6 +84,9 @@ export type Database = {
       }
       business_events: {
         Row: {
+          ambiance_photo_url: string | null
+          avg_attendance: number | null
+          capacity: number | null
           category: string
           created_at: string
           custom_venue: string | null
@@ -93,17 +96,23 @@ export type Database = {
           external_url: string | null
           id: string
           image_url: string | null
+          is_recurring: boolean
           likes: number
           participants: number
           price: string | null
           time: string
           title: string
+          total_editions: number | null
           updated_at: string
           user_id: string
           venue: string | null
+          venue_photo_url: string | null
           views: number
         }
         Insert: {
+          ambiance_photo_url?: string | null
+          avg_attendance?: number | null
+          capacity?: number | null
           category: string
           created_at?: string
           custom_venue?: string | null
@@ -113,17 +122,23 @@ export type Database = {
           external_url?: string | null
           id?: string
           image_url?: string | null
+          is_recurring?: boolean
           likes?: number
           participants?: number
           price?: string | null
           time: string
           title: string
+          total_editions?: number | null
           updated_at?: string
           user_id: string
           venue?: string | null
+          venue_photo_url?: string | null
           views?: number
         }
         Update: {
+          ambiance_photo_url?: string | null
+          avg_attendance?: number | null
+          capacity?: number | null
           category?: string
           created_at?: string
           custom_venue?: string | null
@@ -133,14 +148,17 @@ export type Database = {
           external_url?: string | null
           id?: string
           image_url?: string | null
+          is_recurring?: boolean
           likes?: number
           participants?: number
           price?: string | null
           time?: string
           title?: string
+          total_editions?: number | null
           updated_at?: string
           user_id?: string
           venue?: string | null
+          venue_photo_url?: string | null
           views?: number
         }
         Relationships: []
@@ -189,6 +207,35 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      event_views: {
+        Row: {
+          event_id: string
+          id: string
+          user_id: string
+          viewed_at: string
+        }
+        Insert: {
+          event_id: string
+          id?: string
+          user_id: string
+          viewed_at?: string
+        }
+        Update: {
+          event_id?: string
+          id?: string
+          user_id?: string
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_views_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       events: {
         Row: {

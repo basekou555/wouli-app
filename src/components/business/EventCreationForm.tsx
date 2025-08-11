@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle, MapPin, ExternalLink } from 'lucide-react';
 import ImageUpload from '@/components/ImageUpload';
@@ -50,7 +52,14 @@ const EventCreationForm = ({ config, onEventCreate, editingEvent, onEventUpdate,
     event_type: editingEvent?.event_type || 'a-boire',
     price: editingEvent?.price || '',
     external_url: editingEvent?.external_url || '',
-    image_url: editingEvent?.image_url || ''
+    image_url: editingEvent?.image_url || '',
+    // New fields
+    venue_photo_url: (editingEvent as any)?.venue_photo_url || '',
+    ambiance_photo_url: (editingEvent as any)?.ambiance_photo_url || '',
+    capacity: (editingEvent as any)?.capacity ? String((editingEvent as any).capacity) : '',
+    is_recurring: (editingEvent as any)?.is_recurring || false,
+    avg_attendance: (editingEvent as any)?.avg_attendance ? String((editingEvent as any).avg_attendance) : '',
+    total_editions: (editingEvent as any)?.total_editions ? String((editingEvent as any).total_editions) : ''
   });
 
   const [useCustomVenue, setUseCustomVenue] = useState(!!editingEvent?.custom_venue);
@@ -65,8 +74,11 @@ const EventCreationForm = ({ config, onEventCreate, editingEvent, onEventUpdate,
       ...newEvent,
       venue: useCustomVenue ? undefined : newEvent.venue,
       custom_venue: useCustomVenue ? newEvent.custom_venue : undefined,
-      location: useCustomVenue ? newEvent.custom_venue : newEvent.venue
-    };
+      location: useCustomVenue ? newEvent.custom_venue : newEvent.venue,
+      capacity: newEvent.capacity ? Number(newEvent.capacity) : undefined,
+      avg_attendance: newEvent.avg_attendance ? Number(newEvent.avg_attendance) : undefined,
+      total_editions: newEvent.total_editions ? Number(newEvent.total_editions) : undefined
+    } as unknown as Omit<BusinessEvent, 'id' | 'views' | 'likes' | 'participants' | 'user_id'>;
 
     if (editingEvent && onEventUpdate && editingEvent.id) {
       onEventUpdate(editingEvent.id, eventData);
@@ -87,7 +99,13 @@ const EventCreationForm = ({ config, onEventCreate, editingEvent, onEventUpdate,
         event_type: 'a-boire',
         price: '', 
         external_url: '',
-        image_url: '' 
+        image_url: '',
+        venue_photo_url: '',
+        ambiance_photo_url: '',
+        capacity: '',
+        is_recurring: false,
+        avg_attendance: '',
+        total_editions: ''
       });
       setUseCustomVenue(false);
     }
@@ -115,6 +133,23 @@ const EventCreationForm = ({ config, onEventCreate, editingEvent, onEventUpdate,
               onImageSelect={(imageUrl) => setNewEvent({ ...newEvent, image_url: imageUrl })}
               currentImage={newEvent.image_url}
             />
+          </div>
+
+          {/* Photos supplémentaires */}
+          <div>
+            <Label className="block text-sm font-medium text-gray-700 mb-2">
+              Photos supplémentaires
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
+              <ImageUpload
+                onImageSelect={(url) => setNewEvent({ ...newEvent, venue_photo_url: url })}
+                currentImage={(newEvent as any).venue_photo_url}
+              />
+              <ImageUpload
+                onImageSelect={(url) => setNewEvent({ ...newEvent, ambiance_photo_url: url })}
+                currentImage={(newEvent as any).ambiance_photo_url}
+              />
+            </div>
           </div>
 
           <div>
@@ -230,6 +265,49 @@ const EventCreationForm = ({ config, onEventCreate, editingEvent, onEventUpdate,
               onChange={(e) => setNewEvent({ ...newEvent, price: e.target.value })}
               placeholder="Ex: 15€, Gratuit..."
             />
+          </div>
+
+          {/* Capacité (optionnel) */}
+          <div>
+            <Label className="block text-sm font-medium text-gray-700 mb-2">
+              Capacité (optionnel)
+            </Label>
+            <Input
+              type="number"
+              inputMode="numeric"
+              placeholder="Nombre de places"
+              value={newEvent.capacity}
+              onChange={(e) => setNewEvent({ ...newEvent, capacity: e.target.value })}
+            />
+          </div>
+
+          {/* Événement récurrent */}
+          <div>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={!!newEvent.is_recurring}
+                onCheckedChange={(checked) => setNewEvent({ ...newEvent, is_recurring: checked })}
+              />
+              <Label>Événement récurrent</Label>
+            </div>
+            {newEvent.is_recurring && (
+              <div className="pl-0 md:pl-6 mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  placeholder="Participants moyens par édition"
+                  value={newEvent.avg_attendance}
+                  onChange={(e) => setNewEvent({ ...newEvent, avg_attendance: e.target.value })}
+                />
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  placeholder="Nombre d'éditions précédentes"
+                  value={newEvent.total_editions}
+                  onChange={(e) => setNewEvent({ ...newEvent, total_editions: e.target.value })}
+                />
+              </div>
+            )}
           </div>
 
           <div>

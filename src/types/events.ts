@@ -33,6 +33,13 @@ export interface BusinessEvent extends BaseEvent {
   price?: string;
   external_url?: string;
   user_id: string;
+  // New optional fields for richer event details
+  venue_photo_url?: string;
+  ambiance_photo_url?: string;
+  capacity?: number;
+  is_recurring?: boolean;
+  avg_attendance?: number;
+  total_editions?: number;
 }
 
 export interface EventInteraction {
