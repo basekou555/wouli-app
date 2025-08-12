@@ -130,28 +130,25 @@ export function BusinessDashboardHome() {
         </div>
       </div>
 
-      {/* Dashboard Grid - HealthScore et Métriques principales */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 animate-fade-in" style={{ animationDelay: '200ms' }}>
-        <div className="lg:col-span-1">
-          {metrics && (
-            <div className="sticky top-6">
-              <HealthScore 
-                score={metrics.healthScore} 
-                details={metrics.healthDetails}
-                className="transition-all duration-300 hover:shadow-lg"
-              />
-            </div>
-          )}
-        </div>
-        
-        <div className="lg:col-span-4">
-          {metrics && (
-            <MetricsGrid 
-              metrics={metrics} 
-              className="animate-fade-in"
-            />
-          )}
-        </div>
+      {/* Première ligne - Score de performance et détails */}
+      <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
+        {metrics && (
+          <HealthScore 
+            score={metrics.healthScore} 
+            details={metrics.healthDetails}
+            className="transition-all duration-300 hover:shadow-lg max-w-md mx-auto"
+          />
+        )}
+      </div>
+
+      {/* Deuxième ligne - Métriques principales */}
+      <div className="animate-fade-in" style={{ animationDelay: '300ms' }}>
+        {metrics && (
+          <MetricsGrid 
+            metrics={metrics} 
+            className="animate-fade-in"
+          />
+        )}
       </div>
 
       {/* Alertes & Recommandations */}
