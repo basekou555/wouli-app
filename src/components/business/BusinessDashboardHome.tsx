@@ -1,8 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useBusinessAnalytics } from '@/contexts/BusinessAnalyticsContext';
 import { useBusinessMetrics } from '@/hooks/useBusinessMetrics';
 import { useBusinessEvents } from '@/hooks/useBusinessEvents';
 import { useNavigate } from 'react-router-dom';
@@ -19,12 +18,20 @@ import {
   BarChart3,
   Activity
 } from 'lucide-react';
-import { Alert } from '@/data/simulatedAnalytics';
+import { hybridAnalyticsService } from '@/services/hybridAnalyticsService';
 import HealthScore from './analytics/HealthScore';
 import MetricsGrid from './analytics/MetricsGrid';
 import TopEventsGrid from './analytics/TopEventsGrid';
 import FunnelChart from './analytics/FunnelChart';
 import LoadingSpinner from '@/components/LoadingSpinner';
+
+interface Alert {
+  id: string;
+  type: 'critical' | 'positive' | 'opportunity';
+  title: string;
+  description: string;
+  action?: string;
+}
 
 const AlertCard: React.FC<{ alert: Alert; index: number }> = ({ alert, index }) => {
   const getAlertIcon = (type: Alert['type']) => {
@@ -70,12 +77,115 @@ const AlertCard: React.FC<{ alert: Alert; index: number }> = ({ alert, index }) 
 };
 
 export function BusinessDashboardHome() {
-  const { alerts } = useBusinessAnalytics();
   const { metrics, loading: metricsLoading } = useBusinessMetrics();
   const { events, loading: eventsLoading } = useBusinessEvents();
   const navigate = useNavigate();
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [alertsLoading, setAlertsLoading] = useState(true);
 
-  const loading = metricsLoading || eventsLoading;
+  const loading = metricsLoading || eventsLoading || alertsLoading;
+
+  // Générer les vraies alertes basées sur les événements actuels
+  useEffect(() => {
+    const generateRealAlerts = async () => {
+      if (!events || events.length === 0) {
+        setAlerts([]);
+        setAlertsLoading(false);
+        return;
+      }
+
+      try {
+        const realAlerts: Alert[] = [];
+
+        // Analyser chaque événement pour générer des insights
+        for (const event of events) {
+          const eventMetrics = hybridAnalyticsService.calculateRealTimeMetrics({
+            id: event.id,
+            title: event.title,
+            category: event.category,
+            views: event.views || 0,
+            likes: event.likes || 0,
+            participants: event.participants || 0,
+            date: event.date,
+            created_at: event.created_at,
+            source: 'business',
+            organizer: event.user_id || 'business',
+            organizer_type: 'business',
+            location: event.location || 'Lyon'
+          });
+
+          const benchmark = await hybridAnalyticsService.getBenchmark(event.category);
+          const insights = hybridAnalyticsService.generateInsights(eventMetrics, benchmark);
+
+          // Convertir les insights en alertes
+          insights.forEach((insight, index) => {
+            realAlerts.push({
+              id: `${event.id}-${index}`,
+              type: insight.type === 'warning' ? 'critical' : insight.type,
+              title: insight.title,
+              description: insight.description,
+              action: insight.action
+            });
+          });
+        }
+
+        // Ajouter des alertes globales basées sur les métriques
+        if (metrics) {
+          // Alerte conversion faible
+          if (metrics.conversionRate < 5) {
+            realAlerts.push({
+              id: 'global-conversion',
+              type: 'critical',
+              title: 'Taux de conversion très faible',
+              description: `Seulement ${metrics.conversionRate.toFixed(1)}% de vos visiteurs participent aux événements`,
+              action: 'Optimiser vos descriptions et prix'
+            });
+          }
+
+          // Alerte performance positive
+          if (metrics.conversionRate > 15) {
+            realAlerts.push({
+              id: 'global-performance',
+              type: 'positive',
+              title: 'Excellentes performances !',
+              description: `Votre taux de conversion de ${metrics.conversionRate.toFixed(1)}% dépasse largement la moyenne`,
+              action: 'Créer plus d\'événements similaires'
+            });
+          }
+
+          // Opportunité d'amélioration
+          if (metrics.totalViews > 100 && metrics.conversionRate < 10) {
+            realAlerts.push({
+              id: 'global-opportunity',
+              type: 'opportunity',
+              title: 'Forte visibilité, conversion à optimiser',
+              description: `${metrics.totalViews} vues générées mais conversion limitée à ${metrics.conversionRate.toFixed(1)}%`,
+              action: 'Tester différents prix ou formats'
+            });
+          }
+        }
+
+        // Limiter à 3 alertes max et prioriser par type
+        const sortedAlerts = realAlerts
+          .sort((a, b) => {
+            const priority = { critical: 3, opportunity: 2, positive: 1 };
+            return priority[b.type] - priority[a.type];
+          })
+          .slice(0, 3);
+
+        setAlerts(sortedAlerts);
+      } catch (error) {
+        console.error('Error generating alerts:', error);
+        setAlerts([]);
+      } finally {
+        setAlertsLoading(false);
+      }
+    };
+
+    if (!eventsLoading && !metricsLoading) {
+      generateRealAlerts();
+    }
+  }, [events, metrics, eventsLoading, metricsLoading]);
 
   if (loading) {
     return (
@@ -93,11 +203,11 @@ export function BusinessDashboardHome() {
     navigate('/business/events/new');
   };
 
-  // Créer les données pour le funnel
+  // Créer les vraies données pour le funnel basées sur les métriques réelles
   const funnelData = metrics ? [
     { name: 'Vues', value: metrics.totalViews, color: 'hsl(var(--primary))' },
-    { name: 'Likes', value: metrics.totalLikes, color: 'hsl(var(--secondary))' },
-    { name: 'Participants', value: metrics.totalParticipants, color: 'hsl(var(--accent))' }
+    { name: 'Intérêts', value: metrics.totalLikes, color: 'hsl(var(--secondary))' },
+    { name: 'Participations', value: metrics.totalParticipants, color: 'hsl(var(--accent))' }
   ] : [];
 
   return (
