@@ -46,6 +46,36 @@ export type Database = {
           },
         ]
       }
+      analytics_snapshots: {
+        Row: {
+          benchmark: Json | null
+          created_at: string | null
+          entity_id: string
+          entity_type: string | null
+          id: string
+          metrics: Json
+          period_type: string | null
+        }
+        Insert: {
+          benchmark?: Json | null
+          created_at?: string | null
+          entity_id: string
+          entity_type?: string | null
+          id?: string
+          metrics: Json
+          period_type?: string | null
+        }
+        Update: {
+          benchmark?: Json | null
+          created_at?: string | null
+          entity_id?: string
+          entity_type?: string | null
+          id?: string
+          metrics?: Json
+          period_type?: string | null
+        }
+        Relationships: []
+      }
       business_configs: {
         Row: {
           brand_color: string
@@ -84,10 +114,13 @@ export type Database = {
       }
       business_events: {
         Row: {
+          actual_participants: number | null
           ambiance_photo_url: string | null
           avg_attendance: number | null
+          avg_booking_advance: number | null
           capacity: number | null
           category: string
+          category_rank: number | null
           created_at: string
           custom_venue: string | null
           date: string
@@ -97,8 +130,12 @@ export type Database = {
           id: string
           image_url: string | null
           is_recurring: boolean
+          last_minute_ratio: number | null
           likes: number
+          no_show_rate: number | null
           participants: number
+          peak_views_time: string | null
+          performance_score: number | null
           price: string | null
           time: string
           title: string
@@ -110,10 +147,13 @@ export type Database = {
           views: number
         }
         Insert: {
+          actual_participants?: number | null
           ambiance_photo_url?: string | null
           avg_attendance?: number | null
+          avg_booking_advance?: number | null
           capacity?: number | null
           category: string
+          category_rank?: number | null
           created_at?: string
           custom_venue?: string | null
           date: string
@@ -123,8 +163,12 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_recurring?: boolean
+          last_minute_ratio?: number | null
           likes?: number
+          no_show_rate?: number | null
           participants?: number
+          peak_views_time?: string | null
+          performance_score?: number | null
           price?: string | null
           time: string
           title: string
@@ -136,10 +180,13 @@ export type Database = {
           views?: number
         }
         Update: {
+          actual_participants?: number | null
           ambiance_photo_url?: string | null
           avg_attendance?: number | null
+          avg_booking_advance?: number | null
           capacity?: number | null
           category?: string
+          category_rank?: number | null
           created_at?: string
           custom_venue?: string | null
           date?: string
@@ -149,8 +196,12 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_recurring?: boolean
+          last_minute_ratio?: number | null
           likes?: number
+          no_show_rate?: number | null
           participants?: number
+          peak_views_time?: string | null
+          performance_score?: number | null
           price?: string | null
           time?: string
           title?: string
@@ -423,6 +474,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_display_info: {
+        Args: { user_ids: string[] }
+        Returns: {
+          id: string
+          username: string
+          avatar_url: string
+        }[]
+      }
       get_user_stats: {
         Args: { user_uuid: string }
         Returns: {

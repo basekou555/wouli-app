@@ -3,8 +3,11 @@ import React from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, MapPin, Clock, Euro, ArrowLeft, Edit, Share2, ExternalLink, Eye, Heart, Users } from 'lucide-react';
+import { Calendar, MapPin, Clock, Euro, ArrowLeft, Edit, Share2, ExternalLink, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import EventMetrics from '@/components/business/analytics/EventMetrics';
+import EventInsights from '@/components/business/analytics/EventInsights';
+import { useEventAnalytics } from '@/hooks/useEventAnalytics';
 
 const BusinessEventDetails = () => {
   const { id } = useParams();
@@ -14,6 +17,16 @@ const BusinessEventDetails = () => {
 
   // Get event from location state
   const event = location.state?.event;
+  
+  // Load analytics data
+  const { 
+    metrics, 
+    benchmark, 
+    categoryRank, 
+    insights, 
+    loading: analyticsLoading, 
+    refreshAnalytics 
+  } = useEventAnalytics(event);
 
   if (!event) {
     return (
@@ -81,6 +94,14 @@ const BusinessEventDetails = () => {
             </div>
           </div>
           <div className="flex gap-2">
+            <Button 
+              onClick={refreshAnalytics} 
+              variant="ghost" 
+              size="sm"
+              disabled={analyticsLoading}
+            >
+              <RefreshCw className={`h-4 w-4 ${analyticsLoading ? 'animate-spin' : ''}`} />
+            </Button>
             <Button onClick={handleEdit} variant="outline">
               <Edit className="h-4 w-4 mr-2" />
               Modifier
@@ -93,135 +114,116 @@ const BusinessEventDetails = () => {
         </div>
       </div>
 
-      <div className="container mx-auto p-6 max-w-4xl">
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Main content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Event image */}
-            {event.image_url && (
-              <Card>
-                <CardContent className="p-0">
-                  <img 
-                    src={event.image_url} 
-                    alt={event.title}
-                    className="w-full h-64 object-cover rounded-lg"
-                  />
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Event details */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Détails de l'événement</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center text-gray-700">
-                  <Calendar className="h-5 w-5 mr-3 text-orange-500" />
-                  <span>{formatDate(event.date)}</span>
-                </div>
-
-                <div className="flex items-center text-gray-700">
-                  <Clock className="h-5 w-5 mr-3 text-orange-500" />
-                  <span>{event.time}</span>
-                </div>
-
-                <div className="flex items-center text-gray-700">
-                  <MapPin className="h-5 w-5 mr-3 text-orange-500" />
-                  <span>{getLocationDisplay()}</span>
-                </div>
-
-                {event.price && (
-                  <div className="flex items-center text-gray-700">
-                    <Euro className="h-5 w-5 mr-3 text-orange-500" />
-                    <span>{event.price}</span>
-                  </div>
-                )}
-
-                {event.external_url && (
-                  <div className="flex items-center text-gray-700">
-                    <ExternalLink className="h-5 w-5 mr-3 text-orange-500" />
-                    <a 
-                      href={event.external_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-blue-500 hover:underline"
-                    >
-                      Billeterie / Réservation
-                    </a>
-                  </div>
-                )}
-
-                {event.description && (
-                  <div className="mt-6">
-                    <h3 className="font-semibold text-lg mb-2">Description</h3>
-                    <p className="text-gray-700 leading-relaxed">{event.description}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+      <div className="container mx-auto p-6 max-w-6xl">
+        <div className="space-y-8">
+          {/* Analytics Section */}
+          <div className="space-y-6">
+            <EventMetrics 
+              metrics={metrics || { views: 0, likes: 0, participants: 0, conversion_rate: 0, like_rate: 0, engagement_score: 0 }}
+              benchmark={benchmark}
+              categoryRank={categoryRank}
+            />
+            
+            <EventInsights insights={insights} />
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Statistics */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Statistiques</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <Eye className="h-5 w-5 mr-2 text-blue-500" />
-                      <span>Vues</span>
-                    </div>
-                    <span className="font-bold text-lg">{event.views}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <Heart className="h-5 w-5 mr-2 text-red-500" />
-                      <span>Likes</span>
-                    </div>
-                    <span className="font-bold text-lg">{event.likes}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <Users className="h-5 w-5 mr-2 text-green-500" />
-                      <span>Participants</span>
-                    </div>
-                    <span className="font-bold text-lg">{event.participants}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          {/* Event Details Grid */}
+          <div className="grid lg:grid-cols-3 gap-8">
+            {/* Main content */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Event image */}
+              {event.image_url && (
+                <Card>
+                  <CardContent className="p-0">
+                    <img 
+                      src={event.image_url} 
+                      alt={event.title}
+                      className="w-full h-64 object-cover rounded-lg"
+                    />
+                  </CardContent>
+                </Card>
+              )}
 
-            {/* Quick actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Actions rapides</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button onClick={handleEdit} className="w-full" variant="outline">
-                  <Edit className="h-4 w-4 mr-2" />
-                  Modifier l'événement
-                </Button>
-                <Button onClick={handleShare} className="w-full" variant="outline">
-                  <Share2 className="h-4 w-4 mr-2" />
-                  Partager l'événement
-                </Button>
-                <Button 
-                  asChild
-                  className="w-full" 
-                  variant="outline"
-                >
-                  <Link to={`/event/${id}`} target="_blank">
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Voir en tant qu'utilisateur
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
+              {/* Event details */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Détails de l'événement</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center text-gray-700">
+                    <Calendar className="h-5 w-5 mr-3 text-orange-500" />
+                    <span>{formatDate(event.date)}</span>
+                  </div>
+
+                  <div className="flex items-center text-gray-700">
+                    <Clock className="h-5 w-5 mr-3 text-orange-500" />
+                    <span>{event.time}</span>
+                  </div>
+
+                  <div className="flex items-center text-gray-700">
+                    <MapPin className="h-5 w-5 mr-3 text-orange-500" />
+                    <span>{getLocationDisplay()}</span>
+                  </div>
+
+                  {event.price && (
+                    <div className="flex items-center text-gray-700">
+                      <Euro className="h-5 w-5 mr-3 text-orange-500" />
+                      <span>{event.price}</span>
+                    </div>
+                  )}
+
+                  {event.external_url && (
+                    <div className="flex items-center text-gray-700">
+                      <ExternalLink className="h-5 w-5 mr-3 text-orange-500" />
+                      <a 
+                        href={event.external_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:underline"
+                      >
+                        Billeterie / Réservation
+                      </a>
+                    </div>
+                  )}
+
+                  {event.description && (
+                    <div className="mt-6">
+                      <h3 className="font-semibold text-lg mb-2">Description</h3>
+                      <p className="text-gray-700 leading-relaxed">{event.description}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Sidebar - Quick actions */}
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Actions rapides</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Button onClick={handleEdit} className="w-full" variant="outline">
+                    <Edit className="h-4 w-4 mr-2" />
+                    Modifier l'événement
+                  </Button>
+                  <Button onClick={handleShare} className="w-full" variant="outline">
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Partager l'événement
+                  </Button>
+                  <Button 
+                    asChild
+                    className="w-full" 
+                    variant="outline"
+                  >
+                    <Link to={`/event/${id}`} target="_blank">
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Voir en tant qu'utilisateur
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </div>
