@@ -125,26 +125,6 @@ const BusinessEventDetails = () => {
           </div>
         </div>
 
-        {/* Action buttons overlay */}
-        <div className="absolute top-4 right-4 flex gap-2">
-          <Button 
-            onClick={refreshAnalytics} 
-            variant="ghost" 
-            size="sm"
-            disabled={analyticsLoading}
-            className="text-white hover:bg-white/20"
-          >
-            <RefreshCw className={`h-4 w-4 ${analyticsLoading ? 'animate-spin' : ''}`} />
-          </Button>
-          <Button onClick={handleEdit} variant="secondary" size="sm">
-            <Edit className="h-4 w-4 mr-2" />
-            Modifier
-          </Button>
-          <Button onClick={handleShare} variant="secondary" size="sm">
-            <Share2 className="h-4 w-4 mr-2" />
-            Partager
-          </Button>
-        </div>
       </div>
 
       <div className="container mx-auto p-6 max-w-6xl">
@@ -291,18 +271,40 @@ const BusinessEventDetails = () => {
                     </div>
                   )}
                   
-                  <div className="pt-3 border-t">
-                    <Button 
-                      asChild
-                      className="w-full" 
-                      variant="outline"
-                      size="sm"
-                    >
-                      <Link to={`/event/${id}`} target="_blank">
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        Voir côté utilisateur
-                      </Link>
-                    </Button>
+                  <div className="pt-3 border-t space-y-2">
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={refreshAnalytics} 
+                        variant="outline" 
+                        size="sm"
+                        disabled={analyticsLoading}
+                        className="flex-1"
+                      >
+                        <RefreshCw className={`h-4 w-4 mr-2 ${analyticsLoading ? 'animate-spin' : ''}`} />
+                        Actualiser
+                      </Button>
+                      <Button onClick={handleEdit} variant="outline" size="sm" className="flex-1">
+                        <Edit className="h-4 w-4 mr-2" />
+                        Modifier
+                      </Button>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={handleShare} variant="outline" size="sm" className="flex-1">
+                        <Share2 className="h-4 w-4 mr-2" />
+                        Partager
+                      </Button>
+                      <Button 
+                        asChild
+                        className="flex-1" 
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Link to={`/event/${id}`} target="_blank">
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Voir public
+                        </Link>
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
