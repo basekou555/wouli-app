@@ -98,11 +98,11 @@ const BusinessEventDetails = () => {
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent" />
         
         {/* Back button overlay */}
-        <div className="absolute top-4 left-4">
+        <div className="absolute top-4 left-4 z-20">
           <Button 
             variant="ghost" 
             onClick={() => navigate('/business')}
-            className="text-white hover:bg-white/20"
+            className="text-white hover:bg-white/20 cursor-pointer"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
