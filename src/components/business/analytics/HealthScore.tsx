@@ -45,41 +45,64 @@ const HealthScore: React.FC<HealthScoreProps> = ({
   };
 
   return (
-    <Card className={className}>
-      <CardHeader className="text-center">
+    <Card className={`transition-all duration-300 hover:shadow-lg ${className}`}>
+      <CardHeader className="text-center pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           Score de Performance
         </CardTitle>
       </CardHeader>
       <CardContent className="text-center space-y-4">
-        <div className="flex items-center justify-center space-x-2">
-          {getScoreIcon()}
-          <div className={`text-3xl font-bold ${getScoreColor()}`}>
-            {score}/100
+        {/* Score principal avec animation */}
+        <div className="relative">
+          <div className="flex items-center justify-center space-x-3">
+            <div className="transition-transform duration-300 hover:scale-110">
+              {getScoreIcon()}
+            </div>
+            <div className={`text-4xl font-bold transition-colors duration-300 ${getScoreColor()}`}>
+              {score}
+              <span className="text-lg text-muted-foreground">/100</span>
+            </div>
+          </div>
+          
+          {/* Barre de progression circulaire simulée */}
+          <div className="mt-2">
+            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+              <div 
+                className={`h-full bg-gradient-to-r transition-all duration-1000 ease-out ${
+                  score >= 80 ? 'from-green-400 to-green-600' : 
+                  score >= 60 ? 'from-yellow-400 to-yellow-600' : 
+                  'from-red-400 to-red-600'
+                }`}
+                style={{ width: `${score}%` }}
+              />
+            </div>
           </div>
         </div>
         
-        <Badge variant={getBadgeVariant()} className="text-sm">
+        <Badge variant={getBadgeVariant()} className="text-sm font-medium px-3 py-1">
           {getScoreLabel()}
         </Badge>
 
         {details && (
-          <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-            <div className="flex justify-between">
-              <span>Visibilité:</span>
-              <span className="font-medium">{details.visibility}/25</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Engagement:</span>
-              <span className="font-medium">{details.engagement}/25</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Conversion:</span>
-              <span className="font-medium">{details.conversion}/25</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Timing:</span>
-              <span className="font-medium">{details.timing}/25</span>
+          <div className="space-y-3 pt-2 border-t">
+            <p className="text-xs text-muted-foreground font-medium">Détail par catégorie</p>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="flex flex-col items-center p-2 bg-muted/30 rounded-lg transition-colors hover:bg-muted/50">
+                <span className="text-muted-foreground">Visibilité</span>
+                <span className="font-bold text-foreground">{details.visibility}/25</span>
+              </div>
+              <div className="flex flex-col items-center p-2 bg-muted/30 rounded-lg transition-colors hover:bg-muted/50">
+                <span className="text-muted-foreground">Engagement</span>
+                <span className="font-bold text-foreground">{details.engagement}/25</span>
+              </div>
+              <div className="flex flex-col items-center p-2 bg-muted/30 rounded-lg transition-colors hover:bg-muted/50">
+                <span className="text-muted-foreground">Conversion</span>
+                <span className="font-bold text-foreground">{details.conversion}/25</span>
+              </div>
+              <div className="flex flex-col items-center p-2 bg-muted/30 rounded-lg transition-colors hover:bg-muted/50">
+                <span className="text-muted-foreground">Timing</span>
+                <span className="font-bold text-foreground">{details.timing}/25</span>
+              </div>
             </div>
           </div>
         )}
