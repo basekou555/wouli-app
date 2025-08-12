@@ -3,13 +3,13 @@ import React from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, MapPin, Clock, Euro, ArrowLeft, Edit, Share2, ExternalLink, RefreshCw, Eye, Heart, Users, Trophy } from 'lucide-react';
+import { Calendar, MapPin, Clock, Euro, ArrowLeft, Edit, Share2, ExternalLink, RefreshCw, Eye, Heart, Users, Trophy, Lightbulb } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import EventMetrics from '@/components/business/analytics/EventMetrics';
 import EventInsights from '@/components/business/analytics/EventInsights';
 import PerformanceGauge from '@/components/business/analytics/PerformanceGauge';
 import MetricCard from '@/components/business/analytics/MetricCard';
 import { useEventAnalytics } from '@/hooks/useEventAnalytics';
+import { hybridAnalyticsService } from '@/services/hybridAnalyticsService';
 
 const BusinessEventDetails = () => {
   const { id } = useParams();
@@ -77,21 +77,14 @@ const BusinessEventDetails = () => {
     });
   };
 
-  // Calculate performance score
-  const calculatePerformanceScore = () => {
+  // Get performance score from analytics service
+  const getPerformanceScore = () => {
     if (!metrics) return 0;
-    const { views, likes, participants, conversion_rate, like_rate, engagement_score } = metrics;
-    
-    // Weighted scoring algorithm
-    const viewsScore = Math.min((views / 200) * 100, 100); // Max at 200 views
-    const likeScore = Math.min(like_rate * 2, 100); // Max at 50% like rate
-    const conversionScore = Math.min(conversion_rate * 5, 100); // Max at 20% conversion
-    const engagementWeight = Math.min(engagement_score * 10, 100); // Max at 10 engagement score
-    
-    return Math.round((viewsScore * 0.3 + likeScore * 0.25 + conversionScore * 0.3 + engagementWeight * 0.15));
+    const score = hybridAnalyticsService.calculatePerformanceScore(metrics);
+    return Math.round(score);
   };
 
-  const performanceScore = calculatePerformanceScore();
+  const performanceScore = getPerformanceScore();
 
   return (
     <div className="min-h-screen bg-background">
@@ -202,34 +195,13 @@ const BusinessEventDetails = () => {
             />
           </div>
 
-          {/* Analytics Section */}
-          <div className="space-y-6">
-            <EventMetrics 
-              metrics={metrics || { views: 0, likes: 0, participants: 0, conversion_rate: 0, like_rate: 0, engagement_score: 0 }}
-              benchmark={benchmark}
-              categoryRank={categoryRank}
-            />
-            
-            <EventInsights insights={insights} />
-          </div>
+          {/* Insights Section */}
+          <EventInsights insights={insights} />
 
           {/* Event Details Grid */}
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Main content */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Event image */}
-              {event.image_url && (
-                <Card>
-                  <CardContent className="p-0">
-                    <img 
-                      src={event.image_url} 
-                      alt={event.title}
-                      className="w-full h-64 object-cover rounded-lg"
-                    />
-                  </CardContent>
-                </Card>
-              )}
-
               {/* Event details */}
               <Card>
                 <CardHeader>
@@ -282,31 +254,56 @@ const BusinessEventDetails = () => {
               </Card>
             </div>
 
-            {/* Sidebar - Quick actions */}
+            {/* Sidebar - Quick Insights */}
             <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Actions rapides</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Lightbulb className="h-5 w-5 text-primary" />
+                    Insights rapides
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2">
-                  <Button onClick={handleEdit} className="w-full" variant="outline">
-                    <Edit className="h-4 w-4 mr-2" />
-                    Modifier l'événement
-                  </Button>
-                  <Button onClick={handleShare} className="w-full" variant="outline">
-                    <Share2 className="h-4 w-4 mr-2" />
-                    Partager l'événement
-                  </Button>
-                  <Button 
-                    asChild
-                    className="w-full" 
-                    variant="outline"
-                  >
-                    <Link to={`/event/${id}`} target="_blank">
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Voir en tant qu'utilisateur
-                    </Link>
-                  </Button>
+                <CardContent className="space-y-4">
+                  {benchmark && (
+                    <div className="text-sm space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Vues vs moyenne</span>
+                        <span className={`font-medium ${
+                          (metrics?.views || 0) > benchmark.avg_views ? 'text-success' : 'text-muted-foreground'
+                        }`}>
+                          {((metrics?.views || 0) / benchmark.avg_views * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Conversion vs moyenne</span>
+                        <span className={`font-medium ${
+                          (metrics?.conversion_rate || 0) > benchmark.avg_conversion ? 'text-success' : 'text-muted-foreground'
+                        }`}>
+                          {((metrics?.conversion_rate || 0) / benchmark.avg_conversion * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                      {categoryRank && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Position catégorie</span>
+                          <span className="font-medium">#{categoryRank.rank}/{categoryRank.total}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  <div className="pt-3 border-t">
+                    <Button 
+                      asChild
+                      className="w-full" 
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Link to={`/event/${id}`} target="_blank">
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Voir côté utilisateur
+                      </Link>
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </div>

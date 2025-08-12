@@ -232,6 +232,19 @@ class HybridAnalyticsService {
     return insights.slice(0, 3); // Max 3 insights
   }
 
+  // Calculate performance score from metrics
+  calculatePerformanceScore(metrics: RealTimeMetrics): number {
+    const { views, likes, participants, conversion_rate, like_rate, engagement_score } = metrics;
+    
+    // Weighted scoring algorithm
+    const viewsScore = Math.min((views / 200) * 100, 100); // Max at 200 views
+    const likeScore = Math.min(like_rate * 2, 100); // Max at 50% like rate
+    const conversionScore = Math.min(conversion_rate * 5, 100); // Max at 20% conversion
+    const engagementWeight = Math.min(engagement_score * 10, 100); // Max at 10 engagement score
+    
+    return (viewsScore * 0.3 + likeScore * 0.25 + conversionScore * 0.3 + engagementWeight * 0.15);
+  }
+
   // Clear cache (for testing or manual refresh)
   clearCache(): void {
     this.benchmarkCache.clear();
