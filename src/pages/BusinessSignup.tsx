@@ -6,35 +6,47 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertCircle, Building, Mail, Lock, MapPin, User, Palette } from 'lucide-react';
+import { AlertCircle, Mail, Lock, MapPin, ChevronRight, ChevronLeft } from 'lucide-react';
+import EstablishmentTypeSelector from '@/components/business/EstablishmentTypeSelector';
+import { ESTABLISHMENT_TYPES, LYON_CITIES } from '@/data/establishmentTypes';
 
 const BusinessSignup = () => {
   const navigate = useNavigate();
   const { businessSignUp, loading } = useAuth();
+  const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
+    // Step 1
+    establishmentName: '',
+    establishmentType: '',
+    location: '',
+    // Step 2
     email: '',
     password: '',
-    confirmPassword: '',
-    username: '',
-    clientName: '',
-    clientType: '',
-    location: '',
-    brandColor: '#FF7A1F'
+    confirmPassword: ''
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const businessTypes = [
-    { value: 'restaurant', label: 'Restaurant' },
-    { value: 'bar', label: 'Bar / Pub' },
-    { value: 'club', label: 'Club de nuit' },
-    { value: 'culturel', label: 'Lieu culturel' },
-    { value: 'sport', label: 'Salle de sport' },
-    { value: 'organisateur', label: 'Organisateur d\'événements' },
-    { value: 'autre', label: 'Autre' }
-  ];
+  const validateStep1 = () => {
+    const newErrors: Record<string, string> = {};
 
-  const validateForm = () => {
+    if (!formData.establishmentName) {
+      newErrors.establishmentName = 'Nom de l\'établissement requis';
+    }
+
+    if (!formData.establishmentType) {
+      newErrors.establishmentType = 'Type d\'établissement requis';
+    }
+
+    if (!formData.location) {
+      newErrors.location = 'Ville requise';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateStep2 = () => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.email) {
@@ -53,39 +65,34 @@ const BusinessSignup = () => {
       newErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
     }
 
-    if (!formData.username) {
-      newErrors.username = 'Nom d\'utilisateur requis';
-    }
-
-    if (!formData.clientName) {
-      newErrors.clientName = 'Nom de l\'établissement requis';
-    }
-
-    if (!formData.clientType) {
-      newErrors.clientType = 'Type d\'établissement requis';
-    }
-
-    if (!formData.location) {
-      newErrors.location = 'Localisation requise';
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const handleNextStep = () => {
+    if (validateStep1()) {
+      setCurrentStep(2);
+    }
+  };
+
+  const handlePrevStep = () => {
+    setCurrentStep(1);
+    setErrors({});
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
+    if (!validateStep2()) return;
 
     setIsSubmitting(true);
     try {
       const { error } = await businessSignUp(formData.email, formData.password, {
-        username: formData.username,
-        clientName: formData.clientName,
-        clientType: formData.clientType,
+        username: formData.establishmentName.toLowerCase().replace(/\s+/g, '_'),
+        clientName: formData.establishmentName,
+        clientType: formData.establishmentType,
         location: formData.location,
-        brandColor: formData.brandColor
+        brandColor: '#FF7A1F'
       });
 
       if (!error) {
@@ -110,6 +117,166 @@ const BusinessSignup = () => {
     }
   };
 
+  const renderStep1 = () => (
+    <div className="space-y-6">
+      {/* Establishment Name */}
+      <div className="space-y-2">
+        <Label htmlFor="establishmentName">
+          Nom de votre établissement
+        </Label>
+        <Input
+          id="establishmentName"
+          type="text"
+          placeholder="Mon Restaurant Lyon"
+          value={formData.establishmentName}
+          onChange={(e) => handleInputChange('establishmentName', e.target.value)}
+          className={errors.establishmentName ? 'border-destructive' : ''}
+        />
+        {errors.establishmentName && (
+          <p className="text-sm text-destructive flex items-center gap-1">
+            <AlertCircle className="w-3 h-3" />
+            {errors.establishmentName}
+          </p>
+        )}
+      </div>
+
+      {/* Establishment Type */}
+      <EstablishmentTypeSelector
+        types={ESTABLISHMENT_TYPES}
+        value={formData.establishmentType}
+        onChange={(value) => handleInputChange('establishmentType', value)}
+        error={errors.establishmentType}
+      />
+
+      {/* Location */}
+      <div className="space-y-2">
+        <Label className="flex items-center gap-2">
+          <MapPin className="w-4 h-4" />
+          Ville
+        </Label>
+        <Select
+          value={formData.location}
+          onValueChange={(value) => handleInputChange('location', value)}
+        >
+          <SelectTrigger className={errors.location ? 'border-destructive' : ''}>
+            <SelectValue placeholder="Sélectionnez votre ville" />
+          </SelectTrigger>
+          <SelectContent>
+            {LYON_CITIES.map((city) => (
+              <SelectItem key={city} value={city}>
+                {city}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {errors.location && (
+          <p className="text-sm text-destructive flex items-center gap-1">
+            <AlertCircle className="w-3 h-3" />
+            {errors.location}
+          </p>
+        )}
+      </div>
+
+      <Button 
+        onClick={handleNextStep}
+        className="w-full"
+        type="button"
+      >
+        Continuer
+        <ChevronRight className="ml-2 h-4 w-4" />
+      </Button>
+    </div>
+  );
+
+  const renderStep2 = () => (
+    <div className="space-y-6">
+      {/* Email */}
+      <div className="space-y-2">
+        <Label htmlFor="email" className="flex items-center gap-2">
+          <Mail className="w-4 h-4" />
+          Email professionnel
+        </Label>
+        <Input
+          id="email"
+          type="email"
+          placeholder="contact@monestablissement.fr"
+          value={formData.email}
+          onChange={(e) => handleInputChange('email', e.target.value)}
+          className={errors.email ? 'border-destructive' : ''}
+        />
+        {errors.email && (
+          <p className="text-sm text-destructive flex items-center gap-1">
+            <AlertCircle className="w-3 h-3" />
+            {errors.email}
+          </p>
+        )}
+      </div>
+
+      {/* Password */}
+      <div className="space-y-2">
+        <Label htmlFor="password" className="flex items-center gap-2">
+          <Lock className="w-4 h-4" />
+          Mot de passe
+        </Label>
+        <Input
+          id="password"
+          type="password"
+          placeholder="••••••••"
+          value={formData.password}
+          onChange={(e) => handleInputChange('password', e.target.value)}
+          className={errors.password ? 'border-destructive' : ''}
+        />
+        {errors.password && (
+          <p className="text-sm text-destructive flex items-center gap-1">
+            <AlertCircle className="w-3 h-3" />
+            {errors.password}
+          </p>
+        )}
+      </div>
+
+      {/* Confirm Password */}
+      <div className="space-y-2">
+        <Label htmlFor="confirmPassword" className="flex items-center gap-2">
+          <Lock className="w-4 h-4" />
+          Confirmer le mot de passe
+        </Label>
+        <Input
+          id="confirmPassword"
+          type="password"
+          placeholder="••••••••"
+          value={formData.confirmPassword}
+          onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+          className={errors.confirmPassword ? 'border-destructive' : ''}
+        />
+        {errors.confirmPassword && (
+          <p className="text-sm text-destructive flex items-center gap-1">
+            <AlertCircle className="w-3 h-3" />
+            {errors.confirmPassword}
+          </p>
+        )}
+      </div>
+
+      <div className="flex gap-3">
+        <Button 
+          onClick={handlePrevStep}
+          variant="outline"
+          className="flex-1"
+          type="button"
+        >
+          <ChevronLeft className="mr-2 h-4 w-4" />
+          Retour
+        </Button>
+        <Button 
+          type="submit" 
+          className="flex-1" 
+          disabled={loading || isSubmitting}
+        >
+          {isSubmitting ? 'Création...' : 'Créer mon compte'}
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
@@ -118,204 +285,20 @@ const BusinessSignup = () => {
             Créer un compte établissement
           </CardTitle>
           <CardDescription>
-            Rejoignez Wouli et connectez-vous avec vos clients Lyon
+            Étape {currentStep} sur 2 - {currentStep === 1 ? 'Informations établissement' : 'Accès au compte'}
           </CardDescription>
+          
+          {/* Progress bar */}
+          <div className="flex gap-2 mt-4">
+            <div className={`h-2 flex-1 rounded-full ${currentStep >= 1 ? 'bg-primary' : 'bg-muted'}`} />
+            <div className={`h-2 flex-1 rounded-full ${currentStep >= 2 ? 'bg-primary' : 'bg-muted'}`} />
+          </div>
         </CardHeader>
         
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Email */}
-            <div className="space-y-2">
-              <Label htmlFor="email" className="flex items-center gap-2">
-                <Mail className="w-4 h-4" />
-                Email professionnel
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="contact@monestablissement.fr"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                className={errors.email ? 'border-destructive' : ''}
-              />
-              {errors.email && (
-                <p className="text-sm text-destructive flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  {errors.email}
-                </p>
-              )}
-            </div>
-
-            {/* Password */}
-            <div className="space-y-2">
-              <Label htmlFor="password" className="flex items-center gap-2">
-                <Lock className="w-4 h-4" />
-                Mot de passe
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={(e) => handleInputChange('password', e.target.value)}
-                className={errors.password ? 'border-destructive' : ''}
-              />
-              {errors.password && (
-                <p className="text-sm text-destructive flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  {errors.password}
-                </p>
-              )}
-            </div>
-
-            {/* Confirm Password */}
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="flex items-center gap-2">
-                <Lock className="w-4 h-4" />
-                Confirmer le mot de passe
-              </Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={formData.confirmPassword}
-                onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                className={errors.confirmPassword ? 'border-destructive' : ''}
-              />
-              {errors.confirmPassword && (
-                <p className="text-sm text-destructive flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  {errors.confirmPassword}
-                </p>
-              )}
-            </div>
-
-            {/* Username */}
-            <div className="space-y-2">
-              <Label htmlFor="username" className="flex items-center gap-2">
-                <User className="w-4 h-4" />
-                Nom d'utilisateur
-              </Label>
-              <Input
-                id="username"
-                type="text"
-                placeholder="mon_etablissement_lyon"
-                value={formData.username}
-                onChange={(e) => handleInputChange('username', e.target.value)}
-                className={errors.username ? 'border-destructive' : ''}
-              />
-              {errors.username && (
-                <p className="text-sm text-destructive flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  {errors.username}
-                </p>
-              )}
-            </div>
-
-            {/* Business Name */}
-            <div className="space-y-2">
-              <Label htmlFor="clientName" className="flex items-center gap-2">
-                <Building className="w-4 h-4" />
-                Nom de l'établissement
-              </Label>
-              <Input
-                id="clientName"
-                type="text"
-                placeholder="Mon Restaurant Lyon"
-                value={formData.clientName}
-                onChange={(e) => handleInputChange('clientName', e.target.value)}
-                className={errors.clientName ? 'border-destructive' : ''}
-              />
-              {errors.clientName && (
-                <p className="text-sm text-destructive flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  {errors.clientName}
-                </p>
-              )}
-            </div>
-
-            {/* Business Type */}
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Building className="w-4 h-4" />
-                Type d'établissement
-              </Label>
-              <Select
-                value={formData.clientType}
-                onValueChange={(value) => handleInputChange('clientType', value)}
-              >
-                <SelectTrigger className={errors.clientType ? 'border-destructive' : ''}>
-                  <SelectValue placeholder="Sélectionnez votre type d'établissement" />
-                </SelectTrigger>
-                <SelectContent>
-                  {businessTypes.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.clientType && (
-                <p className="text-sm text-destructive flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  {errors.clientType}
-                </p>
-              )}
-            </div>
-
-            {/* Location */}
-            <div className="space-y-2">
-              <Label htmlFor="location" className="flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                Adresse complète
-              </Label>
-              <Input
-                id="location"
-                type="text"
-                placeholder="123 Rue de la République, 69002 Lyon"
-                value={formData.location}
-                onChange={(e) => handleInputChange('location', e.target.value)}
-                className={errors.location ? 'border-destructive' : ''}
-              />
-              {errors.location && (
-                <p className="text-sm text-destructive flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  {errors.location}
-                </p>
-              )}
-            </div>
-
-            {/* Brand Color */}
-            <div className="space-y-2">
-              <Label htmlFor="brandColor" className="flex items-center gap-2">
-                <Palette className="w-4 h-4" />
-                Couleur de marque (optionnel)
-              </Label>
-              <div className="flex gap-2">
-                <Input
-                  id="brandColor"
-                  type="color"
-                  value={formData.brandColor}
-                  onChange={(e) => handleInputChange('brandColor', e.target.value)}
-                  className="w-16 h-10 p-1 border"
-                />
-                <Input
-                  type="text"
-                  value={formData.brandColor}
-                  onChange={(e) => handleInputChange('brandColor', e.target.value)}
-                  placeholder="#FF7A1F"
-                  className="flex-1"
-                />
-              </div>
-            </div>
-
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={loading || isSubmitting}
-            >
-              {isSubmitting ? 'Création du compte...' : 'Créer mon compte établissement'}
-            </Button>
+          <form onSubmit={handleSubmit}>
+            {currentStep === 1 && renderStep1()}
+            {currentStep === 2 && renderStep2()}
           </form>
 
           <div className="mt-6 text-center">
