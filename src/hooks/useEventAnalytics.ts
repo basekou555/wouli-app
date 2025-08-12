@@ -12,10 +12,11 @@ interface EventAnalyticsData {
   benchmark: BenchmarkData | null;
   categoryRank: { rank: number; total: number } | null;
   insights: Array<{
-    type: 'positive' | 'warning' | 'opportunity';
+    type: 'positive' | 'warning' | 'opportunity' | 'timing' | 'competition';
     title: string;
     description: string;
     action?: string;
+    priority: number;
   }>;
   loading: boolean;
   error: string | null;
@@ -58,7 +59,7 @@ export const useEventAnalytics = (event: UnifiedEvent | null) => {
         const categoryRank = await hybridAnalyticsService.getCategoryRank(event);
 
         // Generate insights
-        const insights = hybridAnalyticsService.generateInsights(metrics, benchmark);
+        const insights = hybridAnalyticsService.generateInsights(metrics, benchmark, event);
 
         setData({
           metrics,
@@ -113,7 +114,7 @@ export const useEventAnalytics = (event: UnifiedEvent | null) => {
           );
           const benchmark = await hybridAnalyticsService.getBenchmark(event.category);
           const categoryRank = await hybridAnalyticsService.getCategoryRank(event);
-          const insights = hybridAnalyticsService.generateInsights(metrics, benchmark);
+          const insights = hybridAnalyticsService.generateInsights(metrics, benchmark, event);
 
           setData({
             metrics,

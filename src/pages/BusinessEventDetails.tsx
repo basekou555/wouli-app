@@ -8,6 +8,8 @@ import { useToast } from '@/hooks/use-toast';
 import EventInsights from '@/components/business/analytics/EventInsights';
 import PerformanceGauge from '@/components/business/analytics/PerformanceGauge';
 import MetricCard from '@/components/business/analytics/MetricCard';
+import WouliMetricsGrid from '@/components/business/analytics/WouliMetricsGrid';
+import RecommendationsSection from '@/components/business/analytics/RecommendationsSection';
 import { useEventAnalytics } from '@/hooks/useEventAnalytics';
 import { hybridAnalyticsService } from '@/services/hybridAnalyticsService';
 
@@ -175,8 +177,16 @@ const BusinessEventDetails = () => {
             />
           </div>
 
-          {/* Insights Section */}
-          <EventInsights insights={insights} />
+          {/* WOULI Metrics Advanced Grid */}
+          {metrics?.wouli && (
+            <WouliMetricsGrid metrics={metrics.wouli} />
+          )}
+
+          {/* Enhanced Recommendations Section */}
+          <RecommendationsSection insights={insights} />
+
+          {/* Legacy Insights (keeping for compatibility) */}
+          <EventInsights insights={insights.map(insight => ({ ...insight, priority: insight.priority || 0 }))} />
 
           {/* Event Details Grid */}
           <div className="grid lg:grid-cols-3 gap-8">

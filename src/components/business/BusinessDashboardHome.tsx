@@ -121,7 +121,8 @@ export function BusinessDashboardHome() {
           insights.forEach((insight, index) => {
             realAlerts.push({
               id: `${event.id}-${index}`,
-              type: insight.type === 'warning' ? 'critical' : insight.type,
+              type: insight.type === 'warning' ? 'critical' : 
+                    insight.type === 'timing' || insight.type === 'competition' ? 'opportunity' : insight.type,
               title: insight.title,
               description: insight.description,
               action: insight.action

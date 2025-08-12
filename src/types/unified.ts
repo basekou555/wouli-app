@@ -17,6 +17,7 @@ export interface UnifiedEvent extends BaseEvent {
   price_text?: string;
   end_date?: string;
   max_participants?: number;
+  capacity?: number;
   address?: string;
   tags?: string[];
   external_url?: string;

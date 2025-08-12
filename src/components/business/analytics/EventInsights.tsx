@@ -6,14 +6,17 @@ import {
   CheckCircle, 
   AlertTriangle, 
   Lightbulb, 
-  ArrowRight 
+  ArrowRight,
+  Clock,
+  Target
 } from 'lucide-react';
 
 interface Insight {
-  type: 'positive' | 'warning' | 'opportunity';
+  type: 'positive' | 'warning' | 'opportunity' | 'timing' | 'competition';
   title: string;
   description: string;
   action?: string;
+  priority?: number;
 }
 
 interface EventInsightsProps {
@@ -28,11 +31,15 @@ const EventInsights: React.FC<EventInsightsProps> = ({
   const getInsightIcon = (type: string) => {
     switch (type) {
       case 'positive':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
+        return <CheckCircle className="h-4 w-4 text-success" />;
       case 'warning':
-        return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
+        return <AlertTriangle className="h-4 w-4 text-destructive" />;
       case 'opportunity':
-        return <Lightbulb className="h-4 w-4 text-blue-600" />;
+        return <Lightbulb className="h-4 w-4 text-primary" />;
+      case 'timing':
+        return <Clock className="h-4 w-4 text-accent" />;
+      case 'competition':
+        return <Target className="h-4 w-4 text-secondary" />;
       default:
         return <Lightbulb className="h-4 w-4" />;
     }
@@ -46,6 +53,10 @@ const EventInsights: React.FC<EventInsightsProps> = ({
         return 'destructive';
       case 'opportunity':
         return 'secondary';
+      case 'timing':
+        return 'outline';
+      case 'competition':
+        return 'outline';
       default:
         return 'outline';
     }
@@ -59,6 +70,10 @@ const EventInsights: React.FC<EventInsightsProps> = ({
         return 'À améliorer';
       case 'opportunity':
         return 'Opportunité';
+      case 'timing':
+        return 'Timing';
+      case 'competition':
+        return 'Position';
       default:
         return 'Insight';
     }
