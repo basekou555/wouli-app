@@ -195,6 +195,16 @@ const BusinessEventDetails = () => {
             />
           </div>
 
+          {/* Description Section - Moved here */}
+          {event.description && (
+            <Card className="max-w-4xl mx-auto">
+              <CardContent className="p-6">
+                <h3 className="font-semibold text-lg mb-3">Description</h3>
+                <p className="text-muted-foreground leading-relaxed">{event.description}</p>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Insights Section */}
           <EventInsights insights={insights} />
 
@@ -244,12 +254,6 @@ const BusinessEventDetails = () => {
                     </div>
                   )}
 
-                  {event.description && (
-                    <div className="mt-6">
-                      <h3 className="font-semibold text-lg mb-2">Description</h3>
-                      <p className="text-gray-700 leading-relaxed">{event.description}</p>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             </div>
