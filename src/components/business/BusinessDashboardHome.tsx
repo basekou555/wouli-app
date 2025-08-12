@@ -3,6 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useBusinessAnalytics } from '@/contexts/BusinessAnalyticsContext';
+import { useBusinessMetrics } from '@/hooks/useBusinessMetrics';
+import { useBusinessEvents } from '@/hooks/useBusinessEvents';
+import { useNavigate } from 'react-router-dom';
 import { 
   Eye, 
   Users, 
@@ -14,6 +17,10 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { Alert } from '@/data/simulatedAnalytics';
+import HealthScore from './analytics/HealthScore';
+import MetricsGrid from './analytics/MetricsGrid';
+import TopEventsGrid from './analytics/TopEventsGrid';
+import FunnelChart from './analytics/FunnelChart';
 
 const AlertCard: React.FC<{ alert: Alert }> = ({ alert }) => {
   const getAlertIcon = (type: Alert['type']) => {
@@ -54,80 +61,49 @@ const AlertCard: React.FC<{ alert: Alert }> = ({ alert }) => {
 };
 
 export function BusinessDashboardHome() {
-  const { metrics, alerts, events, loading } = useBusinessAnalytics();
+  const { alerts } = useBusinessAnalytics();
+  const { metrics, loading: metricsLoading } = useBusinessMetrics();
+  const { events, loading: eventsLoading } = useBusinessEvents();
+  const navigate = useNavigate();
+
+  const loading = metricsLoading || eventsLoading;
 
   if (loading) {
-    return <div className="animate-pulse">Chargement...</div>;
+    return <div className="animate-pulse">Chargement du dashboard...</div>;
   }
 
-  const topPerformingEvent = events.sort((a, b) => b.performance_score - a.performance_score)[0];
+  const handleEventClick = (eventId: string) => {
+    navigate(`/business/events/${eventId}`);
+  };
+
+  // Créer les données pour le funnel
+  const funnelData = metrics ? [
+    { name: 'Vues', value: metrics.totalViews, color: 'hsl(var(--primary))' },
+    { name: 'Likes', value: metrics.totalLikes, color: 'hsl(var(--secondary))' },
+    { name: 'Participants', value: metrics.totalParticipants, color: 'hsl(var(--accent))' }
+  ] : [];
 
   return (
     <div className="space-y-6">
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Événements actifs
-            </CardTitle>
-            <Calendar className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">{metrics.total_events}</div>
-            <p className="text-xs text-muted-foreground">
-              +2 ce mois-ci
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Vues totales
-            </CardTitle>
-            <Eye className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">{metrics.total_views}</div>
-            <p className="text-xs text-green-600">
-              +{metrics.growth_7d}% cette semaine
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Participants
-            </CardTitle>
-            <Users className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">{metrics.total_participants}</div>
-            <p className="text-xs text-muted-foreground">
-              {metrics.avg_conversion.toFixed(1)}% taux de conversion
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Position marché
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">#{metrics.market_position}</div>
-            <p className="text-xs text-muted-foreground">
-              {metrics.best_performing_category}
-            </p>
-          </CardContent>
-        </Card>
+      {/* Dashboard Header - HealthScore et Métriques principales */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <div className="lg:col-span-1">
+          {metrics && (
+            <HealthScore 
+              score={metrics.healthScore} 
+              details={metrics.healthDetails}
+            />
+          )}
+        </div>
+        
+        <div className="lg:col-span-4">
+          {metrics && (
+            <MetricsGrid metrics={metrics} />
+          )}
+        </div>
       </div>
 
-      {/* Alerts Section */}
+      {/* Alertes & Recommandations */}
       {alerts.length > 0 && (
         <div>
           <h2 className="text-lg font-semibold text-foreground mb-4">Alertes & Recommandations</h2>
@@ -139,36 +115,19 @@ export function BusinessDashboardHome() {
         </div>
       )}
 
-      {/* Performance Highlight */}
-      {topPerformingEvent && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg text-foreground">Meilleure Performance</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium text-foreground">{topPerformingEvent.title}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {topPerformingEvent.participants} participants • {topPerformingEvent.conversion_rate.toFixed(1)}% conversion
-                </p>
-                <div className="flex items-center space-x-2 mt-2">
-                  <Badge variant="outline" className="text-xs">
-                    Score: {topPerformingEvent.performance_score}/10
-                  </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    Position #{topPerformingEvent.competitor_rank}
-                  </Badge>
-                </div>
-              </div>
-              <Button variant="outline">
-                Voir détails
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Analytics détaillées */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <FunnelChart 
+          stages={funnelData}
+          title="Entonnoir de conversion"
+        />
+        
+        <TopEventsGrid 
+          events={events || []}
+          title="Top événements"
+          onEventClick={handleEventClick}
+        />
+      </div>
     </div>
   );
 }
