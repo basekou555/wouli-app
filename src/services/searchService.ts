@@ -53,6 +53,7 @@ export const searchEvents = async (
         .from('events')
         .select('*')
         .or(`title.ilike.%${query}%,description.ilike.%${query}%,location.ilike.%${query}%`)
+        .not('status', 'eq', 'archived')
         .order('date', { ascending: true });
 
       if (validCategory) {
