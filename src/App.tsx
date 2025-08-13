@@ -6,6 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { RatingModal } from "@/components/rating/RatingModal";
+import { useRatingModal } from "@/hooks/useRatingModal";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import UserApp from "./pages/UserApp";
@@ -37,15 +39,12 @@ const queryClient = new QueryClient({
   },
 });
 
-function App() {
+function AppContent() {
+  const { modalState, submitRating, skipRating, canSkip, progress } = useRatingModal();
+
   return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
+    <>
+      <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/auth" element={
@@ -147,6 +146,29 @@ function App() {
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
+            
+            <RatingModal
+              isOpen={modalState.isOpen}
+              event={modalState.event}
+              isBlocking={modalState.isBlocking}
+              canSkip={canSkip}
+              progress={progress}
+              onSubmit={submitRating}
+              onSkip={skipRating}
+            />
+          </>
+  );
+}
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <AppContent />
           </TooltipProvider>
         </AuthProvider>
       </QueryClientProvider>

@@ -40,6 +40,11 @@ export interface BusinessEvent extends BaseEvent {
   is_recurring?: boolean;
   avg_attendance?: number;
   total_editions?: number;
+  // Archiving and rating fields
+  status?: 'active' | 'archived';
+  duration_hours?: number;
+  end_time?: string;
+  average_rating?: number;
 }
 
 export interface EventInteraction {
