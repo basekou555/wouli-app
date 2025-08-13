@@ -100,10 +100,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let businessData = null;
     
     try {
-      // Fetch user profile
+      // Fetch user profile - only select essential fields for security
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, username, type, bio, city, avatar_url, created_at, updated_at')
         .eq('id', userId)
         .single();
 

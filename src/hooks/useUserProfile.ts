@@ -42,10 +42,10 @@ export const useUserProfile = () => {
     }
 
     try {
-      // Récupérer le profil utilisateur
+      // Récupérer le profil utilisateur - only select fields the user owns
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, username, type, bio, city, avatar_url, phone, website, address, created_at, updated_at')
         .eq('id', user.id)
         .single();
 
