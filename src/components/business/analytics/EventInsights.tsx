@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, AlertTriangle, Lightbulb, ArrowRight } from 'lucide-react';
 interface Insight {
-  type: 'positive' | 'warning' | 'opportunity';
+  type: 'positive' | 'warning' | 'opportunity' | 'timing' | 'competition';
   title: string;
   description: string;
   action?: string;
