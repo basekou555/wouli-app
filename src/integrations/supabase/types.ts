@@ -363,6 +363,13 @@ export type Database = {
             foreignKeyName: "events_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "business_profiles_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -422,6 +429,13 @@ export type Database = {
             foreignKeyName: "events_pending_validated_by_fkey"
             columns: ["validated_by"]
             isOneToOne: false
+            referencedRelation: "business_profiles_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_pending_validated_by_fkey"
+            columns: ["validated_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -471,7 +485,36 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      business_profiles_public: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          city: string | null
+          created_at: string | null
+          id: string | null
+          type: Database["public"]["Enums"]["user_type"] | null
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          city?: string | null
+          created_at?: string | null
+          id?: string | null
+          type?: Database["public"]["Enums"]["user_type"] | null
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          city?: string | null
+          created_at?: string | null
+          id?: string | null
+          type?: Database["public"]["Enums"]["user_type"] | null
+          username?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_user_display_info: {
