@@ -474,6 +474,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_public_business_info: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          username: string
+          bio: string
+          city: string
+          avatar_url: string
+        }[]
+      }
       get_user_display_info: {
         Args: { user_ids: string[] }
         Returns: {
