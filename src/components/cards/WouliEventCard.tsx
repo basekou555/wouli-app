@@ -3,13 +3,13 @@ import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Heart, X, Share2, Eye, Users } from 'lucide-react';
+import { Heart, X, Share2, Eye, Users, Euro } from 'lucide-react';
 import { UnifiedEvent } from '@/types/unified';
 import { 
   getUrgencyBadge, 
   getSocialProofText, 
   formatEventDateTime, 
-  getPriceDisplay, 
+  getPriceInfo, 
   getLocationDisplay 
 } from '@/utils/eventCardHelpers';
 
@@ -67,8 +67,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
   // Card content for swipe variant
   const SwipeCardContent = () => {
     const urgencyLabel = getUrgencyBadge(event.date, event.time);
-    const priceText = getPriceDisplay(event.price_text);
-    const showPrice = priceText !== 'Gratuit';
+    const priceInfo = getPriceInfo(event.price_text);
     const friends = event.friendsParticipating || [];
     const totalParticipants = event.totalParticipants || event.participants || 0;
 
@@ -111,10 +110,11 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
             <h3 className="font-bold text-lg text-foreground truncate flex-1 cursor-pointer">
               {event.title}
             </h3>
-            {showPrice && (
-              <span className="text-purple-500 font-semibold whitespace-nowrap">
-                • {priceText}
-              </span>
+            {!priceInfo.isFree && (
+              <div className="flex items-center gap-1 text-purple-500 font-semibold whitespace-nowrap">
+                <Euro className="w-4 h-4" />
+                <span>{priceInfo.display}</span>
+              </div>
             )}
           </div>
           
@@ -233,8 +233,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
   // VARIANTE LIST
   if (variant === 'list') {
     const urgencyLabel = getUrgencyBadge(event.date, event.time);
-    const priceText = getPriceDisplay(event.price_text);
-    const showPrice = priceText !== 'Gratuit';
+    const priceInfo = getPriceInfo(event.price_text);
     const friends = event.friendsParticipating || [];
     const totalParticipants = event.totalParticipants || event.participants || 0;
 
@@ -278,10 +277,11 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
               <h3 className="font-semibold text-sm text-foreground truncate flex-1">
                 {event.title}
               </h3>
-              {showPrice && (
-                <span className="text-purple-500 font-medium text-sm whitespace-nowrap">
-                  • {priceText}
-                </span>
+              {!priceInfo.isFree && (
+                <div className="flex items-center gap-1 text-purple-500 font-medium text-sm whitespace-nowrap">
+                  <Euro className="w-3 h-3" />
+                  <span>{priceInfo.display}</span>
+                </div>
               )}
             </div>
             

@@ -56,6 +56,12 @@ export const getPriceDisplay = (priceText?: string): string => {
   return priceText;
 };
 
+export const getPriceInfo = (priceText?: string): { display: string; isFree: boolean } => {
+  if (!priceText) return { display: 'Gratuit', isFree: true };
+  if (priceText.toLowerCase().includes('gratuit') || priceText === '0€') return { display: 'Gratuit', isFree: true };
+  return { display: priceText, isFree: false };
+};
+
 export const getLocationDisplay = (venue?: string, location?: string): string => {
   return venue || location?.split(',')[0].trim() || 'Lieu non spécifié';
 };
