@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -471,33 +471,95 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_events: {
+        Row: {
+          ambiance_photo_url: string | null
+          capacity: number | null
+          category: string | null
+          custom_venue: string | null
+          date: string | null
+          description: string | null
+          event_type: string | null
+          id: string | null
+          image_url: string | null
+          is_recurring: boolean | null
+          likes: number | null
+          participants: number | null
+          price: string | null
+          time: string | null
+          title: string | null
+          venue: string | null
+          venue_photo_url: string | null
+          views: number | null
+        }
+        Insert: {
+          ambiance_photo_url?: string | null
+          capacity?: number | null
+          category?: string | null
+          custom_venue?: string | null
+          date?: string | null
+          description?: string | null
+          event_type?: string | null
+          id?: string | null
+          image_url?: string | null
+          is_recurring?: boolean | null
+          likes?: number | null
+          participants?: number | null
+          price?: string | null
+          time?: string | null
+          title?: string | null
+          venue?: string | null
+          venue_photo_url?: string | null
+          views?: number | null
+        }
+        Update: {
+          ambiance_photo_url?: string | null
+          capacity?: number | null
+          category?: string | null
+          custom_venue?: string | null
+          date?: string | null
+          description?: string | null
+          event_type?: string | null
+          id?: string | null
+          image_url?: string | null
+          is_recurring?: boolean | null
+          likes?: number | null
+          participants?: number | null
+          price?: string | null
+          time?: string | null
+          title?: string | null
+          venue?: string | null
+          venue_photo_url?: string | null
+          views?: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_public_business_info: {
         Args: Record<PropertyKey, never>
         Returns: {
-          id: string
-          username: string
+          avatar_url: string
           bio: string
           city: string
-          avatar_url: string
+          id: string
+          username: string
         }[]
       }
       get_user_display_info: {
         Args: { user_ids: string[] }
         Returns: {
+          avatar_url: string
           id: string
           username: string
-          avatar_url: string
         }[]
       }
       get_user_stats: {
         Args: { user_uuid: string }
         Returns: {
+          events_created: number
           events_liked: number
           events_participated: number
-          events_created: number
         }[]
       }
       increment_event_views: {
