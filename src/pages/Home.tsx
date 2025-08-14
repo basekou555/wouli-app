@@ -1,13 +1,10 @@
-
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowRight, Users, Building, MapPin, Sparkles, MousePointer2 } from "lucide-react";
 import SwipePreview from "@/components/SwipePreview";
-
 const Home = () => {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-neutral-100">
+  return <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-neutral-100">
       {/* Header */}
       <div className="bg-background/80 backdrop-blur-sm border-b sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
@@ -38,9 +35,7 @@ const Home = () => {
             <h2 className="text-3xl md:text-4xl font-bold text-gradient mb-6">
               Swipe. Sors. Profite.
             </h2>
-            <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Découvre les meilleures sorties à Lyon en swipant comme sur Tinder
-            </p>
+            <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">Découvre les meilleures sorties à Lyon en swipant</p>
           </div>
 
           {/* Swipe Preview Interactive */}
@@ -49,10 +44,7 @@ const Home = () => {
           {/* CTA Principal */}
           <div className="text-center mt-12">
             <Link to="/app">
-              <Button 
-                size="lg" 
-                className="text-xl px-12 py-6 rounded-full hover:scale-105 transition-transform duration-300 animate-pulse-soft touch-target"
-              >
+              <Button size="lg" className="text-xl px-12 py-6 rounded-full hover:scale-105 transition-transform duration-300 animate-pulse-soft touch-target">
                 Voir les sorties de ce soir →
               </Button>
             </Link>
@@ -181,8 +173,6 @@ const Home = () => {
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Home;
