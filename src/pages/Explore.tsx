@@ -221,6 +221,30 @@ const Explore = () => {
     setCurrentIndex(prev => Math.min(prev + 1, filteredEvents.length - 1));
   };
 
+  // Fonctions dédiées pour les swipes - fix du bug de cartes bloquées
+  const handleSwipeLeft = () => {
+    console.log('👈 Swipe left détecté - prochaine carte');
+    setCurrentIndex(prev => Math.min(prev + 1, filteredEvents.length - 1));
+  };
+
+  const handleSwipeRight = async (eventId: string) => {
+    console.log('👉 Swipe right détecté - like + prochaine carte');
+    
+    // Avancer immédiatement l'index pour éviter les cartes bloquées
+    setCurrentIndex(prev => Math.min(prev + 1, filteredEvents.length - 1));
+
+    // Mise à jour optimiste de l'UI
+    setUserInteractions(prev => ({
+      ...prev,
+      liked: new Set([...prev.liked, eventId])
+    }));
+
+    // Like en arrière-plan avec synchro des compteurs
+    const event = filteredEvents.find(e => e.id === eventId);
+    await simpleLike(eventId, event?.title);
+    await refetch();
+  };
+
   const handleViewEvent = async (eventId: string) => {
     console.log('👁️ Vue d\'événement dans Explore pour:', eventId);
     await handleIncrementViews(eventId);
@@ -328,8 +352,8 @@ const Explore = () => {
                       }}
                       onCardClick={() => handleViewEvent(event.id)}
                       enableSwipe={isCurrentCard}
-                      onSwipeLeft={() => setCurrentIndex(prev => Math.min(prev + 1, filteredEvents.length - 1))}
-                      onSwipeRight={() => handleLike(event.id)}
+                      onSwipeLeft={handleSwipeLeft}
+                      onSwipeRight={() => handleSwipeRight(event.id)}
                       className="w-full h-full"
                     />
                   </div>
