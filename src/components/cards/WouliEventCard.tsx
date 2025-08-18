@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -46,6 +46,10 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
   onSwipeLeft,
   onSwipeRight
 }) => {
+  // Motion values for Tinder-like behavior
+  const x = useMotionValue(0);
+  const rotate = useTransform(x, [-120, 120], [-15, 15]);
+
   const handleDragEnd = (_: any, info: any) => {
     if (!enableSwipe) return;
     
@@ -54,13 +58,21 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
     
     console.log('🔄 Drag ended:', { offset, velocity });
     
-    // Lower thresholds for better mobile experience
-    if (offset > 50 || velocity > 300) {
-      console.log('➡️ Swipe right detected');
-      onSwipeRight?.();
-    } else if (offset < -50 || velocity < -300) {
-      console.log('⬅️ Swipe left detected');
-      onSwipeLeft?.();
+    // SEUIL TINDER STRICT
+    const swipeThreshold = 80;
+    const velocityThreshold = 500;
+    
+    if (Math.abs(offset) > swipeThreshold || Math.abs(velocity) > velocityThreshold) {
+      if (offset > 0 || velocity > 0) {
+        console.log('➡️ Swipe RIGHT validé');
+        onSwipeRight?.();
+      } else {
+        console.log('⬅️ Swipe LEFT validé');
+        onSwipeLeft?.();
+      }
+    } else {
+      console.log('🔄 Swipe annulé - retour au centre');
+      // Framer Motion remet automatiquement au centre
     }
   };
 
@@ -210,14 +222,22 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
     return enableSwipe ? (
       <motion.div
         drag="x"
-        dragConstraints={{ left: -150, right: 150 }}
-        dragElastic={0.1}
+        dragConstraints={{ left: -120, right: 120 }}
+        dragElastic={0.15}
         dragMomentum={false}
         onDragEnd={handleDragEnd}
-        whileDrag={{ scale: 1.02, rotate: 5 }}
-        whileTap={{ scale: 0.98 }}
-        className="cursor-grab active:cursor-grabbing touch-none"
-        style={{ touchAction: 'none' }}
+        style={{ x, rotate }}
+        whileDrag={{ 
+          scale: 1.05,
+          zIndex: 50
+        }}
+        animate={{ x: 0, y: 0, rotate: 0 }}
+        transition={{ 
+          type: "spring", 
+          stiffness: 400, 
+          damping: 30 
+        }}
+        className="cursor-grab active:cursor-grabbing"
       >
         <Card className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card ${className}`}>
           <SwipeCardContent />

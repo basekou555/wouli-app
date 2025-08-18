@@ -314,73 +314,88 @@ const Explore = () => {
         )}
 
         <div className="flex-1 flex items-center justify-center p-4 relative">
-          {filteredEvents.length > 0 && (
-            <div className="relative w-full max-w-sm mx-auto h-[600px]">
-              {/* Stack of cards - show next cards behind current one */}
-              {filteredEvents.slice(currentIndex, currentIndex + 3).map((event, stackIndex) => {
-                const isCurrentCard = stackIndex === 0;
-                const zIndex = 30 - stackIndex;
-                const scale = 1 - (stackIndex * 0.05);
-                const yOffset = stackIndex * 8;
-                
-                return (
-                  <div
-                    key={`${event.id}-${currentIndex + stackIndex}`}
-                    className="absolute inset-0"
-                    style={{
-                      zIndex,
-                      transform: `scale(${scale}) translateY(${yOffset}px)`,
-                      opacity: isCurrentCard ? 1 : 0.7
-                    }}
-                  >
-                    <WouliEventCard
-                      event={event}
-                      variant="swipe"
-                      isLiked={userInteractions.liked.has(event.id)}
-                      isParticipating={userInteractions.participating.has(event.id)}
-                      onLike={() => handleLike(event.id)}
-                      onDislike={handleDislike}
-                      onParticipate={() => handleParticipate(event.id)}
-                      onShare={() => {
-                        if (navigator.share) {
-                          navigator.share({
-                            title: event.title,
-                            text: `Découvre ${event.title} sur Wouli !`,
-                            url: window.location.href
-                          });
-                        }
-                      }}
-                      onCardClick={() => handleViewEvent(event.id)}
-                      enableSwipe={isCurrentCard}
-                      onSwipeLeft={handleSwipeLeft}
-                      onSwipeRight={() => handleSwipeRight(event.id)}
-                      className="w-full h-full"
-                    />
-                  </div>
-                );
-              })}
-              
-              {/* Action buttons overlay - hidden during drag */}
-              {currentEvent && (
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-4 z-20 pointer-events-none">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="rounded-full bg-background/80 backdrop-blur-sm border-2 pointer-events-auto"
-                    onClick={handleDislike}
-                  >
-                    <X className="h-5 w-5" />
-                  </Button>
-                  <Button
-                    variant="default"
-                    size="icon" 
-                    className="rounded-full bg-gradient-primary border-2 border-white pointer-events-auto"
-                    onClick={() => handleLike(currentEvent.id)}
-                  >
-                    <Heart className={`h-5 w-5 ${userInteractions.liked.has(currentEvent.id) ? 'fill-current' : ''}`} />
-                  </Button>
+          {/* Container pour le stack Tinder-like */}
+          <div className="relative h-[600px] w-full max-w-sm mx-auto">
+            {/* CARTE ACTIVE UNIQUE */}
+            {currentIndex < filteredEvents.length && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <WouliEventCard
+                  event={filteredEvents[currentIndex]}
+                  variant="swipe"
+                  isLiked={userInteractions.liked.has(filteredEvents[currentIndex].id)}
+                  isParticipating={userInteractions.participating.has(filteredEvents[currentIndex].id)}
+                  onLike={() => handleLike(filteredEvents[currentIndex].id)}
+                  onParticipate={() => handleParticipate(filteredEvents[currentIndex].id)}
+                  onDislike={handleDislike}
+                  onShare={() => {
+                    if (navigator.share) {
+                      navigator.share({
+                        title: filteredEvents[currentIndex].title,
+                        text: `Découvre ${filteredEvents[currentIndex].title} sur Wouli !`,
+                        url: window.location.href
+                      });
+                    }
+                  }}
+                  onCardClick={() => handleViewEvent(filteredEvents[currentIndex].id)}
+                  enableSwipe={true}
+                  onSwipeLeft={handleSwipeLeft}
+                  onSwipeRight={() => handleSwipeRight(filteredEvents[currentIndex].id)}
+                  className="w-full h-full"
+                />
+              </div>
+            )}
+            
+            {/* PREVIEW CARTE SUIVANTE (optionnel, derrière, scale 95%) */}
+            {currentIndex + 1 < filteredEvents.length && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="transform scale-95 opacity-30 -z-10">
+                  <WouliEventCard
+                    event={filteredEvents[currentIndex + 1]}
+                    variant="swipe"
+                    isLiked={userInteractions.liked.has(filteredEvents[currentIndex + 1].id)}
+                    isParticipating={userInteractions.participating.has(filteredEvents[currentIndex + 1].id)}
+                    onLike={() => {}}
+                    onParticipate={() => {}}
+                    onDislike={() => {}}
+                    onShare={() => {}}
+                    onCardClick={() => {}}
+                    enableSwipe={false}
+                    className="w-full h-full"
+                  />
                 </div>
-              )}
+              </div>
+            )}
+            
+            {/* Action buttons overlay - centrés en bas */}
+            {currentIndex < filteredEvents.length && (
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-4 z-20 pointer-events-none">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="rounded-full bg-background/80 backdrop-blur-sm border-2 pointer-events-auto"
+                  onClick={handleSwipeLeft}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+                <Button
+                  variant="default"
+                  size="icon" 
+                  className="rounded-full bg-gradient-primary border-2 border-white pointer-events-auto"
+                  onClick={() => handleSwipeRight(filteredEvents[currentIndex].id)}
+                >
+                  <Heart className={`h-5 w-5 ${userInteractions.liked.has(filteredEvents[currentIndex].id) ? 'fill-current' : ''}`} />
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Message de fin */}
+          {currentIndex >= filteredEvents.length && (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Plus d'événements à découvrir !</p>
+              <Button onClick={clearFilters} className="mt-4">
+                Réinitialiser les filtres
+              </Button>
             </div>
           )}
           
