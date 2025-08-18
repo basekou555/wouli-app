@@ -40,21 +40,13 @@ export const useSwipeEvents = (): SwipeEventsResult => {
     const viewedIds = (viewed || []).map(v => v.event_id);
 
     // Fetch upcoming events not viewed yet and not archived
-    let query = supabase
+    const { data: upcoming, error } = await (supabase as any)
       .from('events')
       .select('*')
-      .neq('status', 'archived') // Exclure les événements archivés
+      .neq('status', 'archived')
       .gte('date', new Date().toISOString())
       .order('date', { ascending: true })
       .limit(40);
-
-    // Apply NOT IN filter when possible, else filter client-side
-    if (viewedIds.length > 0) {
-      // @ts-ignore postgrest supports not.in
-      query = query.not('id', 'in', viewedIds);
-    }
-
-    const { data: upcoming, error } = await query;
 
     if (error) {
       console.error('Failed fetching events', error);

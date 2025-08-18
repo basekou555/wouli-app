@@ -44,15 +44,15 @@ export const UserMemories = () => {
       }
 
       const memoriesData = eventParticipations?.map(item => {
-        const event = item.events;
-        if (!event || typeof event !== 'object') return null;
+        const event = item.events as any;
+        if (!event?.id) return null;
         return {
-          id: event.id || '',
+          id: event.id,
           title: event.title || '',
           description: event.description || '',
           date: event.date || '',
           location: event.location || '',
-          category: event.category || 'a-boire',
+          category: (event.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites') || 'a-boire',
           image_url: event.image_url || null,
           views: event.views || 0,
           likes: event.likes || 0,
@@ -64,7 +64,7 @@ export const UserMemories = () => {
           organizer_type: 'user' as const,
           participated_at: item.created_at
         };
-      }).filter(Boolean) || [];
+      }).filter((memory): memory is NonNullable<typeof memory> => memory !== null) || [];
 
       setMemories(memoriesData);
     } catch (error) {
