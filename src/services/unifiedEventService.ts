@@ -3,10 +3,10 @@ import { UnifiedEvent } from '@/types/unified';
 import { BusinessEvent } from '@/types/events';
 
 export const fetchAllEvents = async (): Promise<UnifiedEvent[]> => {
+  // Utiliser la vue active_events pour récupérer seulement les événements actifs et futurs
   const { data: allEvents, error } = await supabase
-    .from('events')
+    .from('active_events')
     .select('*')
-    .gte('date', new Date().toISOString())
     .order('date', { ascending: true });
 
   if (error) {
@@ -74,11 +74,11 @@ export const fetchBusinessEvents = async (): Promise<UnifiedEvent[]> => {
 };
 
 const fetchEventsByType = async (type: 'user' | 'business'): Promise<UnifiedEvent[]> => {
+  // Utiliser la vue active_events filtrée par type
   const { data: events, error } = await supabase
-    .from('events')
+    .from('active_events')
     .select('*')
     .eq('created_by_type', type)
-    .gte('date', new Date().toISOString())
     .order('date', { ascending: true });
 
   if (error) {
@@ -140,12 +140,13 @@ export const fetchBusinessEventsForDashboard = async (): Promise<BusinessEvent[]
     return [];
   }
 
+  // Récupérer TOUS les événements business (actifs ET archivés) pour le dashboard
   const { data, error } = await supabase
     .from('events')
     .select('*')
     .eq('created_by', user.id)
     .eq('created_by_type', 'business')
-    .order('date', { ascending: true });
+    .order('date', { ascending: false }); // Ordre décroissant pour voir les plus récents d'abord
 
   if (error) throw error;
   

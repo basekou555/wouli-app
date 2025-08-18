@@ -41,6 +41,13 @@ export type Database = {
             foreignKeyName: "admin_events_import_event_id_fkey"
             columns: ["event_id"]
             isOneToOne: true
+            referencedRelation: "active_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_events_import_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
             referencedRelation: "events"
             referencedColumns: ["id"]
           },
@@ -283,6 +290,13 @@ export type Database = {
             foreignKeyName: "event_views_event_id_fkey"
             columns: ["event_id"]
             isOneToOne: false
+            referencedRelation: "active_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_views_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
             referencedRelation: "events"
             referencedColumns: ["id"]
           },
@@ -290,7 +304,9 @@ export type Database = {
       }
       events: {
         Row: {
+          actual_participants: number | null
           address: string | null
+          archived_at: string | null
           category: Database["public"]["Enums"]["event_category"]
           created_at: string | null
           created_by: string
@@ -298,22 +314,27 @@ export type Database = {
           date: string
           description: string | null
           end_date: string | null
+          end_time: string | null
           external_url: string | null
           id: string
           image_url: string | null
           likes: number | null
           location: string
           max_participants: number | null
+          no_show_count: number | null
           participants: number | null
           price: number | null
           search_appearances: number | null
+          status: string | null
           tags: string[] | null
           title: string
           updated_at: string | null
           views: number | null
         }
         Insert: {
+          actual_participants?: number | null
           address?: string | null
+          archived_at?: string | null
           category: Database["public"]["Enums"]["event_category"]
           created_at?: string | null
           created_by: string
@@ -321,22 +342,27 @@ export type Database = {
           date: string
           description?: string | null
           end_date?: string | null
+          end_time?: string | null
           external_url?: string | null
           id?: string
           image_url?: string | null
           likes?: number | null
           location: string
           max_participants?: number | null
+          no_show_count?: number | null
           participants?: number | null
           price?: number | null
           search_appearances?: number | null
+          status?: string | null
           tags?: string[] | null
           title: string
           updated_at?: string | null
           views?: number | null
         }
         Update: {
+          actual_participants?: number | null
           address?: string | null
+          archived_at?: string | null
           category?: Database["public"]["Enums"]["event_category"]
           created_at?: string | null
           created_by?: string
@@ -344,15 +370,18 @@ export type Database = {
           date?: string
           description?: string | null
           end_date?: string | null
+          end_time?: string | null
           external_url?: string | null
           id?: string
           image_url?: string | null
           likes?: number | null
           location?: string
           max_participants?: number | null
+          no_show_count?: number | null
           participants?: number | null
           price?: number | null
           search_appearances?: number | null
+          status?: string | null
           tags?: string[] | null
           title?: string
           updated_at?: string | null
@@ -471,6 +500,107 @@ export type Database = {
       }
     }
     Views: {
+      active_events: {
+        Row: {
+          actual_participants: number | null
+          address: string | null
+          archived_at: string | null
+          category: Database["public"]["Enums"]["event_category"] | null
+          created_at: string | null
+          created_by: string | null
+          created_by_type:
+            | Database["public"]["Enums"]["event_creator_type"]
+            | null
+          date: string | null
+          description: string | null
+          end_date: string | null
+          end_time: string | null
+          external_url: string | null
+          id: string | null
+          image_url: string | null
+          likes: number | null
+          location: string | null
+          max_participants: number | null
+          no_show_count: number | null
+          participants: number | null
+          price: number | null
+          search_appearances: number | null
+          status: string | null
+          tags: string[] | null
+          title: string | null
+          updated_at: string | null
+          views: number | null
+        }
+        Insert: {
+          actual_participants?: number | null
+          address?: string | null
+          archived_at?: string | null
+          category?: Database["public"]["Enums"]["event_category"] | null
+          created_at?: string | null
+          created_by?: string | null
+          created_by_type?:
+            | Database["public"]["Enums"]["event_creator_type"]
+            | null
+          date?: string | null
+          description?: string | null
+          end_date?: string | null
+          end_time?: string | null
+          external_url?: string | null
+          id?: string | null
+          image_url?: string | null
+          likes?: number | null
+          location?: string | null
+          max_participants?: number | null
+          no_show_count?: number | null
+          participants?: number | null
+          price?: number | null
+          search_appearances?: number | null
+          status?: string | null
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string | null
+          views?: number | null
+        }
+        Update: {
+          actual_participants?: number | null
+          address?: string | null
+          archived_at?: string | null
+          category?: Database["public"]["Enums"]["event_category"] | null
+          created_at?: string | null
+          created_by?: string | null
+          created_by_type?:
+            | Database["public"]["Enums"]["event_creator_type"]
+            | null
+          date?: string | null
+          description?: string | null
+          end_date?: string | null
+          end_time?: string | null
+          external_url?: string | null
+          id?: string | null
+          image_url?: string | null
+          likes?: number | null
+          location?: string | null
+          max_participants?: number | null
+          no_show_count?: number | null
+          participants?: number | null
+          price?: number | null
+          search_appearances?: number | null
+          status?: string | null
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string | null
+          views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       public_events: {
         Row: {
           ambiance_photo_url: string | null
@@ -536,6 +666,10 @@ export type Database = {
       }
     }
     Functions: {
+      archive_past_events: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       get_public_business_info: {
         Args: Record<PropertyKey, never>
         Returns: {
