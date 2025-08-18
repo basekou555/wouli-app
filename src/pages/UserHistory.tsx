@@ -4,11 +4,12 @@ import AppLayout from '../components/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, MapPin, Users, Heart, X, Trash2 } from 'lucide-react';
+import { Calendar, MapPin, Users, Heart, X, Trash2, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import BottomNavigation from '../components/BottomNavigation';
 import { useUserHistory } from '../hooks/useUserHistory';
 import { PageSkeleton } from '../components/LoadingSkeleton';
+import { UserMemories } from '../components/memories/UserMemories';
 import { UnifiedEvent } from '@/types/unified';
 
 const formatDate = (dateString: string) => {
@@ -84,11 +85,11 @@ const UserHistory = () => {
         <div className="py-6 space-y-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Mes Événements</h1>
-            <p className="text-gray-500">Gérez vos favoris et participations</p>
+            <p className="text-gray-500">Gérez vos favoris, participations et souvenirs</p>
           </div>
 
           <Tabs defaultValue="liked" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="liked" className="flex items-center">
                 <Heart className="h-4 w-4 mr-2" />
                 Favoris ({likedEvents.length})
@@ -96,6 +97,10 @@ const UserHistory = () => {
               <TabsTrigger value="participating" className="flex items-center">
                 <Calendar className="h-4 w-4 mr-2" />
                 Participations ({participatingEvents.length})
+              </TabsTrigger>
+              <TabsTrigger value="memories" className="flex items-center">
+                <Star className="h-4 w-4 mr-2" />
+                Memories
               </TabsTrigger>
             </TabsList>
 
@@ -147,6 +152,10 @@ const UserHistory = () => {
                   </Link>
                 </div>
               )}
+            </TabsContent>
+
+            <TabsContent value="memories" className="mt-6">
+              <UserMemories />
             </TabsContent>
           </Tabs>
         </div>

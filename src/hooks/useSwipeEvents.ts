@@ -39,10 +39,11 @@ export const useSwipeEvents = (): SwipeEventsResult => {
 
     const viewedIds = (viewed || []).map(v => v.event_id);
 
-    // Fetch upcoming events not viewed yet
+    // Fetch upcoming events not viewed yet and not archived
     let query = supabase
       .from('events')
       .select('*')
+      .neq('status', 'archived') // Exclure les événements archivés
       .gte('date', new Date().toISOString())
       .order('date', { ascending: true })
       .limit(40);
