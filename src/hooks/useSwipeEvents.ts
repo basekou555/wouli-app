@@ -39,11 +39,10 @@ export const useSwipeEvents = (): SwipeEventsResult => {
 
     const viewedIds = (viewed || []).map(v => v.event_id);
 
-    // Fetch upcoming events not viewed yet and not archived
+    // Fetch upcoming events not viewed yet
     const { data: upcoming, error } = await (supabase as any)
       .from('events')
       .select('*')
-      .neq('status', 'archived')
       .gte('date', new Date().toISOString())
       .order('date', { ascending: true })
       .limit(40);

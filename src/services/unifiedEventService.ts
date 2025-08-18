@@ -6,6 +6,7 @@ export const fetchAllEvents = async (): Promise<UnifiedEvent[]> => {
   const { data: allEvents, error } = await supabase
     .from('events')
     .select('*')
+    .gte('date', new Date().toISOString())
     .order('date', { ascending: true });
 
   if (error) {
@@ -77,6 +78,7 @@ const fetchEventsByType = async (type: 'user' | 'business'): Promise<UnifiedEven
     .from('events')
     .select('*')
     .eq('created_by_type', type)
+    .gte('date', new Date().toISOString())
     .order('date', { ascending: true });
 
   if (error) {
