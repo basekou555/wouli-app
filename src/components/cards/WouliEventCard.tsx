@@ -51,14 +51,14 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
   const [showLikeAnimation, setShowLikeAnimation] = useState(false);
   const [showDislikeAnimation, setShowDislikeAnimation] = useState(false);
 
-  // Motion values pour animations fluides
+  // Motion values pour animations ultra-fluides
   const x = useMotionValue(0);
-  const rotate = useTransform(x, [-150, 150], [-12, 12]);
+  const rotate = useTransform(x, [-200, 200], [-15, 15]);
   
-  // Animation values basées sur le drag
-  const scale = useTransform(x, [-150, 0, 150], [1.02, 1.02, 1.02]);
-  const y = useTransform(x, [-150, 0, 150], [15, 0, 15], { clamp: false });
-  const brightness = useTransform(x, [-150, -40, 0, 40, 150], [0.85, 0.85, 1.05, 1.15, 1.15]);
+  // Animation values optimisées pour performance
+  const scale = useTransform(x, [-200, 0, 200], [1.05, 1.02, 1.05]);
+  const y = useTransform(x, [-200, 0, 200], [10, 0, 10], { clamp: false });
+  const brightness = useTransform(x, [-200, -60, 0, 60, 200], [0.8, 0.9, 1.05, 1.15, 1.2]);
   
   // Vibration helper avec fallback gracieux
   const vibrate = (pattern: number | number[]) => {
@@ -73,16 +73,22 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
     setIsDragging(false);
     
     const offset = info.offset.x;
-    const velocity = info.velocity.x;
-    const absOffset = Math.abs(offset);
+    const velocity = Math.abs(info.velocity.x);
+    const distance = Math.abs(offset);
     
     console.log('🔄 Drag ended:', { offset, velocity });
     
-    // SEUILS ADDICTIFS OPTIMISÉS
-    const swipeThreshold = 80;
-    const velocityThreshold = 400;
+    // ÉVALUATION INTELLIGENTE inspirée react-tinder-card
+    const swipeRequirementType = 'velocity'; // ou 'position'
     
-    if (absOffset > swipeThreshold || Math.abs(velocity) > velocityThreshold) {
+    let shouldSwipe = false;
+    if (swipeRequirementType === 'velocity') {
+      shouldSwipe = velocity > 300;  // Basé sur vitesse
+    } else {
+      shouldSwipe = distance > window.innerWidth * 0.25; // 25% de l'écran
+    }
+    
+    if (shouldSwipe) {
       // SWIPE VALIDÉ = RÉCOMPENSE MAXIMALE
       
       // Vibration de satisfaction
@@ -254,9 +260,18 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
       <div className="relative">
         <motion.div
           drag="x"
-          dragConstraints={{ left: -150, right: 150 }}
-          dragElastic={0.2}
-          dragMomentum={false}
+          dragConstraints={{ left: -200, right: 200 }}
+          dragElastic={0.1}                           // Moins d'élasticité = plus de contrôle
+          dragMomentum={false}                        // Pas de momentum libre
+          dragTransition={{ 
+            power: 0.2,                               // Mouvement plus naturel
+            timeConstant: 150                         // Plus réactif
+          }}
+          
+          // OPTIMISATION PERFORMANCE
+          transformTemplate={({ x, rotate, scale }) => 
+            `translate3d(${x}px, 0, 0) rotate(${rotate}deg) scale(${scale})`
+          }
           
           // FEEDBACK INSTANTANÉ
           onDragStart={() => {
@@ -288,12 +303,12 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
             filter: 'brightness(1)'
           }}
           
-          // SPRING ADDICTIF
-          transition={{ 
-            type: "spring", 
-            stiffness: 400,
-            damping: 30,
-            mass: 0.8
+          // SPRING ULTRA OPTIMISÉ
+          transition={{
+            type: "spring",
+            stiffness: 500,      // Plus réactif
+            damping: 35,         // Moins d'oscillation
+            mass: 0.7           // Plus léger = plus fluide
           }}
           className="cursor-grab active:cursor-grabbing"
         >
@@ -311,8 +326,8 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
             exit={{ opacity: 0, scale: 2 }}
             transition={{ duration: 0.3 }}
           >
-            <div className="px-3 py-1 rounded-md bg-green-500/90 text-white text-sm font-bold rotate-12 shadow-lg">
-              ❤️ J'aime
+            <div className="px-4 py-2 rounded-lg bg-green-500/90 text-white text-3xl font-bold rotate-12 shadow-lg">
+              ❤️
             </div>
           </motion.div>
         )}
@@ -326,8 +341,8 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
             exit={{ opacity: 0, scale: 2 }}
             transition={{ duration: 0.3 }}
           >
-            <div className="px-3 py-1 rounded-md bg-red-500/90 text-white text-sm font-bold -rotate-12 shadow-lg">
-              ❌ Nope
+            <div className="px-4 py-2 rounded-lg bg-red-500/90 text-white text-3xl font-bold -rotate-12 shadow-lg">
+              ❌
             </div>
           </motion.div>
         )}
