@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { motion, useMotionValue, useTransform } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { useSpring, animated, to } from '@react-spring/web';
+import { useDrag } from '@use-gesture/react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -46,20 +48,16 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
   onSwipeLeft,
   onSwipeRight
 }) => {
-  // États pour animations addictives
+  // États pour React Spring
   const [isDragging, setIsDragging] = useState(false);
-  const [showLikeAnimation, setShowLikeAnimation] = useState(false);
-  const [showDislikeAnimation, setShowDislikeAnimation] = useState(false);
 
-  // Motion values pour animations ultra-fluides
-  const x = useMotionValue(0);
-  const rotate = useTransform(x, [-200, 200], [-15, 15]);
-  
-  // Animation values optimisées pour performance
-  const scale = useTransform(x, [-200, 0, 200], [1.05, 1.02, 1.05]);
-  const y = useTransform(x, [-200, 0, 200], [10, 0, 10], { clamp: false });
-  const brightness = useTransform(x, [-200, -60, 0, 60, 200], [0.8, 0.9, 1.05, 1.15, 1.2]);
-  
+  // React Spring pour animations ultra-fluides
+  const [{ x, rotate, scale }, api] = useSpring(() => ({ 
+    x: 0, 
+    rotate: 0, 
+    scale: 1 
+  }));
+
   // Vibration helper avec fallback gracieux
   const vibrate = (pattern: number | number[]) => {
     if (navigator.vibrate) {
@@ -67,51 +65,86 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
     }
   };
 
-  const handleDragEnd = (_: any, info: any) => {
+  // Drag handler ultra-optimisé avec use-gesture
+  const bind = useDrag(({ 
+    offset: [ox], 
+    velocity: [vx], 
+    down,
+    first,
+    cancel
+  }) => {
     if (!enableSwipe) return;
     
-    setIsDragging(false);
-    
-    const offset = info.offset.x;
-    const velocity = Math.abs(info.velocity.x);
-    const distance = Math.abs(offset);
-    
-    console.log('🔄 Drag ended:', { offset, velocity });
-    
-    // ÉVALUATION INTELLIGENTE inspirée react-tinder-card
-    const swipeRequirementType = 'velocity'; // ou 'position'
-    
-    let shouldSwipe = false;
-    if (swipeRequirementType === 'velocity') {
-      shouldSwipe = velocity > 300;  // Basé sur vitesse
-    } else {
-      shouldSwipe = distance > window.innerWidth * 0.25; // 25% de l'écran
-    }
-    
-    if (shouldSwipe) {
-      // SWIPE VALIDÉ = RÉCOMPENSE MAXIMALE
-      
-      // Vibration de satisfaction
-      vibrate([15, 50, 15]);
-      
-      if (offset > 0) {
-        // LIKE ANIMATION
-        setShowLikeAnimation(true);
-        setTimeout(() => setShowLikeAnimation(false), 250);
-        console.log('➡️ Swipe RIGHT validé - Like');
-        onSwipeRight?.();
-      } else {
-        // DISLIKE ANIMATION  
-        setShowDislikeAnimation(true);
-        setTimeout(() => setShowDislikeAnimation(false), 250);
-        console.log('⬅️ Swipe LEFT validé - Dislike');
-        onSwipeLeft?.();
+    if (down) {
+      // FEEDBACK INSTANTANÉ au premier drag
+      if (first) {
+        setIsDragging(true);
+        vibrate(8); // Vibration de démarrage
       }
+      
+      // PENDANT LE DRAG - Animation instantanée
+      api.start({ 
+        x: ox, 
+        rotate: ox * 0.1, 
+        scale: 1.05,
+        immediate: true  // Zéro lag !
+      });
     } else {
-      console.log('🔄 Swipe annulé - retour au centre');
-      // Spring bouncy pour encourager à re-essayer
+      // FIN DU DRAG - ÉVALUATION SWIPE
+      setIsDragging(false);
+      
+      const velocity = Math.abs(vx);
+      const distance = Math.abs(ox);
+      
+      console.log('🔄 Drag ended:', { offset: ox, velocity });
+      
+      // ÉVALUATION INTELLIGENTE inspirée react-tinder-card
+      const swipeRequirementType = 'velocity';
+      let shouldSwipe = false;
+      
+      if (swipeRequirementType === 'velocity') {
+        shouldSwipe = velocity > 0.3;  // Basé sur vitesse
+      } else {
+        shouldSwipe = distance > window.innerWidth * 0.3; // 30% de l'écran
+      }
+      
+      if (shouldSwipe) {
+        // SWIPE VALIDÉ - Animation de sortie
+        vibrate([10, 30, 10]);
+        
+        api.start({ 
+          x: ox > 0 ? window.innerWidth : -window.innerWidth,
+          rotate: ox > 0 ? 45 : -45,
+          scale: 0.8,
+          config: { tension: 200, friction: 20 }
+        });
+        
+        setTimeout(() => {
+          if (ox > 0) {
+            console.log('➡️ Swipe RIGHT validé - Like');
+            onSwipeRight?.();
+          } else {
+            console.log('⬅️ Swipe LEFT validé - Dislike');
+            onSwipeLeft?.();
+          }
+        }, 200);
+        
+      } else {
+        // RETOUR AU CENTRE
+        console.log('🔄 Swipe annulé - retour au centre');
+        api.start({ 
+          x: 0, 
+          rotate: 0, 
+          scale: 1,
+          config: { tension: 400, friction: 30 }
+        });
+      }
     }
-  };
+  }, {
+    axis: 'x',
+    bounds: { left: -200, right: 200 },
+    rubberband: true
+  });
 
   // Card content for swipe variant
   const SwipeCardContent = () => {
@@ -258,94 +291,43 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
   if (variant === 'swipe') {
     return enableSwipe ? (
       <div className="relative">
-        <motion.div
-          drag="x"
-          dragConstraints={{ left: -200, right: 200 }}
-          dragElastic={0.1}                           // Moins d'élasticité = plus de contrôle
-          dragMomentum={false}                        // Pas de momentum libre
-          dragTransition={{ 
-            power: 0.2,                               // Mouvement plus naturel
-            timeConstant: 150                         // Plus réactif
-          }}
-          
-          // OPTIMISATION PERFORMANCE
-          transformTemplate={({ x, rotate, scale }) => 
-            `translate3d(${x}px, 0, 0) rotate(${rotate}deg) scale(${scale})`
-          }
-          
-          // FEEDBACK INSTANTANÉ
-          onDragStart={() => {
-            setIsDragging(true);
-            vibrate(8);
-          }}
-          
-          onDragEnd={handleDragEnd}
-          style={{ 
-            x, 
+        <animated.div
+          {...bind()}
+          style={{
+            x,
             rotate,
             scale,
-            y: y
-          }}
-          
-          // ANIMATION ADDICTIVE PENDANT DRAG
-          whileDrag={{ 
-            zIndex: 50,
-            filter: "brightness(1.1)",
-            boxShadow: "0 20px 40px rgba(0,0,0,0.15)"
-          }}
-          
-          // POSITION DE REPOS PARFAITE
-          animate={{ 
-            x: 0, 
-            y: 0, 
-            rotate: 0,
-            scale: 1,
-            filter: 'brightness(1)'
-          }}
-          
-          // SPRING ULTRA OPTIMISÉ
-          transition={{
-            type: "spring",
-            stiffness: 500,      // Plus réactif
-            damping: 35,         // Moins d'oscillation
-            mass: 0.7           // Plus léger = plus fluide
+            transform: 'translate3d(0,0,0)', // GPU acceleration
+            touchAction: 'none',
+            willChange: 'transform'
           }}
           className="cursor-grab active:cursor-grabbing"
         >
           <Card className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card ${className}`}>
             <SwipeCardContent />
           </Card>
-        </motion.div>
+        </animated.div>
 
-        {/* OVERLAY LIKE ANIMATION */}
-        {showLikeAnimation && (
-          <motion.div
-            className="absolute inset-0 pointer-events-none z-50 flex items-center justify-center"
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1.2 }}
-            exit={{ opacity: 0, scale: 2 }}
-            transition={{ duration: 0.3 }}
-          >
-            <div className="px-4 py-2 rounded-lg bg-green-500/90 text-white text-3xl font-bold rotate-12 shadow-lg">
-              ❤️
-            </div>
-          </motion.div>
-        )}
-
-        {/* OVERLAY DISLIKE ANIMATION */}
-        {showDislikeAnimation && (
-          <motion.div
-            className="absolute inset-0 pointer-events-none z-50 flex items-center justify-center"
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1.2 }}
-            exit={{ opacity: 0, scale: 2 }}
-            transition={{ duration: 0.3 }}
-          >
-            <div className="px-4 py-2 rounded-lg bg-red-500/90 text-white text-3xl font-bold -rotate-12 shadow-lg">
-              ❌
-            </div>
-          </motion.div>
-        )}
+        {/* OVERLAYS AVEC EMOJIS REACT SPRING */}
+        <animated.div
+          style={{
+            opacity: to([x], (x) => x > 50 ? (x - 50) / 100 : 0),
+            pointerEvents: 'none'
+          }}
+          className="absolute top-6 left-6 text-4xl z-50"
+        >
+          ❤️
+        </animated.div>
+        
+        <animated.div
+          style={{
+            opacity: to([x], (x) => x < -50 ? (-x - 50) / 100 : 0),
+            pointerEvents: 'none'
+          }}
+          className="absolute top-6 right-6 text-4xl z-50"
+        >
+          ❌
+        </animated.div>
       </div>
     ) : (
       <Card className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card ${className}`}>
