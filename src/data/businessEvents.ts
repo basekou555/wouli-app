@@ -1,4 +1,3 @@
-
 import { BusinessEvent } from '@/types/events';
 
 export const demoBusinessEvents: BusinessEvent[] = [
@@ -9,7 +8,6 @@ export const demoBusinessEvents: BusinessEvent[] = [
     description: 'Une soirée jazz intimiste avec le trio "Lyon Jazz Collective". Ambiance feutrée et cocktails signatures.',
     date: '2024-06-20',
     time: '20:00',
-    location: 'Blue Note Bar',
     venue: 'Blue Note Bar',
     category: 'a-boire',
     event_type: 'a-boire',
@@ -26,7 +24,6 @@ export const demoBusinessEvents: BusinessEvent[] = [
     description: 'Tous les cocktails à -50% de 18h à 20h ! Découvrez nos créations originales dans une ambiance décontractée.',
     date: '2024-06-18',
     time: '18:00',
-    location: 'Blue Note Bar',
     venue: 'Blue Note Bar',
     category: 'a-boire',
     event_type: 'a-boire',
@@ -43,7 +40,6 @@ export const demoBusinessEvents: BusinessEvent[] = [
     description: 'Soirée découverte avec notre sommelier. Sélection de vins locaux accompagnés de fromages d\'exception.',
     date: '2024-06-22',
     time: '19:30',
-    location: 'Blue Note Bar',
     venue: 'Blue Note Bar',
     category: 'a-manger',
     event_type: 'a-manger',
@@ -54,7 +50,7 @@ export const demoBusinessEvents: BusinessEvent[] = [
     participants: 32,
     user_id: 'demo-user-1'
   },
-
+  
   // Club Nyx - Events
   {
     id: 'demo-event-4',
@@ -62,7 +58,6 @@ export const demoBusinessEvents: BusinessEvent[] = [
     description: 'La plus grosse soirée électro de Lyon ! DJ internationaux, lightshow exceptionnel et ambiance survoltée.',
     date: '2024-06-21',
     time: '22:00',
-    location: 'Club Nyx',
     venue: 'Club Nyx',
     category: 'soirees',
     event_type: 'soirees',
@@ -79,7 +74,6 @@ export const demoBusinessEvents: BusinessEvent[] = [
     description: 'Soirée spéciale pour les femmes ! Entrée gratuite et cocktails offerts jusqu\'à minuit.',
     date: '2024-06-19',
     time: '21:00',
-    location: 'Club Nyx',
     venue: 'Club Nyx',
     category: 'soirees',
     event_type: 'soirees',
@@ -87,10 +81,10 @@ export const demoBusinessEvents: BusinessEvent[] = [
     image_url: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800&h=600&fit=crop',
     views: 445,
     likes: 89,
-    participants: 167,
+    participants: 156,
     user_id: 'demo-user-2'
   },
-
+  
   // FitMax Gym - Events
   {
     id: 'demo-event-6',
@@ -98,7 +92,6 @@ export const demoBusinessEvents: BusinessEvent[] = [
     description: 'Commencez votre journée en douceur avec notre cours de yoga matinal. Tous niveaux bienvenus.',
     date: '2024-06-17',
     time: '07:00',
-    location: 'FitMax Gym',
     venue: 'FitMax Gym',
     category: 'activites',
     event_type: 'activites',
@@ -106,7 +99,7 @@ export const demoBusinessEvents: BusinessEvent[] = [
     image_url: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800&h=600&fit=crop',
     views: 123,
     likes: 34,
-    participants: 28,
+    participants: 18,
     user_id: 'demo-user-3'
   },
   {
@@ -115,7 +108,6 @@ export const demoBusinessEvents: BusinessEvent[] = [
     description: 'Défi CrossFit inter-équipes ! Venez tester vos limites dans une ambiance conviviale et motivante.',
     date: '2024-06-23',
     time: '10:00',
-    location: 'FitMax Gym',
     venue: 'FitMax Gym',
     category: 'activites',
     event_type: 'activites',
@@ -123,7 +115,7 @@ export const demoBusinessEvents: BusinessEvent[] = [
     image_url: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=600&fit=crop',
     views: 267,
     likes: 67,
-    participants: 45,
+    participants: 24,
     user_id: 'demo-user-3'
   },
   {
@@ -132,7 +124,6 @@ export const demoBusinessEvents: BusinessEvent[] = [
     description: 'Cours d\'aqua fitness en musique ! Dépensez-vous dans l\'eau avec notre coach dynamique.',
     date: '2024-06-25',
     time: '19:00',
-    location: 'FitMax Gym',
     venue: 'FitMax Gym',
     category: 'activites',
     event_type: 'activites',
@@ -140,7 +131,7 @@ export const demoBusinessEvents: BusinessEvent[] = [
     image_url: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800&h=600&fit=crop',
     views: 98,
     likes: 23,
-    participants: 19,
+    participants: 15,
     user_id: 'demo-user-3'
   }
 ];

@@ -25,7 +25,7 @@ export interface UserEvent extends BaseEvent {
   created_by_type: 'user' | 'business';
 }
 
-export interface BusinessEvent extends BaseEvent {
+export interface BusinessEvent extends Omit<BaseEvent, 'location'> {
   time: string;
   venue?: string;
   custom_venue?: string;
@@ -41,10 +41,14 @@ export interface BusinessEvent extends BaseEvent {
   avg_attendance?: number;
   total_editions?: number;
   // Archiving and rating fields
-  status?: 'active' | 'archived';
+  status?: 'active' | 'grace_period' | 'archived';
   duration_hours?: number;
   end_time?: string;
   average_rating?: number;
+  // New archiving fields
+  actual_participants?: number;
+  no_show_count?: number;
+  archived_at?: string;
 }
 
 export interface EventInteraction {

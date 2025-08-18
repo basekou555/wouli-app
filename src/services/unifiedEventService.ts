@@ -154,7 +154,6 @@ export const fetchBusinessEventsForDashboard = async (): Promise<BusinessEvent[]
     description: event.description,
     date: event.date.split('T')[0], // Extract date part only
     time: '00:00', // Default time since not in unified table
-    location: event.location,
     venue: event.location, // Use location as venue
     category: event.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
     event_type: event.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
@@ -206,7 +205,6 @@ export const createBusinessEvent = async (
     description: data.description,
     date: data.date.split('T')[0],
     time: data.date.split('T')[1]?.split(':').slice(0, 2).join(':') || '00:00',
-    location: data.location,
     venue: data.location,
     category: data.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
     event_type: data.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
@@ -261,7 +259,6 @@ export const updateBusinessEvent = async (
     description: data.description,
     date: data.date.split('T')[0],
     time: data.date.split('T')[1]?.split(':').slice(0, 2).join(':') || '00:00',
-    location: data.location,
     venue: data.location,
     category: data.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
     event_type: data.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',

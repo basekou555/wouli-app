@@ -43,13 +43,28 @@ export const UserMemories = () => {
         return;
       }
 
-      const memoriesData = eventParticipations?.map(item => ({
-        ...item.events,
-        source: 'user' as const,
-        organizer: 'Organisateur',
-        organizer_type: 'user' as const,
-        participated_at: item.created_at
-      })) || [];
+      const memoriesData = eventParticipations?.map(item => {
+        const event = item.events;
+        if (!event || typeof event !== 'object') return null;
+        return {
+          id: event.id || '',
+          title: event.title || '',
+          description: event.description || '',
+          date: event.date || '',
+          location: event.location || '',
+          category: event.category || 'a-boire',
+          image_url: event.image_url || null,
+          views: event.views || 0,
+          likes: event.likes || 0,
+          participants: event.participants || 0,
+          created_at: event.created_at || '',
+          updated_at: event.updated_at || '',
+          source: 'user' as const,
+          organizer: 'Organisateur',
+          organizer_type: 'user' as const,
+          participated_at: item.created_at
+        };
+      }).filter(Boolean) || [];
 
       setMemories(memoriesData);
     } catch (error) {

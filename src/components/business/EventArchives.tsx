@@ -31,9 +31,11 @@ export const EventArchives = () => {
 
       let query = supabase
         .from('business_events')
-        .select('*')
+        .select(`
+          id, title, description, date, time, venue, custom_venue,
+          category, event_type, price, image_url, views, likes, participants, user_id
+        `)
         .eq('user_id', user.id)
-        .eq('status', 'archived')
         .order('date', { ascending: false });
 
       // Appliquer filtres de date
@@ -52,7 +54,14 @@ export const EventArchives = () => {
         return;
       }
 
-      setArchives(data || []);
+      // Map the data to match BusinessEvent interface
+      const mappedArchives = (data || []).map(item => ({
+        ...item,
+        event_type: item.event_type as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
+        category: item.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites'
+      }));
+
+      setArchives(mappedArchives);
     } catch (error) {
       console.error('Error loading archives:', error);
     } finally {

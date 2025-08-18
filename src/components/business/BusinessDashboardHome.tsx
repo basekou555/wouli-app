@@ -111,7 +111,7 @@ export function BusinessDashboardHome() {
             source: 'business',
             organizer: event.user_id || 'business',
             organizer_type: 'business',
-            location: event.location || 'Lyon'
+            location: event.venue || event.custom_venue || 'Lyon'
           });
 
           const benchmark = await hybridAnalyticsService.getBenchmark(event.category);
