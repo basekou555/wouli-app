@@ -316,9 +316,51 @@ const Explore = () => {
         <div className="flex-1 flex items-center justify-center p-4 relative">
           {/* Container pour le stack Tinder-like */}
           <div className="relative h-[600px] w-full max-w-sm mx-auto">
-            {/* CARTE ACTIVE UNIQUE */}
+            {/* CARTE 3 - Fond lointain */}
+            {currentIndex + 2 < filteredEvents.length && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="transform scale-90 opacity-20 -z-20 blur-sm">
+                  <WouliEventCard
+                    event={filteredEvents[currentIndex + 2]}
+                    variant="swipe"
+                    isLiked={userInteractions.liked.has(filteredEvents[currentIndex + 2].id)}
+                    isParticipating={userInteractions.participating.has(filteredEvents[currentIndex + 2].id)}
+                    onLike={() => {}}
+                    onParticipate={() => {}}
+                    onDislike={() => {}}
+                    onShare={() => {}}
+                    onCardClick={() => {}}
+                    enableSwipe={false}
+                    className="w-full h-full"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* CARTE 2 - Fond proche */}
+            {currentIndex + 1 < filteredEvents.length && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="transform scale-95 opacity-40 -z-10">
+                  <WouliEventCard
+                    event={filteredEvents[currentIndex + 1]}
+                    variant="swipe"
+                    isLiked={userInteractions.liked.has(filteredEvents[currentIndex + 1].id)}
+                    isParticipating={userInteractions.participating.has(filteredEvents[currentIndex + 1].id)}
+                    onLike={() => {}}
+                    onParticipate={() => {}}
+                    onDislike={() => {}}
+                    onShare={() => {}}
+                    onCardClick={() => {}}
+                    enableSwipe={false}
+                    className="w-full h-full"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* CARTE 1 - Active (swipable) */}
             {currentIndex < filteredEvents.length && (
-              <div className="absolute inset-0 flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center justify-center z-10">
                 <WouliEventCard
                   event={filteredEvents[currentIndex]}
                   variant="swipe"
@@ -342,27 +384,6 @@ const Explore = () => {
                   onSwipeRight={() => handleSwipeRight(filteredEvents[currentIndex].id)}
                   className="w-full h-full"
                 />
-              </div>
-            )}
-            
-            {/* PREVIEW CARTE SUIVANTE (optionnel, derrière, scale 95%) */}
-            {currentIndex + 1 < filteredEvents.length && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="transform scale-95 opacity-30 -z-10">
-                  <WouliEventCard
-                    event={filteredEvents[currentIndex + 1]}
-                    variant="swipe"
-                    isLiked={userInteractions.liked.has(filteredEvents[currentIndex + 1].id)}
-                    isParticipating={userInteractions.participating.has(filteredEvents[currentIndex + 1].id)}
-                    onLike={() => {}}
-                    onParticipate={() => {}}
-                    onDislike={() => {}}
-                    onShare={() => {}}
-                    onCardClick={() => {}}
-                    enableSwipe={false}
-                    className="w-full h-full"
-                  />
-                </div>
               </div>
             )}
             

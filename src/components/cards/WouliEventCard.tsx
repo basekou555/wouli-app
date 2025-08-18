@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,33 +46,64 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
   onSwipeLeft,
   onSwipeRight
 }) => {
-  // Motion values for Tinder-like behavior
+  // États pour animations addictives
+  const [isDragging, setIsDragging] = useState(false);
+  const [showLikeAnimation, setShowLikeAnimation] = useState(false);
+  const [showDislikeAnimation, setShowDislikeAnimation] = useState(false);
+
+  // Motion values pour animations fluides
   const x = useMotionValue(0);
-  const rotate = useTransform(x, [-120, 120], [-15, 15]);
+  const rotate = useTransform(x, [-150, 150], [-12, 12]);
+  
+  // Animation values basées sur le drag
+  const scale = useTransform(x, [-150, 0, 150], [1.02, 1.02, 1.02]);
+  const y = useTransform(x, [-150, 0, 150], [15, 0, 15], { clamp: false });
+  const brightness = useTransform(x, [-150, -40, 0, 40, 150], [0.85, 0.85, 1.05, 1.15, 1.15]);
+  
+  // Vibration helper avec fallback gracieux
+  const vibrate = (pattern: number | number[]) => {
+    if (navigator.vibrate) {
+      navigator.vibrate(pattern);
+    }
+  };
 
   const handleDragEnd = (_: any, info: any) => {
     if (!enableSwipe) return;
     
+    setIsDragging(false);
+    
     const offset = info.offset.x;
     const velocity = info.velocity.x;
+    const absOffset = Math.abs(offset);
     
     console.log('🔄 Drag ended:', { offset, velocity });
     
-    // SEUIL TINDER STRICT
+    // SEUILS ADDICTIFS OPTIMISÉS
     const swipeThreshold = 80;
-    const velocityThreshold = 500;
+    const velocityThreshold = 400;
     
-    if (Math.abs(offset) > swipeThreshold || Math.abs(velocity) > velocityThreshold) {
-      if (offset > 0 || velocity > 0) {
-        console.log('➡️ Swipe RIGHT validé');
+    if (absOffset > swipeThreshold || Math.abs(velocity) > velocityThreshold) {
+      // SWIPE VALIDÉ = RÉCOMPENSE MAXIMALE
+      
+      // Vibration de satisfaction
+      vibrate([15, 50, 15]);
+      
+      if (offset > 0) {
+        // LIKE ANIMATION
+        setShowLikeAnimation(true);
+        setTimeout(() => setShowLikeAnimation(false), 250);
+        console.log('➡️ Swipe RIGHT validé - Like');
         onSwipeRight?.();
       } else {
-        console.log('⬅️ Swipe LEFT validé');
+        // DISLIKE ANIMATION  
+        setShowDislikeAnimation(true);
+        setTimeout(() => setShowDislikeAnimation(false), 250);
+        console.log('⬅️ Swipe LEFT validé - Dislike');
         onSwipeLeft?.();
       }
     } else {
       console.log('🔄 Swipe annulé - retour au centre');
-      // Framer Motion remet automatiquement au centre
+      // Spring bouncy pour encourager à re-essayer
     }
   };
 
@@ -220,29 +251,87 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
   // VARIANTE SWIPE
   if (variant === 'swipe') {
     return enableSwipe ? (
-      <motion.div
-        drag="x"
-        dragConstraints={{ left: -120, right: 120 }}
-        dragElastic={0.15}
-        dragMomentum={false}
-        onDragEnd={handleDragEnd}
-        style={{ x, rotate }}
-        whileDrag={{ 
-          scale: 1.05,
-          zIndex: 50
-        }}
-        animate={{ x: 0, y: 0, rotate: 0 }}
-        transition={{ 
-          type: "spring", 
-          stiffness: 400, 
-          damping: 30 
-        }}
-        className="cursor-grab active:cursor-grabbing"
-      >
-        <Card className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card ${className}`}>
-          <SwipeCardContent />
-        </Card>
-      </motion.div>
+      <div className="relative">
+        <motion.div
+          drag="x"
+          dragConstraints={{ left: -150, right: 150 }}
+          dragElastic={0.2}
+          dragMomentum={false}
+          
+          // FEEDBACK INSTANTANÉ
+          onDragStart={() => {
+            setIsDragging(true);
+            vibrate(8);
+          }}
+          
+          onDragEnd={handleDragEnd}
+          style={{ 
+            x, 
+            rotate,
+            scale,
+            y: y
+          }}
+          
+          // ANIMATION ADDICTIVE PENDANT DRAG
+          whileDrag={{ 
+            zIndex: 50,
+            filter: "brightness(1.1)",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.15)"
+          }}
+          
+          // POSITION DE REPOS PARFAITE
+          animate={{ 
+            x: 0, 
+            y: 0, 
+            rotate: 0,
+            scale: 1,
+            filter: 'brightness(1)'
+          }}
+          
+          // SPRING ADDICTIF
+          transition={{ 
+            type: "spring", 
+            stiffness: 400,
+            damping: 30,
+            mass: 0.8
+          }}
+          className="cursor-grab active:cursor-grabbing"
+        >
+          <Card className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card ${className}`}>
+            <SwipeCardContent />
+          </Card>
+        </motion.div>
+
+        {/* OVERLAY LIKE ANIMATION */}
+        {showLikeAnimation && (
+          <motion.div
+            className="absolute inset-0 pointer-events-none z-50 flex items-center justify-center"
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1.2 }}
+            exit={{ opacity: 0, scale: 2 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="px-3 py-1 rounded-md bg-green-500/90 text-white text-sm font-bold rotate-12 shadow-lg">
+              ❤️ J'aime
+            </div>
+          </motion.div>
+        )}
+
+        {/* OVERLAY DISLIKE ANIMATION */}
+        {showDislikeAnimation && (
+          <motion.div
+            className="absolute inset-0 pointer-events-none z-50 flex items-center justify-center"
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1.2 }}
+            exit={{ opacity: 0, scale: 2 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="px-3 py-1 rounded-md bg-red-500/90 text-white text-sm font-bold -rotate-12 shadow-lg">
+              ❌ Nope
+            </div>
+          </motion.div>
+        )}
+      </div>
     ) : (
       <Card className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card ${className}`}>
         <SwipeCardContent />
