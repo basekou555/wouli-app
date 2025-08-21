@@ -409,6 +409,7 @@ export type Database = {
           description: string | null
           external_url: string | null
           id: string
+          image_url: string | null
           location: string
           price: number | null
           status: string
@@ -425,6 +426,7 @@ export type Database = {
           description?: string | null
           external_url?: string | null
           id?: string
+          image_url?: string | null
           location: string
           price?: number | null
           status?: string
@@ -441,6 +443,7 @@ export type Database = {
           description?: string | null
           external_url?: string | null
           id?: string
+          image_url?: string | null
           location?: string
           price?: number | null
           status?: string
@@ -669,6 +672,10 @@ export type Database = {
       }
     }
     Functions: {
+      approve_pending_event: {
+        Args: { p_event_id: string }
+        Returns: undefined
+      }
       archive_past_events: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -703,6 +710,10 @@ export type Database = {
         Args: { event_id: number }
         Returns: undefined
       }
+      is_admin_user: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       is_business_user: {
         Args: Record<PropertyKey, never>
         Returns: boolean
@@ -720,6 +731,10 @@ export type Database = {
           p_title: string
         }
         Returns: string
+      }
+      reject_pending_event: {
+        Args: { p_event_id: string }
+        Returns: undefined
       }
     }
     Enums: {

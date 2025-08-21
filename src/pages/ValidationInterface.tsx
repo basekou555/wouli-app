@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { Calendar, MapPin, Euro, ExternalLink, Check, X, Clock } from 'lucide-re
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import AdminProfileChecker from '@/components/AdminProfileChecker';
 
 interface PendingEvent {
   id: string;
@@ -35,16 +35,20 @@ const ValidationInterface = () => {
 
   const fetchPendingEvents = async () => {
     try {
+      console.log('🔍 Fetching pending events...');
       const { data, error } = await supabase
         .from('events_pending')
         .select('*')
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
+      console.log('📊 Query result:', { data, error });
+
       if (error) throw error;
       setPendingEvents(data || []);
+      console.log('✅ Loaded', data?.length || 0, 'pending events');
     } catch (error) {
-      console.error('Erreur fetch events:', error);
+      console.error('❌ Erreur fetch events:', error);
       toast({
         title: "Erreur",
         description: "Impossible de charger les événements en attente",
@@ -176,6 +180,9 @@ const ValidationInterface = () => {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Admin Status Checker */}
+        <AdminProfileChecker />
+
         {pendingEvents.length === 0 ? (
           <Card className="text-center py-12">
             <CardContent>
