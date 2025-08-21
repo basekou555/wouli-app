@@ -58,7 +58,8 @@ const ValidationInterface = () => {
   const handleApprove = async (eventId: string, eventTitle: string) => {
     setProcessingId(eventId);
     try {
-      const { error } = await supabase.rpc('approve_pending_event', {
+      // Use generic rpc call instead of typed function
+      const { error } = await supabase.rpc('approve_pending_event' as any, {
         p_event_id: eventId
       });
 
@@ -86,7 +87,8 @@ const ValidationInterface = () => {
   const handleReject = async (eventId: string, eventTitle: string) => {
     setProcessingId(eventId);
     try {
-      const { error } = await supabase.rpc('reject_pending_event', {
+      // Use generic rpc call instead of typed function
+      const { error } = await supabase.rpc('reject_pending_event' as any, {
         p_event_id: eventId
       });
 
