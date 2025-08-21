@@ -324,6 +324,7 @@ export type Database = {
           no_show_count: number | null
           participants: number | null
           price: number | null
+          scraped_at: string | null
           search_appearances: number | null
           status: string | null
           tags: string[] | null
@@ -352,6 +353,7 @@ export type Database = {
           no_show_count?: number | null
           participants?: number | null
           price?: number | null
+          scraped_at?: string | null
           search_appearances?: number | null
           status?: string | null
           tags?: string[] | null
@@ -380,6 +382,7 @@ export type Database = {
           no_show_count?: number | null
           participants?: number | null
           price?: number | null
+          scraped_at?: string | null
           search_appearances?: number | null
           status?: string | null
           tags?: string[] | null
@@ -709,7 +712,7 @@ export type Database = {
       event_category: "a-boire" | "a-manger" | "soirees" | "activites"
       event_creator_type: "user" | "business" | "admin"
       participant_status: "going" | "interested"
-      user_type: "user" | "business"
+      user_type: "user" | "business" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -840,7 +843,7 @@ export const Constants = {
       event_category: ["a-boire", "a-manger", "soirees", "activites"],
       event_creator_type: ["user", "business", "admin"],
       participant_status: ["going", "interested"],
-      user_type: ["user", "business"],
+      user_type: ["user", "business", "admin"],
     },
   },
 } as const
