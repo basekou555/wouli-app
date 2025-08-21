@@ -9,7 +9,7 @@ export interface UserProfile {
   phone?: string;
   address?: string;
   website?: string;
-  type: 'user' | 'business';
+  type: 'user' | 'business' | 'admin';
   created_at: string;
   updated_at?: string;
 }

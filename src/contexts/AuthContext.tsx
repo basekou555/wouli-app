@@ -11,7 +11,7 @@ interface AuthContextType {
   session: Session | null;
   profile: UserProfile | null;
   businessConfig: BusinessConfig | null;
-  userType: 'user' | 'business' | null;
+  userType: 'user' | 'business' | 'admin' | null;
   loading: boolean;
   signUp: (email: string, password: string, username: string) => Promise<{ error: any }>;
   businessSignUp: (email: string, password: string, businessData: {
