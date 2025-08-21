@@ -1,14 +1,18 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, Calendar, BarChart3, Shield } from 'lucide-react';
+import AdminMenu from '@/components/AdminMenu';
 
 const AdminDashboard = () => {
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-background">
+      <AdminMenu />
+      
+      <div className="max-w-7xl mx-auto p-6">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
-          <p className="text-muted-foreground mt-2">Panel d'administration Wouli</p>
+          <h1 className="text-3xl font-bold text-foreground">Dashboard Admin</h1>
+          <p className="text-muted-foreground mt-2">Vue d'ensemble de la plateforme Wouli</p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
@@ -64,11 +68,13 @@ const AdminDashboard = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                <span className="text-sm font-medium">Gérer les utilisateurs</span>
-                <span className="text-xs text-muted-foreground">À venir</span>
+                <span className="text-sm font-medium">Valider les événements</span>
+                <a href="/admin/validation" className="text-xs text-primary hover:underline">
+                  Accéder
+                </a>
               </div>
               <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                <span className="text-sm font-medium">Modérer les événements</span>
+                <span className="text-sm font-medium">Gérer les utilisateurs</span>
                 <span className="text-xs text-muted-foreground">À venir</span>
               </div>
               <div className="flex items-center justify-between p-3 bg-muted rounded-lg">

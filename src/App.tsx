@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -27,6 +26,7 @@ import ProfileSettings from "./pages/ProfileSettings";
 import UserProfileSettings from "./pages/UserProfileSettings";
 import BusinessSignup from "./pages/BusinessSignup";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminValidationPage from "./pages/AdminValidationPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AuthRedirect from "./components/AuthRedirect";
 import { AdminRoute } from "./components/AdminRoute";
@@ -149,6 +149,11 @@ function AppContent() {
                 <Route path="/admin" element={
                   <AdminRoute>
                     <AdminDashboard />
+                  </AdminRoute>
+                } />
+                <Route path="/admin/validation" element={
+                  <AdminRoute>
+                    <AdminValidationPage />
                   </AdminRoute>
                 } />
                 
