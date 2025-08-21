@@ -707,6 +707,20 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      propose_event_public: {
+        Args: {
+          p_address: string
+          p_category: Database["public"]["Enums"]["event_category"]
+          p_date: string
+          p_description: string
+          p_external_url?: string
+          p_location: string
+          p_price?: number
+          p_submitter_email?: string
+          p_title: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       event_category: "a-boire" | "a-manger" | "soirees" | "activites"
