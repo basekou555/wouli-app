@@ -26,8 +26,10 @@ import BusinessEventEdit from "./pages/BusinessEventEdit";
 import ProfileSettings from "./pages/ProfileSettings";
 import UserProfileSettings from "./pages/UserProfileSettings";
 import BusinessSignup from "./pages/BusinessSignup";
+import AdminDashboard from "./pages/AdminDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AuthRedirect from "./components/AuthRedirect";
+import { AdminRoute } from "./components/AdminRoute";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -141,6 +143,13 @@ function AppContent() {
                   <ProtectedRoute requireBusiness={true}>
                     <BusinessEventEdit />
                   </ProtectedRoute>
+                } />
+                
+                {/* Admin Routes */}
+                <Route path="/admin" element={
+                  <AdminRoute>
+                    <AdminDashboard />
+                  </AdminRoute>
                 } />
                 
                 <Route path="*" element={<NotFound />} />
