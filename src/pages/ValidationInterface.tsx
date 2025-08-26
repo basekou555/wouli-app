@@ -18,12 +18,14 @@ import { WOULI_CATEGORIES, getCategoryById } from '@/data/wouliCategories';
 import EventEditModal from '@/components/admin/EventEditModal';
 import EventModerationHistory from '@/components/admin/EventModerationHistory';
 import StatusChangeModal from '@/components/admin/StatusChangeModal';
+import { getEventStatus } from '@/utils/eventStatus';
 
 interface PendingEvent {
   id: string;
   title: string;
   description: string | null;
   date: string;
+  end_time?: string;
   location: string;
   address: string | null;
   category: string;
@@ -98,6 +100,7 @@ const ValidationInterface = () => {
       const { data, error } = await supabase
         .from('events')
         .select('*')
+        .neq('status', 'archived')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -228,6 +231,8 @@ const ValidationInterface = () => {
   const getFilteredEvents = () => {
     return events
       .filter(event => {
+        // Exclure les événements archivés par statut ou par temporalité
+        if (event.status === 'archived' || getEventStatus(event) === 'archived') return false;
         if (activeTab !== 'all' && event.status !== activeTab) return false;
         if (filter !== 'all' && event.category !== filter) return false;
         return true;
@@ -321,7 +326,7 @@ const ValidationInterface = () => {
             <TabsTrigger value="pending">En attente ({stats.pending})</TabsTrigger>
             <TabsTrigger value="active">Validés ({stats.active})</TabsTrigger>
             <TabsTrigger value="rejected">Rejetés ({stats.rejected})</TabsTrigger>
-            <TabsTrigger value="all">Tous ({events.length})</TabsTrigger>
+            <TabsTrigger value="all">Tous ({events.filter(e => e.status !== 'archived' && getEventStatus(e) !== 'archived').length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab} className="space-y-4">
