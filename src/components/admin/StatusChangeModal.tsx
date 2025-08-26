@@ -4,7 +4,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { CheckCircle, XCircle, Clock, RotateCcw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -42,18 +41,23 @@ const StatusChangeModal = ({ eventIds, currentStatus, targetStatus, onClose, onS
   const handleConfirm = async () => {
     setProcessing(true);
     try {
-      if (eventIds.length === 1) {
-        await supabase.rpc('admin_set_event_status', {
-          p_event_id: eventIds[0],
-          p_status: targetStatus,
-          p_reason: reason || null
-        });
-      } else {
-        await supabase.rpc('admin_bulk_set_event_status', {
-          p_event_ids: eventIds,
-          p_status: targetStatus,
-          p_reason: reason || null
-        });
+      // Utiliser les fonctions RPC existantes selon le statut cible
+      for (const eventId of eventIds) {
+        if (targetStatus === 'active') {
+          await supabase.rpc('approve_pending_event', { p_event_id: eventId });
+        } else if (targetStatus === 'rejected') {
+          await supabase.rpc('reject_pending_event', { p_event_id: eventId });
+        } else {
+          // Pour remettre en attente, mettre à jour directement le statut
+          await supabase
+            .from('events')
+            .update({ 
+              status: 'pending',
+              validated_at: null,
+              validated_by: null
+            })
+            .eq('id', eventId);
+        }
       }
 
       toast({

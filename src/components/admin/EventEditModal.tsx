@@ -74,19 +74,24 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
     try {
       const dateTime = new Date(`${formData.date}T${formData.time}`);
       
-      await supabase.rpc('admin_update_event_fields', {
-        p_event_id: event.id,
-        p_title: formData.title !== event.title ? formData.title : null,
-        p_description: formData.description !== event.description ? formData.description : null,
-        p_date: dateTime.toISOString(),
-        p_location: formData.location !== event.location ? formData.location : null,
-        p_address: formData.address !== event.address ? formData.address : null,
-        p_category: formData.category !== event.category ? formData.category : null,
-        p_price: formData.price ? parseFloat(formData.price) : null,
-        p_image_url: formData.image_url !== event.image_url ? formData.image_url : null,
-        p_external_url: formData.external_url !== event.external_url ? formData.external_url : null,
-        p_reason: formData.reason || null
-      });
+      // Mettre à jour l'événement directement
+      const { error } = await supabase
+        .from('events')
+        .update({
+          title: formData.title,
+          description: formData.description || null,
+          date: dateTime.toISOString(),
+          location: formData.location,
+          address: formData.address || null,
+          category: formData.category as any,
+          price: formData.price ? parseFloat(formData.price) : null,
+          image_url: formData.image_url || null,
+          external_url: formData.external_url || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', event.id);
+
+      if (error) throw error;
 
       toast({
         title: "✅ Événement modifié",
