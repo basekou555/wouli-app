@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useAdminStats } from '@/hooks/useAdminStats';
-import { LoadingSkeleton } from '@/components/LoadingSkeleton';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const RecentActivityFeed = () => {
   const { data: stats, isLoading } = useAdminStats();
@@ -19,7 +19,13 @@ const RecentActivityFeed = () => {
         <CardContent>
           <div className="space-y-3">
             {[...Array(3)].map((_, i) => (
-              <LoadingSkeleton key={i} className="h-6" />
+              <div key={i} className="flex items-center justify-between">
+                <Skeleton className="h-4 w-48" />
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-5 w-16" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              </div>
             ))}
           </div>
         </CardContent>
