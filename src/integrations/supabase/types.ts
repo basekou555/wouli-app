@@ -266,42 +266,6 @@ export type Database = {
         }
         Relationships: []
       }
-      event_views: {
-        Row: {
-          event_id: string
-          id: string
-          user_id: string
-          viewed_at: string
-        }
-        Insert: {
-          event_id: string
-          id?: string
-          user_id: string
-          viewed_at?: string
-        }
-        Update: {
-          event_id?: string
-          id?: string
-          user_id?: string
-          viewed_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "event_views_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "active_events"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "event_views_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       events: {
         Row: {
           actual_participants: number | null
@@ -327,9 +291,12 @@ export type Database = {
           scraped_at: string | null
           search_appearances: number | null
           status: string | null
+          submitter_email: string | null
           tags: string[] | null
           title: string
           updated_at: string | null
+          validated_at: string | null
+          validated_by: string | null
           views: number | null
         }
         Insert: {
@@ -356,9 +323,12 @@ export type Database = {
           scraped_at?: string | null
           search_appearances?: number | null
           status?: string | null
+          submitter_email?: string | null
           tags?: string[] | null
           title: string
           updated_at?: string | null
+          validated_at?: string | null
+          validated_by?: string | null
           views?: number | null
         }
         Update: {
@@ -385,77 +355,18 @@ export type Database = {
           scraped_at?: string | null
           search_appearances?: number | null
           status?: string | null
+          submitter_email?: string | null
           tags?: string[] | null
           title?: string
           updated_at?: string | null
+          validated_at?: string | null
+          validated_by?: string | null
           views?: number | null
         }
         Relationships: [
           {
             foreignKeyName: "events_created_by_fkey"
             columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      events_pending: {
-        Row: {
-          address: string | null
-          category: Database["public"]["Enums"]["event_category"]
-          created_at: string
-          date: string
-          description: string | null
-          external_url: string | null
-          id: string
-          image_url: string | null
-          location: string
-          price: number | null
-          status: string
-          submitter_email: string | null
-          title: string
-          validated_at: string | null
-          validated_by: string | null
-        }
-        Insert: {
-          address?: string | null
-          category: Database["public"]["Enums"]["event_category"]
-          created_at?: string
-          date: string
-          description?: string | null
-          external_url?: string | null
-          id?: string
-          image_url?: string | null
-          location: string
-          price?: number | null
-          status?: string
-          submitter_email?: string | null
-          title: string
-          validated_at?: string | null
-          validated_by?: string | null
-        }
-        Update: {
-          address?: string | null
-          category?: Database["public"]["Enums"]["event_category"]
-          created_at?: string
-          date?: string
-          description?: string | null
-          external_url?: string | null
-          id?: string
-          image_url?: string | null
-          location?: string
-          price?: number | null
-          status?: string
-          submitter_email?: string | null
-          title?: string
-          validated_at?: string | null
-          validated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "events_pending_validated_by_fkey"
-            columns: ["validated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]

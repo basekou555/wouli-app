@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -54,15 +55,15 @@ const ValidationInterface = () => {
     fetchPendingEvents();
     fetchStats();
     
-    // Realtime subscription
+    // Realtime subscription sur la table events
     const channel = supabase
-      .channel('events_pending_changes')
+      .channel('events_changes')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'events_pending'
+          table: 'events'
         },
         () => {
           fetchPendingEvents();
@@ -79,7 +80,7 @@ const ValidationInterface = () => {
   const fetchPendingEvents = async () => {
     try {
       const { data, error } = await supabase
-        .from('events_pending')
+        .from('events')
         .select('*')
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
@@ -103,11 +104,11 @@ const ValidationInterface = () => {
       const today = new Date().toISOString().split('T')[0];
       
       const [pending, validated, rejected, todayValidated] = await Promise.all([
-        supabase.from('events_pending').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('events_pending').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
-        supabase.from('events_pending').select('*', { count: 'exact', head: true }).eq('status', 'rejected'),
-        supabase.from('events_pending').select('*', { count: 'exact', head: true })
-          .eq('status', 'approved')
+        supabase.from('events').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('events').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+        supabase.from('events').select('*', { count: 'exact', head: true }).eq('status', 'rejected'),
+        supabase.from('events').select('*', { count: 'exact', head: true })
+          .eq('status', 'active')
           .gte('validated_at', `${today}T00:00:00.000Z`)
       ]);
 
@@ -274,7 +275,7 @@ const ValidationInterface = () => {
                 Validation des Événements
               </h1>
               <p className="text-muted-foreground mt-1">
-                Source : Instagram • Scraping du {new Date().toLocaleDateString('fr-FR')}
+                Source : Propositions publiques • Modération du {new Date().toLocaleDateString('fr-FR')}
               </p>
             </div>
             
@@ -523,7 +524,7 @@ const ValidationInterface = () => {
                     </TableCell>
                   </TableRow>
                 ))}
-              </TableBody>
+              </tbody>
             </Table>
           </div>
         )}
@@ -546,7 +547,7 @@ const ValidationInterface = () => {
                 <div>
                   <DialogTitle className="text-2xl font-bold">{showDetails.title}</DialogTitle>
                   <p className="text-muted-foreground mt-1">
-                    {showDetails.submitter_email && `@${showDetails.submitter_email}`}
+                    {showDetails.submitter_email && `Proposé par : ${showDetails.submitter_email}`}
                   </p>
                 </div>
                 <span className={`text-2xl font-bold ${getScoreColor(calculateScore(showDetails))}`}>

@@ -1,206 +1,280 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { Database } from "@/integrations/supabase/types";
 
-type EventCategory = Database["public"]["Enums"]["event_category"];
-type ProposeEventModalProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-};
+import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon, Plus } from 'lucide-react';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { WOULI_CATEGORIES } from '@/data/wouliCategories';
 
-type EventCategoryRow = { category: EventCategory | null };
+interface ProposeEventModalProps {
+  trigger?: React.ReactNode;
+}
 
-const ProposeEventModal: React.FC<ProposeEventModalProps> = ({ open, onOpenChange }) => {
+const ProposeEventModal = ({ trigger }: ProposeEventModalProps) => {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [date, setDate] = useState<Date>();
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    location: '',
+    address: '',
+    category: '',
+    price: '',
+    external_url: '',
+    submitter_email: ''
+  });
   const { toast } = useToast();
 
-  // Form state
-  const [title, setTitle] = useState("");
-  const [datetime, setDatetime] = useState(""); // HTML datetime-local value
-  const [location, setLocation] = useState("Lyon");
-  const [address, setAddress] = useState("");
-  const [category, setCategory] = useState<EventCategory | "">("");
-  const [externalUrl, setExternalUrl] = useState("");
-  const [email, setEmail] = useState("");
-  const [description, setDescription] = useState("");
-
-  // Categories fetched from existing events to ensure enum compatibility
-  const [categories, setCategories] = useState<EventCategory[]>([]);
-  const [loadingCats, setLoadingCats] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    let isMounted = true;
-    const loadCategories = async () => {
-      setLoadingCats(true);
-      try {
-        console.log("[ProposeEventModal] Loading categories from events...");
-        const { data, error } = await supabase
-          .from("events")
-          .select("category")
-          .limit(200);
-        if (error) {
-          console.error("Failed to load categories:", error.message);
-          return;
-        }
-        const unique = Array.from(
-          new Set(
-            ((data as EventCategoryRow[] | null)?.map((d) => d.category).filter((v): v is EventCategory => !!v)) ?? []
-          )
-        );
-        if (!isMounted) return;
-        if (unique.length === 0) {
-          console.warn("No categories found in events; using fallback 'activites'");
-          setCategories(["activites" as EventCategory]);
-          setCategory("activites");
-        } else {
-          setCategories(unique);
-          setCategory(unique[0]);
-        }
-      } finally {
-        if (isMounted) setLoadingCats(false);
-      }
-    };
-    loadCategories();
-    return () => {
-      isMounted = false;
-    };
-  }, [open]);
-
-  const isSubmitDisabled = useMemo(() => {
-    return (
-      !title.trim() ||
-      !datetime ||
-      !location.trim() ||
-      !category.trim()
-    );
-  }, [title, datetime, location, category]);
-
-  const resetForm = () => {
-    setTitle("");
-    setDatetime("");
-    setLocation("Lyon");
-    setAddress("");
-    setExternalUrl("");
-    setEmail("");
-    setDescription("");
-    // keep category as-is so users can submit multiple faster
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("[ProposeEventModal] Submitting event proposal...");
+    if (!date) {
+      toast({
+        title: "Date manquante",
+        description: "Veuillez sélectionner une date pour l'événement",
+        variant: "destructive"
+      });
+      return;
+    }
 
+    setLoading(true);
+    
     try {
-      const isoDate = new Date(datetime).toISOString();
-      const payload: Database["public"]["Tables"]["events_pending"]["Insert"] = {
-        title: title.trim(),
-        description: description.trim() || null,
-        date: isoDate,
-        location: location.trim(),
-        address: address.trim() || null,
-        category: category as EventCategory,
-        price: 0,
-        external_url: externalUrl.trim() || null,
-        submitter_email: email.trim() || null,
-        status: "pending",
-      };
+      const { data, error } = await supabase.rpc('propose_event_public', {
+        p_title: formData.title,
+        p_description: formData.description || null,
+        p_location: formData.location,
+        p_address: formData.address || null,
+        p_date: date.toISOString(),
+        p_category: formData.category as any,
+        p_price: formData.price ? parseFloat(formData.price) : 0,
+        p_external_url: formData.external_url || null,
+        p_submitter_email: formData.submitter_email || null
+      });
 
-      const { error } = await supabase.from("events_pending").insert(payload);
       if (error) throw error;
 
       toast({
-        title: "Merci !",
-        description: "Votre événement a été soumis et sera vérifié par l’équipe.",
+        title: "✅ Événement proposé !",
+        description: "Votre événement a été soumis pour validation. Merci de votre contribution !",
       });
-      resetForm();
-      onOpenChange(false);
-    } catch (err: any) {
-      console.error("[ProposeEventModal] Insert error:", err?.message || err);
-      toast({
-        title: "Erreur lors de l’envoi",
-        description: err?.message || "Veuillez réessayer.",
-        variant: "destructive",
+
+      // Reset form
+      setFormData({
+        title: '',
+        description: '',
+        location: '',
+        address: '',
+        category: '',
+        price: '',
+        external_url: '',
+        submitter_email: ''
       });
+      setDate(undefined);
+      setOpen(false);
+
+    } catch (error: any) {
+      console.error('Erreur proposition événement:', error);
+      
+      if (error.message?.includes('Rate limit exceeded')) {
+        toast({
+          title: "Limite atteinte",
+          description: "Vous avez atteint la limite de 5 propositions par jour.",
+          variant: "destructive"
+        });
+      } else if (error.message?.includes('Authentication required')) {
+        toast({
+          title: "Connexion requise",
+          description: "Vous devez être connecté pour proposer un événement.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Impossible de soumettre votre événement. Veuillez réessayer.",
+          variant: "destructive"
+        });
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
+  const defaultTrigger = (
+    <Button variant="outline" className="gap-2">
+      <Plus className="w-4 h-4" />
+      Proposer un événement
+    </Button>
+  );
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {trigger || defaultTrigger}
+      </DialogTrigger>
+      
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Proposer un événement</DialogTitle>
+          <DialogTitle>Proposer un nouvel événement</DialogTitle>
         </DialogHeader>
-
+        
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="title">Titre</Label>
-            <Input id="title" placeholder="Soirée salsa, Brunch, Afterwork..." value={title} onChange={(e) => setTitle(e.target.value)} />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Titre de l'événement *</Label>
+              <Input
+                id="title"
+                value={formData.title}
+                onChange={(e) => handleInputChange('title', e.target.value)}
+                placeholder="Ex: Soirée techno au Sucre"
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="category">Catégorie *</Label>
+              <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choisir une catégorie" />
+                </SelectTrigger>
+                <SelectContent>
+                  {WOULI_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.icon} {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="datetime">Date et heure</Label>
-            <Input id="datetime" type="datetime-local" value={datetime} onChange={(e) => setDatetime(e.target.value)} />
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => handleInputChange('description', e.target.value)}
+              placeholder="Décrivez l'événement, l'ambiance, les détails importants..."
+              rows={3}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Date de l'événement *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date ? format(date, "PPP", { locale: fr }) : "Sélectionner une date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={setDate}
+                    initialFocus
+                    locale={fr}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="price">Prix (€)</Label>
+              <Input
+                id="price"
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.price}
+                onChange={(e) => handleInputChange('price', e.target.value)}
+                placeholder="0 = Gratuit"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="location">Lieu *</Label>
+              <Input
+                id="location"
+                value={formData.location}
+                onChange={(e) => handleInputChange('location', e.target.value)}
+                placeholder="Ex: Le Sucre, Wallace Bar..."
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="address">Adresse complète</Label>
+              <Input
+                id="address"
+                value={formData.address}
+                onChange={(e) => handleInputChange('address', e.target.value)}
+                placeholder="Ex: 50 Quai Rambaud, Lyon"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="location">Ville / Lieu</Label>
-            <Input id="location" placeholder="Lyon, Villeurbanne..." value={location} onChange={(e) => setLocation(e.target.value)} />
+            <Label htmlFor="external_url">Lien externe</Label>
+            <Input
+              id="external_url"
+              type="url"
+              value={formData.external_url}
+              onChange={(e) => handleInputChange('external_url', e.target.value)}
+              placeholder="Instagram, billetterie, site web..."
+            />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="address">Adresse (optionnel)</Label>
-            <Input id="address" placeholder="12 Rue de la République, 69002 Lyon" value={address} onChange={(e) => setAddress(e.target.value)} />
+            <Label htmlFor="submitter_email">Votre email (optionnel)</Label>
+            <Input
+              id="submitter_email"
+              type="email"
+              value={formData.submitter_email}
+              onChange={(e) => handleInputChange('submitter_email', e.target.value)}
+              placeholder="Pour vous recontacter si nécessaire"
+            />
           </div>
 
-          <div className="space-y-2">
-            <Label>Catégorie</Label>
-            <Select value={category} onValueChange={(v) => setCategory(v as EventCategory)} disabled={loadingCats || categories.length === 0}>
-              <SelectTrigger>
-                <SelectValue placeholder={loadingCats ? "Chargement..." : "Choisir une catégorie"} />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {categories.length === 0 && (
-              <p className="text-xs text-muted-foreground">
-                Aucune catégorie détectée, réessayez plus tard ou contactez le support.
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="url">Lien externe (optionnel)</Label>
-            <Input id="url" placeholder="https://..." value={externalUrl} onChange={(e) => setExternalUrl(e.target.value)} />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email">Votre e-mail (optionnel)</Label>
-            <Input id="email" type="email" placeholder="pour vous recontacter si besoin" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Description (optionnel)</Label>
-            <Textarea id="description" placeholder="Quelques détails utiles..." value={description} onChange={(e) => setDescription(e.target.value)} />
-          </div>
-
-          <div className="pt-2 flex gap-2 justify-end">
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <div className="flex gap-2 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              className="flex-1"
+            >
               Annuler
             </Button>
-            <Button type="submit" disabled={isSubmitDisabled || categories.length === 0}>
-              Envoyer
+            <Button
+              type="submit"
+              disabled={loading}
+              className="flex-1"
+            >
+              {loading ? "Envoi en cours..." : "Proposer l'événement"}
             </Button>
           </div>
         </form>
