@@ -27,24 +27,18 @@ export const useSwipeEvents = (): SwipeEventsResult => {
     if (!user) return;
     setLoading(true);
 
-    // Fetch viewed events for user
-    const { data: viewed, error: viewedErr } = await supabase
-      .from('event_views')
-      .select('event_id')
-      .eq('user_id', user.id);
+    // For now, we'll skip tracking viewed events since event_views table doesn't exist
+    // This functionality can be implemented later with proper database structure
+    const viewedIds: string[] = [];
 
-    if (viewedErr) {
-      console.error('Failed fetching viewed events', viewedErr);
-    }
-
-    const viewedIds = (viewed || []).map(v => v.event_id);
-
-    // Fetch upcoming active events not viewed yet
-    const { data: upcoming, error } = await (supabase as any)
-      .from('active_events')
+    // Fetch upcoming active events from unified events table
+    const { data: upcoming, error } = await supabase
+      .from('events')
       .select('*')
+      .eq('status', 'active')
+      .gte('date', new Date().toISOString())
       .order('date', { ascending: true })
-      .limit(40);
+      .limit(20);
 
     if (error) {
       console.error('Failed fetching events', error);
@@ -54,7 +48,7 @@ export const useSwipeEvents = (): SwipeEventsResult => {
       return;
     }
 
-    const filtered = viewedIds.length > 0 ? (upcoming || []).filter(e => !viewedIds.includes(e.id)) : (upcoming || []);
+    const filtered = (upcoming || []);
 
     if (filtered.length > 0) {
       setEvents(filtered as unknown as UnifiedEvent[]);
@@ -69,14 +63,8 @@ export const useSwipeEvents = (): SwipeEventsResult => {
   };
 
   const markAsViewed = async (eventId: string) => {
-    if (!user) return;
-    const { error } = await supabase
-      .from('event_views')
-      .upsert(
-        { user_id: user.id, event_id: eventId },
-        { onConflict: 'user_id,event_id', ignoreDuplicates: true }
-      );
-    if (error) console.error('Failed marking as viewed', error);
+    // Skip for now since event_views table doesn't exist
+    // This can be implemented later
   };
 
   const likeIfNeeded = async (eventId: string) => {

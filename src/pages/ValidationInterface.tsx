@@ -524,7 +524,7 @@ const ValidationInterface = () => {
                     </TableCell>
                   </TableRow>
                 ))}
-              </tbody>
+              </TableBody>
             </Table>
           </div>
         )}

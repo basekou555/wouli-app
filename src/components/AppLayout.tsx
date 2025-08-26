@@ -33,7 +33,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       <BottomNavigation />
 
       {/* Propose Event Modal */}
-      <ProposeEventModal open={isProposeOpen} onOpenChange={setIsProposeOpen} />
+      <ProposeEventModal />
     </div>
   );
 };
