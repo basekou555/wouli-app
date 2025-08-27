@@ -1,8 +1,56 @@
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useEffect } from 'react';
 
 export const useAdminStats = () => {
+  const queryClient = useQueryClient();
+
+  // Écouter les changements temps réel sur la table events
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin_stats_updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'events'
+        },
+        () => {
+          // Invalider le cache pour forcer un nouveau fetch
+          queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles'
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'business_configs'
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   return useQuery({
     queryKey: ['admin-stats'],
     queryFn: async () => {
@@ -72,6 +120,7 @@ export const useAdminStats = () => {
         systemHealth: 99.9 // Valeur fixe pour l'instant
       };
     },
-    refetchInterval: 30000, // Refresh toutes les 30 secondes
+    refetchInterval: 60000, // Refresh toutes les 60 secondes (backup)
+    staleTime: 10000, // Considérer les données comme fraîches pendant 10 secondes
   });
 };
