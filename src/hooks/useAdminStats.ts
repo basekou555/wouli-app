@@ -9,7 +9,7 @@ export const useAdminStats = () => {
   // Écouter les changements temps réel sur la table events
   useEffect(() => {
     const channel = supabase
-      .channel('admin_stats_updates')
+      .channel('admin_stats_events_' + Math.random()) // Canal unique
       .on(
         'postgres_changes',
         {
@@ -18,10 +18,14 @@ export const useAdminStats = () => {
           table: 'events'
         },
         () => {
-          // Invalider le cache pour forcer un nouveau fetch
+          console.log('🔄 Admin stats: Événement détecté, actualisation...');
           queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
         }
       )
+      .subscribe();
+
+    const profilesChannel = supabase
+      .channel('admin_stats_profiles_' + Math.random()) // Canal unique séparé
       .on(
         'postgres_changes',
         {
@@ -30,9 +34,14 @@ export const useAdminStats = () => {
           table: 'profiles'
         },
         () => {
+          console.log('🔄 Admin stats: Profil détecté, actualisation...');
           queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
         }
       )
+      .subscribe();
+
+    const businessChannel = supabase
+      .channel('admin_stats_business_' + Math.random()) // Canal unique séparé
       .on(
         'postgres_changes',
         {
@@ -41,13 +50,17 @@ export const useAdminStats = () => {
           table: 'business_configs'
         },
         () => {
+          console.log('🔄 Admin stats: Business config détecté, actualisation...');
           queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
         }
       )
       .subscribe();
 
     return () => {
+      console.log('🧹 Admin stats: Nettoyage des canaux...');
       supabase.removeChannel(channel);
+      supabase.removeChannel(profilesChannel);
+      supabase.removeChannel(businessChannel);
     };
   }, [queryClient]);
 
