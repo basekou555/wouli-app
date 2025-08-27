@@ -84,3 +84,9 @@ export const enhanceMultipleEvents = async (
   
   return results;
 };
+
+// Export par défaut pour compatibilité
+export default {
+  enhanceEventContent,
+  enhanceMultipleEvents
+};
