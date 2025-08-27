@@ -13,9 +13,9 @@ serve(async (req) => {
   }
 
   try {
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openAIApiKey) {
-      throw new Error('OpenAI API key not configured');
+    const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
+    if (!anthropicApiKey) {
+      throw new Error('Anthropic API key not configured');
     }
 
     const { title, description, location } = await req.json();
@@ -44,38 +44,40 @@ FORMAT DE RÉPONSE : JSON uniquement
   "time": "HH:MM" // optionnel, seulement si détecté dans le texte original
 }`;
 
-    const userPrompt = `Événement à améliorer :
+    const userMessage = `Événement à améliorer :
 TITRE ACTUEL : ${title}
 LIEU : ${location}
 DESCRIPTION ACTUELLE : ${description || 'Aucune description fournie'}
 
 Améliore ce contenu selon les règles données.`;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    console.log('Calling Anthropic API...');
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
+        'Authorization': `Bearer ${anthropicApiKey}`,
         'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'gpt-5-mini-2025-08-07',
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 1000,
+        system: systemPrompt,
         messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        max_completion_tokens: 800,
-        response_format: { type: "json_object" }
+          { role: 'user', content: userMessage }
+        ]
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('OpenAI API error:', errorText);
-      throw new Error(`OpenAI API error: ${response.status}`);
+      console.error('Anthropic API error:', errorText);
+      throw new Error(`Anthropic API error: ${response.status}`);
     }
 
     const data = await response.json();
-    const generatedContent = data.choices[0].message.content;
+    const generatedContent = data.content[0].text;
     
     let enhancedContent;
     try {

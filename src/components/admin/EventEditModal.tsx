@@ -6,10 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, MapPin, Euro, Save, X } from 'lucide-react';
+import { Calendar, MapPin, Euro, Save, X, Sparkles, Loader2 } from 'lucide-react';
 import { WOULI_CATEGORIES } from '@/data/wouliCategories';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { enhanceEventContent } from '@/services/aiEnhancementService';
 
 interface PendingEvent {
   id: string;
@@ -46,6 +47,7 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
     reason: ''
   });
   const [saving, setSaving] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -66,6 +68,42 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
       });
     }
   }, [event]);
+
+  const handleEnhanceWithAI = async () => {
+    if (!event) return;
+    
+    setEnhancing(true);
+    try {
+      const enhanced = await enhanceEventContent({
+        title: formData.title || event.title,
+        description: formData.description || event.description,
+        location: formData.location || event.location
+      });
+
+      // Appliquer les améliorations au formulaire
+      setFormData(prev => ({
+        ...prev,
+        title: enhanced.title,
+        description: enhanced.description,
+        // Appliquer l'heure si elle a été extraite
+        time: enhanced.time || prev.time
+      }));
+
+      toast({
+        title: "✨ Contenu amélioré",
+        description: "Le titre et la description ont été améliorés par l'IA"
+      });
+    } catch (error) {
+      console.error('Erreur amélioration IA:', error);
+      toast({
+        title: "Erreur d'amélioration",
+        description: "Impossible d'améliorer le contenu avec l'IA",
+        variant: "destructive"
+      });
+    } finally {
+      setEnhancing(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!event) return;
@@ -136,9 +174,25 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
             />
           </div>
 
-          {/* Titre */}
+          {/* Titre avec bouton IA */}
           <div className="col-span-2">
-            <Label htmlFor="title">Titre de l'événement *</Label>
+            <div className="flex items-center justify-between mb-2">
+              <Label htmlFor="title">Titre de l'événement *</Label>
+              <Button
+                onClick={handleEnhanceWithAI}
+                disabled={enhancing || !formData.title || !formData.location}
+                size="sm"
+                variant="outline"
+                className="text-purple-600 border-purple-200 hover:bg-purple-50"
+              >
+                {enhancing ? (
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4 mr-1" />
+                )}
+                {enhancing ? 'Amélioration...' : 'Améliorer avec l\'IA'}
+              </Button>
+            </div>
             <Input
               id="title"
               value={formData.title}

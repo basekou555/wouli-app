@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Calendar, MapPin, Euro, ExternalLink, Check, X, Clock, Filter, RefreshCw, 
-  AlertCircle, Instagram, Edit, RotateCcw, History, ArrowUpDown 
+  AlertCircle, Instagram, Edit, RotateCcw, History, ArrowUpDown, Sparkles 
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -18,6 +18,7 @@ import { WOULI_CATEGORIES, getCategoryById } from '@/data/wouliCategories';
 import EventEditModal from '@/components/admin/EventEditModal';
 import EventModerationHistory from '@/components/admin/EventModerationHistory';
 import StatusChangeModal from '@/components/admin/StatusChangeModal';
+import EnhanceWithAIModal from '@/components/admin/EnhanceWithAIModal';
 import { getEventStatus } from '@/utils/eventStatus';
 
 interface PendingEvent {
@@ -67,6 +68,7 @@ const ValidationInterface = () => {
     rejected: 0,
     todayValidated: 0
   });
+  const [enhanceWithAI, setEnhanceWithAI] = useState<PendingEvent[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -378,6 +380,17 @@ const ValidationInterface = () => {
                     {activeTab === 'pending' && (
                       <>
                         <Button
+                          onClick={() => {
+                            const selectedEvents = filteredEvents.filter(e => selectedIds.has(e.id));
+                            setEnhanceWithAI(selectedEvents);
+                          }}
+                          size="sm"
+                          className="bg-purple-600 hover:bg-purple-700 text-white"
+                        >
+                          <Sparkles className="w-4 h-4 mr-1" />
+                          Améliorer avec l'IA
+                        </Button>
+                        <Button
                           onClick={() => handleStatusChange(Array.from(selectedIds), 'pending', 'active')}
                           size="sm"
                           className="bg-green-600 hover:bg-green-700 text-white"
@@ -589,6 +602,15 @@ const ValidationInterface = () => {
                             {/* Actions générales */}
                             <div className="flex gap-1">
                               <Button
+                                onClick={() => setEnhanceWithAI([event])}
+                                size="icon"
+                                variant="ghost"
+                                className="text-purple-600 hover:bg-purple-50"
+                                title="Améliorer avec l'IA"
+                              >
+                                <Sparkles className="w-4 h-4" />
+                              </Button>
+                              <Button
                                 onClick={() => setEditingEvent(event)}
                                 size="icon"
                                 variant="ghost"
@@ -656,6 +678,16 @@ const ValidationInterface = () => {
         targetStatus={statusChange.targetStatus}
         onClose={() => setStatusChange({ eventIds: [], currentStatus: '', targetStatus: '' })}
         onSuccess={onStatusChangeSuccess}
+      />
+
+      <EnhanceWithAIModal
+        events={enhanceWithAI}
+        onClose={() => setEnhanceWithAI([])}
+        onSuccess={() => {
+          fetchEvents();
+          fetchStats();
+          setSelectedIds(new Set());
+        }}
       />
 
       {/* Modal détails (inchangé) */}
