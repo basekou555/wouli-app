@@ -251,6 +251,17 @@ const ValidationInterface = () => {
 
   const filteredEvents = getFilteredEvents();
 
+  const counts = React.useMemo(() => {
+    const notArchived = events.filter(e => e.status !== 'archived' && getEventStatus(e) !== 'archived');
+    const scoped = filter === 'all' ? notArchived : notArchived.filter(e => e.category === filter);
+    return {
+      pending: scoped.filter(e => e.status === 'pending').length,
+      active: scoped.filter(e => e.status === 'active').length,
+      rejected: scoped.filter(e => e.status === 'rejected').length,
+      all: scoped.length,
+    };
+  }, [events, filter]);
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, any> = {
       pending: { variant: 'secondary', label: '⏳ En attente' },
@@ -324,12 +335,12 @@ const ValidationInterface = () => {
 
         {/* Onglets par statut */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="pending">En attente ({stats.pending})</TabsTrigger>
-            <TabsTrigger value="active">Validés ({stats.active})</TabsTrigger>
-            <TabsTrigger value="rejected">Rejetés ({stats.rejected})</TabsTrigger>
-            <TabsTrigger value="all">Tous ({events.filter(e => e.status !== 'archived' && getEventStatus(e) !== 'archived').length})</TabsTrigger>
-          </TabsList>
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="pending">En attente ({counts.pending})</TabsTrigger>
+              <TabsTrigger value="active">Validés ({counts.active})</TabsTrigger>
+              <TabsTrigger value="rejected">Rejetés ({counts.rejected})</TabsTrigger>
+              <TabsTrigger value="all">Tous ({counts.all})</TabsTrigger>
+            </TabsList>
 
           <TabsContent value={activeTab} className="space-y-4">
             {/* Contrôles */}
