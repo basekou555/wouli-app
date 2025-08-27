@@ -35,6 +35,7 @@ interface PendingEvent {
   submitter_email: string | null;
   status: string;
   created_at: string;
+  validated_at?: string;
   image_url: string | null;
 }
 
@@ -62,18 +63,11 @@ const ValidationInterface = () => {
     currentStatus: string;
     targetStatus: string;
   }>({ eventIds: [], currentStatus: '', targetStatus: '' });
-  const [stats, setStats] = useState<EventStats>({
-    pending: 0,
-    active: 0,
-    rejected: 0,
-    todayValidated: 0
-  });
   const [enhanceWithAI, setEnhanceWithAI] = useState<PendingEvent[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchEvents();
-    fetchStats();
     
     // Realtime subscription sur la table events
     const channel = supabase
@@ -87,7 +81,6 @@ const ValidationInterface = () => {
         },
         () => {
           fetchEvents();
-          fetchStats();
         }
       )
       .subscribe();
@@ -119,29 +112,6 @@ const ValidationInterface = () => {
     }
   };
 
-  const fetchStats = async () => {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      
-      const [pending, active, rejected, todayValidated] = await Promise.all([
-        supabase.from('events').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('events').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-        supabase.from('events').select('*', { count: 'exact', head: true }).eq('status', 'rejected'),
-        supabase.from('events').select('*', { count: 'exact', head: true })
-          .eq('status', 'active')
-          .gte('validated_at', `${today}T00:00:00.000Z`)
-      ]);
-
-      setStats({
-        pending: pending.count || 0,
-        active: active.count || 0,
-        rejected: rejected.count || 0,
-        todayValidated: todayValidated.count || 0
-      });
-    } catch (error) {
-      console.error('Erreur fetch stats:', error);
-    }
-  };
 
   // Actions rapides (legacy - pour compatibilité)
   const handleApprove = async (eventIds: string | string[]) => {
@@ -168,7 +138,6 @@ const ValidationInterface = () => {
 
   const onStatusChangeSuccess = () => {
     fetchEvents();
-    fetchStats();
     setSelectedIds(new Set());
   };
 
@@ -253,12 +222,22 @@ const ValidationInterface = () => {
 
   const counts = React.useMemo(() => {
     const notArchived = events.filter(e => e.status !== 'archived' && getEventStatus(e) !== 'archived');
-    const scoped = filter === 'all' ? notArchived : notArchived.filter(e => e.category === filter);
+    const today = new Date().toISOString().split('T')[0];
+    
     return {
-      pending: scoped.filter(e => e.status === 'pending').length,
-      active: scoped.filter(e => e.status === 'active').length,
-      rejected: scoped.filter(e => e.status === 'rejected').length,
-      all: scoped.length,
+      pending: notArchived.filter(e => e.status === 'pending').length,
+      active: notArchived.filter(e => e.status === 'active').length,
+      rejected: notArchived.filter(e => e.status === 'rejected').length,
+      todayValidated: notArchived.filter(e => 
+        e.status === 'active' && 
+        e.validated_at && 
+        e.validated_at.startsWith(today)
+      ).length,
+      // Filtered counts for tabs
+      scopedPending: (filter === 'all' ? notArchived : notArchived.filter(e => e.category === filter)).filter(e => e.status === 'pending').length,
+      scopedActive: (filter === 'all' ? notArchived : notArchived.filter(e => e.category === filter)).filter(e => e.status === 'active').length,
+      scopedRejected: (filter === 'all' ? notArchived : notArchived.filter(e => e.category === filter)).filter(e => e.status === 'rejected').length,
+      scopedAll: (filter === 'all' ? notArchived : notArchived.filter(e => e.category === filter)).length,
     };
   }, [events, filter]);
 
@@ -296,10 +275,7 @@ const ValidationInterface = () => {
             </div>
             
             <Button
-              onClick={() => {
-                fetchEvents();
-                fetchStats();
-              }}
+              onClick={fetchEvents}
               variant="outline"
               size="icon"
             >
@@ -310,19 +286,19 @@ const ValidationInterface = () => {
           {/* Stats rapides */}
           <div className="grid grid-cols-4 gap-4 mb-6">
             <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
-              <div className="text-2xl font-bold text-orange-600">{stats.pending}</div>
+              <div className="text-2xl font-bold text-orange-600">{counts.pending}</div>
               <div className="text-sm text-orange-700">En attente</div>
             </div>
             <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-              <div className="text-2xl font-bold text-green-600">{stats.active}</div>
+              <div className="text-2xl font-bold text-green-600">{counts.active}</div>
               <div className="text-sm text-green-700">Validés</div>
             </div>
             <div className="bg-red-50 p-3 rounded-lg border border-red-200">
-              <div className="text-2xl font-bold text-red-600">{stats.rejected}</div>
+              <div className="text-2xl font-bold text-red-600">{counts.rejected}</div>
               <div className="text-sm text-red-700">Rejetés</div>
             </div>
             <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
-              <div className="text-2xl font-bold text-purple-600">+{stats.todayValidated}</div>
+              <div className="text-2xl font-bold text-purple-600">+{counts.todayValidated}</div>
               <div className="text-sm text-purple-700">Aujourd'hui</div>
             </div>
           </div>
@@ -336,10 +312,10 @@ const ValidationInterface = () => {
         {/* Onglets par statut */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
             <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="pending">En attente ({counts.pending})</TabsTrigger>
-              <TabsTrigger value="active">Validés ({counts.active})</TabsTrigger>
-              <TabsTrigger value="rejected">Rejetés ({counts.rejected})</TabsTrigger>
-              <TabsTrigger value="all">Tous ({counts.all})</TabsTrigger>
+              <TabsTrigger value="pending">En attente ({counts.scopedPending})</TabsTrigger>
+              <TabsTrigger value="active">Validés ({counts.scopedActive})</TabsTrigger>
+              <TabsTrigger value="rejected">Rejetés ({counts.scopedRejected})</TabsTrigger>
+              <TabsTrigger value="all">Tous ({counts.scopedAll})</TabsTrigger>
             </TabsList>
 
           <TabsContent value={activeTab} className="space-y-4">
@@ -670,7 +646,6 @@ const ValidationInterface = () => {
         onClose={() => setEditingEvent(null)}
         onSuccess={() => {
           fetchEvents();
-          fetchStats();
         }}
       />
 
@@ -696,7 +671,6 @@ const ValidationInterface = () => {
         onClose={() => setEnhanceWithAI([])}
         onSuccess={() => {
           fetchEvents();
-          fetchStats();
           setSelectedIds(new Set());
         }}
       />
