@@ -197,11 +197,13 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
           <div className="col-span-2 space-y-2">
             <Label>Image de l'événement</Label>
             <div className="space-y-2">
-              <img 
-                src={formData.image_url || event.image_url || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30'} 
-                alt="Aperçu"
-                className="w-full h-48 object-cover rounded-lg border"
-              />
+              <div className="w-full aspect-[4/5] rounded-lg border bg-black flex items-center justify-center overflow-hidden">
+                <img 
+                  src={formData.image_url || event.image_url || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30'} 
+                  alt="Aperçu"
+                  className="w-full h-full object-contain"
+                />
+              </div>
               {(formData.image_url || event.image_url) && (
                 <Button
                   type="button"

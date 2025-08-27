@@ -344,14 +344,17 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
     const totalParticipants = event.totalParticipants || event.participants || 0;
 
     return (
-      <Card className={`flex gap-3 p-3 h-24 rounded-lg hover:shadow-lg transition-all duration-300 bg-card cursor-pointer hover-scale ${className}`}>
-        {/* Image carrée */}
+      <Card className={`flex gap-3 p-3 rounded-lg hover:shadow-lg transition-all duration-300 bg-card cursor-pointer hover-scale ${className}`}>
+        {/* Image avec ratio 4:5 */}
         <div className="relative flex-shrink-0" onClick={onCardClick}>
-          <img 
-            src={event.image_url || "https://picsum.photos/400/400?random=event"}
-            alt={event.title}
-            className="w-24 h-24 rounded-lg object-cover" 
-          />
+          <div className="w-20 aspect-[4/5] bg-black rounded-lg overflow-hidden">
+            <img 
+              src={event.image_url || "https://picsum.photos/400/500?random=event"}
+              alt={event.title}
+              className="w-full h-full object-contain" 
+            />
+          </div>
+          
           
           {/* Badge urgence mini */}
           {urgencyLabel && (

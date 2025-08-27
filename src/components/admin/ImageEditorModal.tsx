@@ -9,7 +9,8 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { RotateCw, ZoomIn } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RotateCw, ZoomIn, Image } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ImageEditorModalProps {
@@ -28,7 +29,7 @@ interface Area {
 
 const createImage = (url: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
-    const image = new Image();
+    const image = new window.Image();
     image.addEventListener('load', () => resolve(image));
     image.addEventListener('error', (error) => reject(error));
     image.setAttribute('crossOrigin', 'anonymous');
@@ -38,7 +39,9 @@ const createImage = (url: string): Promise<HTMLImageElement> =>
 const getCroppedImg = async (
   imageSrc: string,
   pixelCrop: Area,
-  rotation = 0
+  rotation = 0,
+  targetWidth: number,
+  targetHeight: number
 ): Promise<Blob> => {
   const image = await createImage(imageSrc);
   const canvas = document.createElement('canvas');
@@ -51,35 +54,56 @@ const getCroppedImg = async (
   const maxSize = Math.max(image.width, image.height);
   const safeArea = 2 * ((maxSize / 2) * Math.sqrt(2));
 
-  canvas.width = safeArea;
-  canvas.height = safeArea;
+  // First canvas for rotation
+  const rotationCanvas = document.createElement('canvas');
+  const rotationCtx = rotationCanvas.getContext('2d')!;
+  
+  rotationCanvas.width = safeArea;
+  rotationCanvas.height = safeArea;
 
-  ctx.translate(safeArea / 2, safeArea / 2);
-  ctx.rotate((rotation * Math.PI) / 180);
-  ctx.translate(-safeArea / 2, -safeArea / 2);
+  rotationCtx.translate(safeArea / 2, safeArea / 2);
+  rotationCtx.rotate((rotation * Math.PI) / 180);
+  rotationCtx.translate(-safeArea / 2, -safeArea / 2);
 
-  ctx.drawImage(
+  rotationCtx.drawImage(
     image,
     safeArea / 2 - image.width * 0.5,
     safeArea / 2 - image.height * 0.5
   );
 
-  const data = ctx.getImageData(0, 0, safeArea, safeArea);
+  const rotatedData = rotationCtx.getImageData(0, 0, safeArea, safeArea);
 
-  canvas.width = pixelCrop.width;
-  canvas.height = pixelCrop.height;
+  // Second canvas for cropping
+  const cropCanvas = document.createElement('canvas');
+  const cropCtx = cropCanvas.getContext('2d')!;
+  
+  cropCanvas.width = pixelCrop.width;
+  cropCanvas.height = pixelCrop.height;
 
-  ctx.putImageData(
-    data,
+  cropCtx.putImageData(
+    rotatedData,
     Math.round(0 - safeArea / 2 + image.width * 0.5 - pixelCrop.x),
     Math.round(0 - safeArea / 2 + image.height * 0.5 - pixelCrop.y)
   );
+
+  // Final canvas for normalization to target size
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+
+  ctx.drawImage(cropCanvas, 0, 0, targetWidth, targetHeight);
 
   return new Promise((resolve) => {
     canvas.toBlob((blob) => {
       if (blob) resolve(blob);
     }, 'image/jpeg', 0.85);
   });
+};
+
+type AspectRatioOption = '4:5' | '9:16';
+
+const ASPECT_RATIOS = {
+  '4:5': { ratio: 4/5, width: 1080, height: 1350, label: '4:5 (Portrait)' },
+  '9:16': { ratio: 9/16, width: 1080, height: 1920, label: '9:16 (Stories)' }
 };
 
 export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
@@ -93,6 +117,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [saving, setSaving] = useState(false);
+  const [aspectRatio, setAspectRatio] = useState<AspectRatioOption>('4:5');
 
   const onCropComplete = useCallback(
     (croppedArea: Area, croppedAreaPixels: Area) => {
@@ -106,10 +131,13 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
 
     setSaving(true);
     try {
+      const targetDimensions = ASPECT_RATIOS[aspectRatio];
       const croppedImageBlob = await getCroppedImg(
         imageUrl,
         croppedAreaPixels,
-        rotation
+        rotation,
+        targetDimensions.width,
+        targetDimensions.height
       );
       await onSave(croppedImageBlob);
       onClose();
@@ -128,6 +156,12 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     setZoom(1);
   };
 
+  const handleAspectRatioChange = (newRatio: AspectRatioOption) => {
+    setAspectRatio(newRatio);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
@@ -139,6 +173,31 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
+          {/* Aspect Ratio Selector */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Image className="h-4 w-4" />
+                Format
+              </label>
+              <span className="text-xs text-muted-foreground">
+                {ASPECT_RATIOS[aspectRatio].width}x{ASPECT_RATIOS[aspectRatio].height}px
+              </span>
+            </div>
+            <Select value={aspectRatio} onValueChange={handleAspectRatioChange}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(ASPECT_RATIOS).map(([key, config]) => (
+                  <SelectItem key={key} value={key}>
+                    {config.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Crop Area */}
           <div className="relative h-96 bg-black rounded-lg overflow-hidden">
             <Cropper
@@ -146,7 +205,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
               crop={crop}
               rotation={rotation}
               zoom={zoom}
-              aspect={16 / 9}
+              aspect={ASPECT_RATIOS[aspectRatio].ratio}
               onCropChange={setCrop}
               onRotationChange={setRotation}
               onCropComplete={onCropComplete}

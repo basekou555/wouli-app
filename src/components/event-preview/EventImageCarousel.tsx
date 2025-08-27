@@ -10,29 +10,31 @@ const EventImageCarousel: React.FC<EventImageCarouselProps> = ({ images, title }
   
   if (!images || images.length === 0) {
     return (
-      <div className="h-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
-        <div className="text-white text-center">
-          <h2 className="text-2xl font-bold mb-2">{title}</h2>
-          <p className="opacity-80">Image à venir</p>
+        <div className="relative h-96 bg-black rounded-lg overflow-hidden flex items-center justify-center">
+          <div className="text-center text-white">
+            <h3 className="text-xl font-semibold mb-2">{title}</h3>
+            <p className="text-gray-300">Image à venir</p>
+          </div>
         </div>
-      </div>
     );
   }
 
   if (images.length === 1) {
     return (
-      <img 
-        src={images[0]} 
-        className="w-full h-full object-cover"
-        alt={title}
-      />
+      <div className="relative h-96 bg-black rounded-lg overflow-hidden">
+        <img 
+          src={images[0]} 
+          className="w-full h-full object-contain"
+          alt={title}
+        />
+      </div>
     );
   }
 
   const imageLabels = ["L'événement", "Le lieu", "L'ambiance"];
 
   return (
-    <div className="relative h-full">
+    <div className="relative h-full bg-black rounded-lg overflow-hidden">
       <div 
         className="flex h-full snap-x snap-mandatory overflow-x-auto scrollbar-hide"
         onScroll={(e) => {
@@ -46,7 +48,7 @@ const EventImageCarousel: React.FC<EventImageCarouselProps> = ({ images, title }
           <div key={idx} className="w-full h-full flex-shrink-0 snap-center relative">
             <img 
               src={img} 
-              className="w-full h-full object-cover" 
+              className="w-full h-full object-contain" 
               alt={imageLabels[idx] || `Image ${idx + 1}`}
             />
             {/* Label sur image */}
