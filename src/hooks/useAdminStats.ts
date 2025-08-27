@@ -83,11 +83,14 @@ export const useAdminStats = () => {
         .from('business_configs')
         .select('*', { count: 'exact', head: true });
 
-      // Compter les événements en attente de validation
+      // Compter les événements en attente de validation (uniquement à venir / en cours)
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+      const fiveHoursAgo = new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString();
       const { count: pendingEvents } = await supabase
         .from('events')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending');
+        .eq('status', 'pending')
+        .or(`and(end_time.is.null,date.gte.${fiveHoursAgo}),and(end_time.not.is.null,end_time.gte.${twoHoursAgo})`);
 
       // Récupérer l'activité récente (derniers événements créés)
       const { data: recentActivity } = await supabase
