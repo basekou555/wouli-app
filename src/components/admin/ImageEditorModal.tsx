@@ -10,7 +10,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RotateCw, ZoomIn, Image } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { RotateCw, ZoomIn, Image, Crop, Maximize } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ImageEditorModalProps {
@@ -99,6 +101,66 @@ const getCroppedImg = async (
   });
 };
 
+const getFittedImg = async (
+  imageSrc: string,
+  rotation = 0,
+  targetWidth: number,
+  targetHeight: number
+): Promise<Blob> => {
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) {
+    throw new Error('Could not get canvas context');
+  }
+
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+
+  // Fill with white background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, targetWidth, targetHeight);
+
+  // Apply rotation
+  ctx.save();
+  ctx.translate(targetWidth / 2, targetHeight / 2);
+  ctx.rotate((rotation * Math.PI) / 180);
+
+  // Calculate scale to fit image in canvas while maintaining aspect ratio
+  const imageAspectRatio = image.width / image.height;
+  const canvasAspectRatio = targetWidth / targetHeight;
+  
+  let drawWidth, drawHeight;
+  
+  if (imageAspectRatio > canvasAspectRatio) {
+    // Image is wider, fit to width
+    drawWidth = targetWidth;
+    drawHeight = targetWidth / imageAspectRatio;
+  } else {
+    // Image is taller, fit to height
+    drawHeight = targetHeight;
+    drawWidth = targetHeight * imageAspectRatio;
+  }
+
+  // Draw image centered
+  ctx.drawImage(
+    image,
+    -drawWidth / 2,
+    -drawHeight / 2,
+    drawWidth,
+    drawHeight
+  );
+
+  ctx.restore();
+
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+    }, 'image/jpeg', 0.85);
+  });
+};
+
 type AspectRatioOption = '4:5' | '9:16';
 
 const ASPECT_RATIOS = {
@@ -118,6 +180,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [saving, setSaving] = useState(false);
   const [aspectRatio, setAspectRatio] = useState<AspectRatioOption>('4:5');
+  const [fillMode, setFillMode] = useState<'crop' | 'fit'>('crop');
 
   const onCropComplete = useCallback(
     (croppedArea: Area, croppedAreaPixels: Area) => {
@@ -127,24 +190,36 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   );
 
   const handleSave = async () => {
-    if (!croppedAreaPixels) return;
+    if (fillMode === 'crop' && !croppedAreaPixels) return;
 
     setSaving(true);
     try {
       const targetDimensions = ASPECT_RATIOS[aspectRatio];
-      const croppedImageBlob = await getCroppedImg(
-        imageUrl,
-        croppedAreaPixels,
-        rotation,
-        targetDimensions.width,
-        targetDimensions.height
-      );
-      await onSave(croppedImageBlob);
+      
+      let processedImageBlob: Blob;
+      if (fillMode === 'crop') {
+        processedImageBlob = await getCroppedImg(
+          imageUrl,
+          croppedAreaPixels!,
+          rotation,
+          targetDimensions.width,
+          targetDimensions.height
+        );
+      } else {
+        processedImageBlob = await getFittedImg(
+          imageUrl,
+          rotation,
+          targetDimensions.width,
+          targetDimensions.height
+        );
+      }
+      
+      await onSave(processedImageBlob);
       onClose();
       toast.success('Image mise à jour avec succès');
     } catch (error) {
-      console.error('Erreur lors du recadrage:', error);
-      toast.error('Erreur lors du recadrage de l\'image');
+      console.error('Erreur lors du traitement:', error);
+      toast.error('Erreur lors du traitement de l\'image');
     } finally {
       setSaving(false);
     }
@@ -167,12 +242,33 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <ZoomIn className="h-5 w-5" />
-            Recadrer l'image
+            {fillMode === 'crop' ? <Crop className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
+            {fillMode === 'crop' ? 'Recadrer l\'image' : 'Ajuster l\'image'}
           </DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
+          {/* Fill Mode Selector */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Mode de traitement</label>
+            <RadioGroup value={fillMode} onValueChange={(value: 'crop' | 'fit') => setFillMode(value)} className="flex gap-6">
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="crop" id="crop" />
+                <Label htmlFor="crop" className="flex items-center gap-2 cursor-pointer">
+                  <Crop className="h-4 w-4" />
+                  Recadrer (crop)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="fit" id="fit" />
+                <Label htmlFor="fit" className="flex items-center gap-2 cursor-pointer">
+                  <Maximize className="h-4 w-4" />
+                  Ajuster avec padding
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
           {/* Aspect Ratio Selector */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -200,35 +296,52 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
 
           {/* Crop Area */}
           <div className="relative h-96 bg-black rounded-lg overflow-hidden">
-            <Cropper
-              image={imageUrl}
-              crop={crop}
-              rotation={rotation}
-              zoom={zoom}
-              aspect={ASPECT_RATIOS[aspectRatio].ratio}
-              onCropChange={setCrop}
-              onRotationChange={setRotation}
-              onCropComplete={onCropComplete}
-              onZoomChange={setZoom}
-            />
+            {fillMode === 'crop' ? (
+              <Cropper
+                image={imageUrl}
+                crop={crop}
+                rotation={rotation}
+                zoom={zoom}
+                aspect={ASPECT_RATIOS[aspectRatio].ratio}
+                onCropChange={setCrop}
+                onRotationChange={setRotation}
+                onCropComplete={onCropComplete}
+                onZoomChange={setZoom}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center relative">
+                <img
+                  src={imageUrl}
+                  alt="Preview"
+                  className="max-w-full max-h-full object-contain"
+                  style={{
+                    transform: `rotate(${rotation}deg)`,
+                    transformOrigin: 'center'
+                  }}
+                />
+                <div className="absolute inset-0 border-2 border-dashed border-primary/30 rounded pointer-events-none" />
+              </div>
+            )}
           </div>
 
           {/* Controls */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">Zoom</label>
-                <span className="text-sm text-muted-foreground">{Math.round(zoom * 100)}%</span>
+            {fillMode === 'crop' && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Zoom</label>
+                  <span className="text-sm text-muted-foreground">{Math.round(zoom * 100)}%</span>
+                </div>
+                <Slider
+                  value={[zoom]}
+                  onValueChange={([value]) => setZoom(value)}
+                  min={1}
+                  max={3}
+                  step={0.1}
+                  className="w-full"
+                />
               </div>
-              <Slider
-                value={[zoom]}
-                onValueChange={([value]) => setZoom(value)}
-                min={1}
-                max={3}
-                step={0.1}
-                className="w-full"
-              />
-            </div>
+            )}
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -258,7 +371,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
           <Button variant="outline" onClick={onClose} disabled={saving}>
             Annuler
           </Button>
-          <Button onClick={handleSave} disabled={saving || !croppedAreaPixels}>
+          <Button onClick={handleSave} disabled={saving || (fillMode === 'crop' && !croppedAreaPixels)}>
             {saving ? 'Sauvegarde...' : 'Sauvegarder'}
           </Button>
         </DialogFooter>
