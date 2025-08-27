@@ -11,6 +11,9 @@ import { WOULI_CATEGORIES } from '@/data/wouliCategories';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { enhanceEventContent } from '@/services/aiEnhancementService';
+import { ImageEditorModal } from './ImageEditorModal';
+import { uploadEventImage, updateEventImageUrl } from '@/services/imageUploadService';
+import { toast } from 'sonner';
 
 interface PendingEvent {
   id: string;
@@ -48,7 +51,9 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
   });
   const [saving, setSaving] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
-  const { toast } = useToast();
+  const [imageEditorOpen, setImageEditorOpen] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  
 
   useEffect(() => {
     if (event) {
@@ -76,7 +81,7 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
     try {
       const enhanced = await enhanceEventContent({
         title: formData.title || event.title,
-        description: formData.description || event.description,
+        description: formData.description || event.description || '',
         location: formData.location || event.location
       });
 
@@ -89,17 +94,10 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
         time: enhanced.time || prev.time
       }));
 
-      toast({
-        title: "✨ Contenu amélioré",
-        description: "Le titre et la description ont été améliorés par l'IA"
-      });
+      toast.success("✨ Le contenu a été amélioré par l'IA");
     } catch (error) {
       console.error('Erreur amélioration IA:', error);
-      toast({
-        title: "Erreur d'amélioration",
-        description: "Impossible d'améliorer le contenu avec l'IA",
-        variant: "destructive"
-      });
+      toast.error("Impossible d'améliorer le contenu avec l'IA");
     } finally {
       setEnhancing(false);
     }
@@ -131,28 +129,58 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
 
       if (error) throw error;
 
-      toast({
-        title: "✅ Événement modifié",
-        description: "Les modifications ont été enregistrées avec succès"
-      });
+      toast.success("✅ Événement modifié avec succès");
 
       onSuccess();
       onClose();
     } catch (error) {
       console.error('Erreur modification:', error);
-      toast({
-        title: "Erreur de modification",
-        description: "Impossible de modifier l'événement",
-        variant: "destructive"
-      });
+      toast.error("Impossible de modifier l'événement");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleImageCrop = async (croppedImageBlob: Blob) => {
+    if (!event?.id) return;
+
+    setUploadingImage(true);
+    try {
+      // Upload new image
+      const uploadResult = await uploadEventImage(croppedImageBlob, event.id);
+      
+      if (!uploadResult.success || !uploadResult.url) {
+        toast.error(uploadResult.error || 'Erreur lors de l\'upload');
+        return;
+      }
+
+      // Update event in database
+      const updateResult = await updateEventImageUrl(event.id, uploadResult.url);
+      
+      if (!updateResult.success) {
+        toast.error(updateResult.error || 'Erreur lors de la mise à jour');
+        return;
+      }
+
+      // Update local form data
+      setFormData(prev => ({
+        ...prev,
+        image_url: uploadResult.url
+      }));
+
+      toast.success('Image mise à jour avec succès');
+    } catch (error) {
+      console.error('Erreur handleImageCrop:', error);
+      toast.error('Erreur lors du traitement de l\'image');
+    } finally {
+      setUploadingImage(false);
     }
   };
 
   if (!event) return null;
 
   return (
+    <>
     <Dialog open={!!event} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -165,13 +193,31 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
         </DialogHeader>
 
         <div className="grid grid-cols-2 gap-6">
-          {/* Image preview */}
-          <div className="col-span-2">
-            <img 
-              src={formData.image_url || event.image_url || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30'} 
-              alt="Aperçu"
-              className="w-full h-48 object-cover rounded-lg"
-            />
+          {/* Image preview with editor */}
+          <div className="col-span-2 space-y-2">
+            <Label>Image de l'événement</Label>
+            <div className="space-y-2">
+              <img 
+                src={formData.image_url || event.image_url || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30'} 
+                alt="Aperçu"
+                className="w-full h-48 object-cover rounded-lg border"
+              />
+              {(formData.image_url || event.image_url) && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setImageEditorOpen(true)}
+                  disabled={uploadingImage}
+                  className="flex items-center gap-2"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  {uploadingImage ? 'Traitement...' : 'Recadrer l\'image'}
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Titre avec bouton IA */}
@@ -348,6 +394,17 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* Image Editor Modal */}
+    {(formData.image_url || event.image_url) && (
+      <ImageEditorModal
+        isOpen={imageEditorOpen}
+        onClose={() => setImageEditorOpen(false)}
+        imageUrl={formData.image_url || event.image_url || ''}
+        onSave={handleImageCrop}
+      />
+    )}
+    </>
   );
 };
 
