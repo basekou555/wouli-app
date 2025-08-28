@@ -1,11 +1,11 @@
-import React, { useState, memo } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useSpring, animated, to } from '@react-spring/web';
 import { useDrag } from '@use-gesture/react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Heart, X, Eye, Users, Euro, Share2 } from 'lucide-react';
+import { Heart, X, Share2, Eye, Users, Euro } from 'lucide-react';
 import { UnifiedEvent } from '@/types/unified';
 import { 
   getUrgencyBadge, 
@@ -14,14 +14,6 @@ import {
   getPriceInfo, 
   getLocationDisplay 
 } from '@/utils/eventCardHelpers';
-
-// New enhanced components
-import UrgentBadge from './UrgentBadge';
-import SocialProof from './SocialProof';
-import DistanceBadge from './DistanceBadge';
-import ContextualBadges from './ContextualBadges';
-import PreciseTimeIndicator from './PreciseTimeIndicator';
-import QuickActions from './QuickActions';
 
 export type EventCardVariant = 'swipe' | 'list' | 'business';
 
@@ -41,7 +33,7 @@ interface WouliEventCardProps {
   onSwipeRight?: () => void;
 }
 
-const WouliEventCard = memo<WouliEventCardProps>(({
+const WouliEventCard: React.FC<WouliEventCardProps> = ({
   event,
   variant,
   isLiked,
@@ -168,33 +160,29 @@ const WouliEventCard = memo<WouliEventCardProps>(({
           <img 
             src={event.image_url || "https://picsum.photos/400/500?random=event"}
             alt={event.title}
-            className="w-full h-full object-cover transition-transform duration-300 hover:scale-105" 
-            loading="lazy"
-            onError={(e) => {
-              e.currentTarget.src = "https://picsum.photos/400/500?random=event";
-            }}
+            className="w-full h-full object-cover" 
           />
           
-          {/* Enhanced urgency badge */}
-          <UrgentBadge eventDate={event.date} eventTime={event.time} />
+          {/* Badge urgence - coin supérieur droit */}
+          {urgencyLabel && (
+            <Badge className="absolute top-3 right-3 bg-red-500 text-white border-none animate-pulse hover:animate-none text-xs font-medium px-2 py-1 rounded-lg shadow-lg">
+              {urgencyLabel}
+            </Badge>
+          )}
           
-          {/* Contextual badges */}
-          <div className="absolute top-3 left-3">
-            <ContextualBadges event={event} />
-          </div>
-          
-          {/* Distance badge */}
-          <div className="absolute bottom-3 left-3">
-            <DistanceBadge 
-              eventLocation={event.venue || event.location} 
-              eventAddress={event.address}
-            />
-          </div>
-          
-          {/* Quick actions */}
-          <div className="absolute bottom-3 right-3">
-            <QuickActions event={event} onShare={onShare} />
-          </div>
+          {/* Bouton partage - coin supérieur gauche */}
+          {onShare && (
+            <Button 
+              size="sm"
+              className="absolute top-3 left-3 w-10 h-10 bg-white/90 backdrop-blur rounded-full p-0 hover:bg-white border-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                onShare();
+              }}
+            >
+              <Share2 className="h-4 w-4 text-gray-700" />
+            </Button>
+          )}
         </div>
         
         {/* Zone Informations (20%) */}
@@ -217,16 +205,37 @@ const WouliEventCard = memo<WouliEventCardProps>(({
             {formatEventDateTime(event.date, event.time)} • {getLocationDisplay(event.venue, event.location)}
           </div>
           
-          {/* Enhanced social proof with precise time */}
-          <div onClick={onCardClick} className="cursor-pointer space-y-2">
-            <SocialProof 
-              friendsParticipating={friends} 
-              totalParticipants={totalParticipants} 
-            />
-            <PreciseTimeIndicator 
-              eventDate={event.date} 
-              eventTime={event.time}
-            />
+          {/* Ligne 3: Social proof */}
+          <div onClick={onCardClick} className="cursor-pointer">
+            <div className="flex items-center space-x-2">
+              {/* Avatars amis (3 max, 24px, overlap -space-x-2) */}
+              {friends.length > 0 && (
+                <div className="flex -space-x-2">
+                  {friends.slice(0, 3).map((friend) => (
+                    <div 
+                      key={friend.id} 
+                      className="w-6 h-6 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-xs font-medium text-white border-2 border-white"
+                    >
+                      {friend.avatar ? (
+                        <img src={friend.avatar} alt={friend.name} className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        friend.name.charAt(0).toUpperCase()
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Texte social proof */}
+              <span className="text-xs text-muted-foreground">
+                {friends.length > 0 
+                  ? `${friends.length} amis, ${totalParticipants} total`
+                  : totalParticipants > 0 
+                    ? `${totalParticipants} personnes intéressées`
+                    : "Sois le premier"
+                }
+              </span>
+            </div>
           </div>
         </div>
         
@@ -245,43 +254,33 @@ const WouliEventCard = memo<WouliEventCardProps>(({
               </Button>
             )}
             
-            {/* Bouton Participer avec animation */}
-            <motion.div
-              whileTap={{ scale: 0.98 }}
-              className={onDislike ? 'flex-[2]' : 'flex-1'}
+            {/* Bouton Participer */}
+            <Button 
+              className={`h-11 font-semibold ${
+                onDislike ? 'flex-[2]' : 'flex-1'
+              } ${
+                isParticipating 
+                  ? 'bg-green-500 hover:bg-green-600 text-white' 
+                  : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white'
+              }`}
+              onClick={onParticipate}
             >
-              <Button 
-                className={`h-11 font-semibold w-full transition-all duration-200 ${
-                  isParticipating 
-                    ? 'bg-success hover:bg-success/80 text-success-foreground' 
-                    : 'wouli-gradient hover:opacity-90 text-white'
-                }`}
-                onClick={onParticipate}
-              >
-                {isParticipating ? '✅ Inscrit' : 'Participer'}
-              </Button>
-            </motion.div>
+              {isParticipating ? '✅ Inscrit' : 'Participer'}
+            </Button>
             
-            {/* Bouton ♡ avec animation */}
-            <motion.div
-              whileTap={{ scale: 0.95 }}
-              whileHover={{ scale: 1.05 }}
-              className="flex-1"
+            {/* Bouton ♡ */}
+            <Button 
+              variant="outline" 
+              size="sm"
+              className={`h-11 flex-1 border-2 ${
+                isLiked 
+                  ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' 
+                  : 'bg-background hover:bg-muted border-border'
+              }`}
+              onClick={onLike}
             >
-              <Button 
-                variant="outline" 
-                size="sm"
-                className={`h-11 w-full border-2 transition-all duration-200 ${
-                  isLiked 
-                    ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100 animate-like-bounce' 
-                    : 'bg-background hover:bg-muted border-border'
-                }`}
-                onClick={onLike}
-                aria-label={isLiked ? "Retirer des favoris" : "Ajouter aux favoris"}
-              >
-                <Heart className={`h-4 w-4 transition-all duration-200 ${isLiked ? 'fill-current text-red-500' : ''}`} />
-              </Button>
-            </motion.div>
+              <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
+            </Button>
           </div>
         </div>
       </>
@@ -374,7 +373,7 @@ const WouliEventCard = memo<WouliEventCardProps>(({
                 onShare();
               }}
             >
-              <Share2 className="h-3 w-3 text-neutral-700" />
+              <Share2 className="h-3 w-3 text-gray-700" />
             </Button>
           )}
         </div>
@@ -549,6 +548,6 @@ const WouliEventCard = memo<WouliEventCardProps>(({
   }
 
   return null;
-});
+};
 
 export default WouliEventCard;
