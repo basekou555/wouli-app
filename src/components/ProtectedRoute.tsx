@@ -26,8 +26,8 @@ const ProtectedRoute = ({ children, requireBusiness = false, requireUser = false
       return;
     }
 
-    // If business route required but user is not business
-    if (requireBusiness && !isBusinessUser) {
+    // If business route required but user is not business AND not admin
+    if (requireBusiness && !isBusinessUser && userType !== 'admin') {
       navigate('/business/signup', { 
         state: { 
           message: 'Vous devez créer un compte établissement pour accéder à cette page.',
@@ -57,7 +57,7 @@ const ProtectedRoute = ({ children, requireBusiness = false, requireUser = false
     return null; // Will redirect via useEffect
   }
 
-  if (requireBusiness && !isBusinessUser) {
+  if (requireBusiness && !isBusinessUser && userType !== 'admin') {
     return null; // Will redirect via useEffect
   }
 
