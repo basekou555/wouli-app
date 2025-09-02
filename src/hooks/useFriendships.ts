@@ -47,14 +47,14 @@ export const useFriendships = () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('friendships')
         .select(`
           *,
           user_profile:user_id (id, username, avatar_url, city),
           friend_profile:friend_id (id, username, avatar_url, city)
         `)
-        .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
+        .or(\`user_id.eq.\${user.id},friend_id.eq.\${user.id}\`)
         .order('requested_at', { ascending: false });
 
       if (error) throw error;
@@ -63,14 +63,14 @@ export const useFriendships = () => {
       const incoming: Friendship[] = [];
       const outgoing: Friendship[] = [];
 
-      data?.forEach((friendship) => {
+      data?.forEach((friendship: any) => {
         if (friendship.status === 'accepted') {
-          acceptedFriends.push(friendship);
+          acceptedFriends.push(friendship as Friendship);
         } else if (friendship.status === 'pending') {
           if (friendship.friend_id === user.id) {
-            incoming.push(friendship);
+            incoming.push(friendship as Friendship);
           } else {
-            outgoing.push(friendship);
+            outgoing.push(friendship as Friendship);
           }
         }
       });
@@ -100,22 +100,23 @@ export const useFriendships = () => {
     setSearchLoading(true);
     try {
       // Récupérer les IDs des relations existantes pour les exclure
-      const { data: existingRelations } = await supabase
+      const { data: existingRelations } = await (supabase as any)
         .from('friendships')
         .select('user_id, friend_id')
-        .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
+        .or(\`user_id.eq.\${user.id},friend_id.eq.\${user.id}\`);
 
-      const excludeIds = new Set([user.id]);
-      existingRelations?.forEach(rel => {
+      const excludeIds = new Set<string>([user.id]);
+      existingRelations?.forEach((rel: any) => {
         excludeIds.add(rel.user_id);
         excludeIds.add(rel.friend_id);
       });
 
+      const excluded = Array.from(excludeIds);
       const { data, error } = await supabase
         .from('profiles')
         .select('id, username, avatar_url, city')
-        .ilike('username', `%${query}%`)
-        .not('id', 'in', `(${Array.from(excludeIds).join(',')})`)
+        .ilike('username', \`%\${query}%\`)
+        .not('id', 'in', \`(\${excluded.join(',')})\`)
         .limit(10);
 
       if (error) throw error;
@@ -132,7 +133,7 @@ export const useFriendships = () => {
     if (!user) return false;
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('friendships')
         .insert({
           user_id: user.id,
@@ -163,7 +164,7 @@ export const useFriendships = () => {
   // Accepter une demande
   const acceptFriendRequest = useCallback(async (friendshipId: string) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('friendships')
         .update({ status: 'accepted' })
         .eq('id', friendshipId);
@@ -191,7 +192,7 @@ export const useFriendships = () => {
   // Refuser/Annuler une demande
   const rejectFriendRequest = useCallback(async (friendshipId: string) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('friendships')
         .delete()
         .eq('id', friendshipId);
@@ -219,7 +220,7 @@ export const useFriendships = () => {
   // Supprimer un ami
   const unfriend = useCallback(async (friendshipId: string) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('friendships')
         .delete()
         .eq('id', friendshipId);
@@ -249,7 +250,7 @@ export const useFriendships = () => {
     if (!user || friends.length === 0) return [];
 
     try {
-      const friendIds = friends.map(f => 
+      const friendIds = friends.map(f =>
         f.user_id === user.id ? f.friend_id : f.user_id
       );
 
@@ -264,18 +265,18 @@ export const useFriendships = () => {
 
       if (error) throw error;
 
-      return data?.map(p => ({
+      return (data || []).map((p: any) => ({
         id: p.profiles.id,
         name: p.profiles.username,
         avatar: p.profiles.avatar_url
-      })) || [];
+      }));
     } catch (error) {
       console.error('Error getting friends participating:', error);
       return [];
     }
   }, [user, friends]);
 
-  // Écouter les notifications en temps réel
+  // Écouter les notifications en temps réel (acceptation de demande)
   useEffect(() => {
     if (!user) return;
 
@@ -287,20 +288,20 @@ export const useFriendships = () => {
           event: 'INSERT',
           schema: 'public',
           table: 'notifications',
-          filter: `user_id=eq.${user.id}`
+          filter: \`user_id=eq.\${user.id}\`
         },
         async (payload) => {
-          const notification = payload.new;
-          if (notification.type === 'friend_request_accepted') {
+          const notification: any = (payload as any).new;
+          if (notification?.type === 'friend_request_accepted') {
             const { data: friendProfile } = await supabase
               .from('profiles')
               .select('username')
-              .eq('id', notification.payload.friend_id)
-              .single();
+              .eq('id', (notification.payload as any).friend_id)
+              .maybeSingle();
 
             toast({
               title: "🎉 Demande acceptée !",
-              description: `${friendProfile?.username || 'Quelqu\'un'} a accepté votre demande d'ami`
+              description: \`\${friendProfile?.username || "Quelqu'un"} a accepté votre demande d'ami\`
             });
 
             await loadFriendships();

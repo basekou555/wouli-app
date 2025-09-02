@@ -1,36 +1,28 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContext';
 import Auth from './pages/Auth';
 import Profile from './pages/Profile';
 import UserHistory from './pages/UserHistory';
-import AppLayout from './components/AppLayout';
-import EventDetailsPage from './pages/EventDetailsPage';
-import BusinessProfilePage from './pages/BusinessProfilePage';
-import BusinessEventsPage from './pages/BusinessEventsPage';
-import ProfileSettings from './pages/ProfileSettings';
-import Explore from './pages/Explore';
-import CreateEvent from './pages/CreateEvent';
-import { Toaster } from "@/components/ui/toaster"
-import { QueryClient } from '@tanstack/react-query';
-import Wouli from './pages/Wouli';
+import { Toaster } from "@/components/ui/toaster";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ErrorBoundary from './components/ErrorBoundary';
 import Friends from './pages/Friends';
+import Explore from './pages/Explore';
+import CreateEvent from './pages/CreateEvent';
+import EventDetails from './pages/EventDetails';
+import BusinessEvents from './pages/BusinessEvents';
+import BusinessDashboard from './pages/BusinessDashboard';
+import ProtectedRoute from './components/ProtectedRoute';
+import UserApp from './pages/UserApp';
 
 const queryClient = new QueryClient();
-
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user } = useAuth();
-  if (!user) {
-    return <Navigate to="/auth" />;
-  }
-  return children;
-};
 
 function App() {
   return (
     <AuthProvider>
-      <QueryClient>
+      <QueryClientProvider client={queryClient}>
         <div className="min-h-screen bg-background">
           <Toaster />
           <ErrorBoundary>
@@ -40,36 +32,100 @@ function App() {
                 <Route path="/auth" element={<Auth />} />
 
                 {/* Routes publiques */}
-                <Route path="/" element={<Navigate to="/app" />} />
-                <Route path="/app" element={<ProtectedRoute><Wouli /></ProtectedRoute>} />
-                <Route path="/event/:eventId" element={<ProtectedRoute><EventDetailsPage /></ProtectedRoute>} />
-                <Route path="/business/:businessId" element={<ProtectedRoute><BusinessProfilePage /></ProtectedRoute>} />
-                <Route path="/business/:businessId/events" element={<ProtectedRoute><BusinessEventsPage /></ProtectedRoute>} />
-                <Route path="/explore" element={<ProtectedRoute><Explore /></ProtectedRoute>} />
-                <Route path="/create" element={<ProtectedRoute><CreateEvent /></ProtectedRoute>} />
-                <Route path="/profile-settings" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
-                <Route path="/history" element={<ProtectedRoute><UserHistory /></ProtectedRoute>} />
-                
-                {/* Routes utilisateur protégées */}
-                <Route path="/profile" element={
-                  <ProtectedRoute>
-                    <Profile />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/friends" element={
-                  <ProtectedRoute>
-                    <Friends />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Route par défaut - redirige vers /app si authentifié, sinon vers /auth */}
-                <Route path="*" element={<ProtectedRoute><Wouli /></ProtectedRoute>} />
+                <Route path="/" element={<Navigate to="/app" replace />} />
+
+                {/* Interface utilisateur */}
+                <Route
+                  path="/app"
+                  element={
+                    <ProtectedRoute requireUser>
+                      <UserApp />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/event/:eventId"
+                  element={
+                    <ProtectedRoute requireUser>
+                      <EventDetails />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/explore"
+                  element={
+                    <ProtectedRoute requireUser>
+                      <Explore />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/create"
+                  element={
+                    <ProtectedRoute requireUser>
+                      <CreateEvent />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/profile-settings"
+                  element={
+                    <ProtectedRoute requireUser>
+                      {/* Reuse Profile page if specific settings page is not needed */}
+                      <Profile />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/history"
+                  element={
+                    <ProtectedRoute requireUser>
+                      <UserHistory />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <ProtectedRoute requireUser>
+                      <Profile />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/friends"
+                  element={
+                    <ProtectedRoute requireUser>
+                      <Friends />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Interface business */}
+                <Route
+                  path="/business"
+                  element={
+                    <ProtectedRoute requireBusiness>
+                      <BusinessDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/business/events"
+                  element={
+                    <ProtectedRoute requireBusiness>
+                      <BusinessEvents />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Fallback */}
+                <Route path="*" element={<Navigate to="/app" replace />} />
               </Routes>
             </BrowserRouter>
           </ErrorBoundary>
         </div>
-      </QueryClient>
+      </QueryClientProvider>
     </AuthProvider>
   );
 }
