@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import Auth from './pages/Auth';
 import Profile from './pages/Profile';
-import UserHistory from './pages/UserHistory';
+
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -74,14 +74,6 @@ function App() {
                     <ProtectedRoute requireUser>
                       {/* Reuse Profile page if specific settings page is not needed */}
                       <Profile />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/history"
-                  element={
-                    <ProtectedRoute requireUser>
-                      <UserHistory />
                     </ProtectedRoute>
                   }
                 />

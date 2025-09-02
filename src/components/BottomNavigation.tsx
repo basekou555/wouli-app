@@ -11,14 +11,13 @@ const BottomNavigation = () => {
     { path: '/app', icon: Heart, label: 'Découvrir' },
     { path: '/explore', icon: Search, label: 'Explorer' },
     { path: '/friends', icon: Users, label: 'Amis' },
-    { path: '/history', icon: Clock, label: 'Historique' },
     { path: '/profile', icon: User, label: 'Profil' }
   ];
 
   return (
     <div className="fixed bottom-0 left-0 w-full bg-white border-t z-50">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-5">
+        <div className="grid grid-cols-4">
           {navItems.map((item) => (
             <Link
               key={item.path}

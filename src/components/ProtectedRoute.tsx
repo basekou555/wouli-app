@@ -38,8 +38,8 @@ const ProtectedRoute = ({ children, requireBusiness = false, requireUser = false
       return;
     }
 
-    // If user route required but user is business
-    if (requireUser && isBusinessUser) {
+    // If user route required but user is business (but allow /app and /explore for all)
+    if (requireUser && isBusinessUser && !location.pathname.startsWith('/app') && !location.pathname.startsWith('/explore')) {
       navigate('/business', { replace: true });
       return;
     }
@@ -61,7 +61,7 @@ const ProtectedRoute = ({ children, requireBusiness = false, requireUser = false
     return null; // Will redirect via useEffect
   }
 
-  if (requireUser && isBusinessUser) {
+  if (requireUser && isBusinessUser && !location.pathname.startsWith('/app') && !location.pathname.startsWith('/explore')) {
     return null; // Will redirect via useEffect
   }
 

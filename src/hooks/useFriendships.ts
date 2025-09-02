@@ -281,7 +281,7 @@ export const useFriendships = () => {
     if (!user) return;
 
     const channel = supabase
-      .channel('friendship-notifications')
+      .channel('friendship-notifications-' + (user?.id || Math.random().toString(36).substr(2, 9)))
       .on(
         'postgres_changes',
         {
