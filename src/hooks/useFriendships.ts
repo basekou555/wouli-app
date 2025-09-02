@@ -54,7 +54,7 @@ export const useFriendships = () => {
           user_profile:user_id (id, username, avatar_url, city),
           friend_profile:friend_id (id, username, avatar_url, city)
         `)
-        .or(\`user_id.eq.\${user.id},friend_id.eq.\${user.id}\`)
+        .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
         .order('requested_at', { ascending: false });
 
       if (error) throw error;
@@ -103,7 +103,7 @@ export const useFriendships = () => {
       const { data: existingRelations } = await (supabase as any)
         .from('friendships')
         .select('user_id, friend_id')
-        .or(\`user_id.eq.\${user.id},friend_id.eq.\${user.id}\`);
+        .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
 
       const excludeIds = new Set<string>([user.id]);
       existingRelations?.forEach((rel: any) => {
@@ -115,8 +115,8 @@ export const useFriendships = () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('id, username, avatar_url, city')
-        .ilike('username', \`%\${query}%\`)
-        .not('id', 'in', \`(\${excluded.join(',')})\`)
+        .ilike('username', `%${query}%`)
+        .not('id', 'in', `(${excluded.join(',')})`)
         .limit(10);
 
       if (error) throw error;
@@ -288,7 +288,7 @@ export const useFriendships = () => {
           event: 'INSERT',
           schema: 'public',
           table: 'notifications',
-          filter: \`user_id=eq.\${user.id}\`
+          filter: `user_id=eq.${user.id}`
         },
         async (payload) => {
           const notification: any = (payload as any).new;
@@ -301,7 +301,7 @@ export const useFriendships = () => {
 
             toast({
               title: "🎉 Demande acceptée !",
-              description: \`\${friendProfile?.username || "Quelqu'un"} a accepté votre demande d'ami\`
+              description: `${friendProfile?.username || "Quelqu'un"} a accepté votre demande d'ami`
             });
 
             await loadFriendships();
