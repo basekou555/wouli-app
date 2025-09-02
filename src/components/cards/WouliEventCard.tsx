@@ -9,11 +9,38 @@ import SocialProof from './SocialProof';
 
 interface WouliEventCardProps {
   event: UnifiedEvent;
+  // Props used by other parts of the app (SearchResults, Explore)
+  variant?: string;
+  isLiked?: boolean;
+  isParticipating?: boolean;
+  onLike?: () => void;
+  onParticipate?: () => void;
+  onDislike?: () => void;
+  onShare?: () => void;
+  onCardClick?: () => void;
+  className?: string;
+  enableSwipe?: boolean;
+  // Existing swipe callbacks
   onSwipeLeft?: () => void;
   onSwipeRight?: () => void;
 }
 
-const WouliEventCard: React.FC<WouliEventCardProps> = ({ event, onSwipeLeft, onSwipeRight }) => {
+const WouliEventCard: React.FC<WouliEventCardProps> = ({
+  event,
+  // accept optional props for compatibility; current implementation doesn't rely on them
+  variant,
+  isLiked,
+  isParticipating,
+  onLike,
+  onParticipate,
+  onDislike,
+  onShare,
+  onCardClick,
+  className,
+  enableSwipe,
+  onSwipeLeft,
+  onSwipeRight
+}) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const { handleLike, handleUnlike, handleParticipate, handleCancelParticipation } = useSimpleEventInteractions();
 
@@ -47,7 +74,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({ event, onSwipeLeft, onS
   };
 
   return (
-    <div className="relative bg-white rounded-2xl shadow-lg overflow-hidden max-w-sm mx-auto h-[600px] flex flex-col">
+    <div className={`relative bg-white rounded-2xl shadow-lg overflow-hidden max-w-sm mx-auto h-[600px] flex flex-col ${className || ''}`}>
       {/* Image Section (70%) */}
       <div className="h-[420px] relative">
         <img

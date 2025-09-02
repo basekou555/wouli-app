@@ -10,7 +10,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ErrorBoundary from './components/ErrorBoundary';
 import Friends from './pages/Friends';
 import Explore from './pages/Explore';
-import CreateEvent from './pages/CreateEvent';
+// Replaced missing CreateEvent page with existing EventCreation component
+import EventCreation from './components/EventCreation';
 import EventDetails from './pages/EventDetails';
 import BusinessEvents from './pages/BusinessEvents';
 import BusinessDashboard from './pages/BusinessDashboard';
@@ -63,7 +64,7 @@ function App() {
                   path="/create"
                   element={
                     <ProtectedRoute requireUser>
-                      <CreateEvent />
+                      <EventCreation />
                     </ProtectedRoute>
                   }
                 />
@@ -131,3 +132,4 @@ function App() {
 }
 
 export default App;
+
