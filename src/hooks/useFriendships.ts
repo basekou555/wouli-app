@@ -47,8 +47,17 @@ export const useFriendships = () => {
     if (!user) return;
 
     try {
+      // Temporairement désactivé en attendant l'approbation de la migration friendships
+      setFriends([]);
+      setIncomingRequests([]);
+      setOutgoingRequests([]);
+      setLoading(false);
+      return;
+
+      // Code original à réactiver après migration
+      /*
       // Étape 1: Récupérer les relations d'amitié
-      const { data: friendships, error: friendshipsError } = await supabase
+      const { data: friendships, error: friendshipsError } = await (supabase as any)
         .from('friendships')
         .select('*')
         .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
@@ -65,7 +74,7 @@ export const useFriendships = () => {
 
       // Étape 2: Récupérer les profils des utilisateurs impliqués
       const userIds = new Set<string>();
-      friendships.forEach(f => {
+      friendships.forEach((f: any) => {
         userIds.add(f.user_id);
         userIds.add(f.friend_id);
       });
@@ -80,7 +89,7 @@ export const useFriendships = () => {
       // Étape 3: Associer les profils aux amitiés
       const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
       
-      const enrichedFriendships = friendships.map(friendship => ({
+      const enrichedFriendships = friendships.map((friendship: any) => ({
         ...friendship,
         user_profile: profilesMap.get(friendship.user_id),
         friend_profile: profilesMap.get(friendship.friend_id)
@@ -105,6 +114,7 @@ export const useFriendships = () => {
       setFriends(acceptedFriends);
       setIncomingRequests(incoming);
       setOutgoingRequests(outgoing);
+      */
     } catch (error) {
       console.error('Error loading friendships:', error);
       toast({
