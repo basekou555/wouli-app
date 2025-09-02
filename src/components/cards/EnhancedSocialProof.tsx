@@ -18,8 +18,13 @@ const EnhancedSocialProof: React.FC<EnhancedSocialProofProps> = ({
 
   useEffect(() => {
     const loadFriendsParticipating = async () => {
-      const friends = await getFriendsParticipating(eventId);
-      setFriendsParticipating(friends);
+      try {
+        const friends = await getFriendsParticipating(eventId);
+        setFriendsParticipating(friends || []);
+      } catch (error) {
+        console.error('Error loading friends participating:', error);
+        setFriendsParticipating([]);
+      }
     };
 
     loadFriendsParticipating();

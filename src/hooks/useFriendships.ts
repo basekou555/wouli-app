@@ -47,23 +47,50 @@ export const useFriendships = () => {
     if (!user) return;
 
     try {
-      const { data, error } = await (supabase as any)
+      // Étape 1: Récupérer les relations d'amitié
+      const { data: friendships, error: friendshipsError } = await supabase
         .from('friendships')
-        .select(`
-          *,
-          user_profile:user_id (id, username, avatar_url, city),
-          friend_profile:friend_id (id, username, avatar_url, city)
-        `)
+        .select('*')
         .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
         .order('requested_at', { ascending: false });
 
-      if (error) throw error;
+      if (friendshipsError) throw friendshipsError;
+      if (!friendships || friendships.length === 0) {
+        setFriends([]);
+        setIncomingRequests([]);
+        setOutgoingRequests([]);
+        setLoading(false);
+        return;
+      }
+
+      // Étape 2: Récupérer les profils des utilisateurs impliqués
+      const userIds = new Set<string>();
+      friendships.forEach(f => {
+        userIds.add(f.user_id);
+        userIds.add(f.friend_id);
+      });
+
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, username, avatar_url, city')
+        .in('id', Array.from(userIds));
+
+      if (profilesError) throw profilesError;
+
+      // Étape 3: Associer les profils aux amitiés
+      const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
+      
+      const enrichedFriendships = friendships.map(friendship => ({
+        ...friendship,
+        user_profile: profilesMap.get(friendship.user_id),
+        friend_profile: profilesMap.get(friendship.friend_id)
+      }));
 
       const acceptedFriends: Friendship[] = [];
       const incoming: Friendship[] = [];
       const outgoing: Friendship[] = [];
 
-      data?.forEach((friendship: any) => {
+      enrichedFriendships.forEach((friendship: any) => {
         if (friendship.status === 'accepted') {
           acceptedFriends.push(friendship as Friendship);
         } else if (friendship.status === 'pending') {
@@ -254,21 +281,29 @@ export const useFriendships = () => {
         f.user_id === user.id ? f.friend_id : f.user_id
       );
 
-      const { data, error } = await supabase
+      // Étape 1: Récupérer les participants de l'événement
+      const { data: participants, error: participantsError } = await supabase
         .from('event_participants')
-        .select(`
-          user_id,
-          profiles:user_id (id, username, avatar_url)
-        `)
+        .select('user_id')
         .eq('event_id', eventId)
         .in('user_id', friendIds);
 
-      if (error) throw error;
+      if (participantsError) throw participantsError;
+      if (!participants || participants.length === 0) return [];
 
-      return (data || []).map((p: any) => ({
-        id: p.profiles.id,
-        name: p.profiles.username,
-        avatar: p.profiles.avatar_url
+      // Étape 2: Récupérer les profils des participants
+      const participantIds = participants.map(p => p.user_id);
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, username, avatar_url')
+        .in('id', participantIds);
+
+      if (profilesError) throw profilesError;
+
+      return (profiles || []).map((profile: any) => ({
+        id: profile.id,
+        name: profile.username,
+        avatar: profile.avatar_url
       }));
     } catch (error) {
       console.error('Error getting friends participating:', error);
@@ -281,7 +316,7 @@ export const useFriendships = () => {
     if (!user) return;
 
     const channel = supabase
-      .channel('friendship-notifications-' + (user?.id || Math.random().toString(36).substr(2, 9)))
+      .channel(`friendship-notifications-${user.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`)
       .on(
         'postgres_changes',
         {

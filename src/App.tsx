@@ -35,11 +35,11 @@ function App() {
                 {/* Routes publiques */}
                 <Route path="/" element={<Navigate to="/app" replace />} />
 
-                {/* Interface utilisateur */}
+                {/* Interface utilisateur - accessible à tous les utilisateurs authentifiés */}
                 <Route
                   path="/app"
                   element={
-                    <ProtectedRoute requireUser>
+                    <ProtectedRoute>
                       <UserApp />
                     </ProtectedRoute>
                   }
@@ -47,7 +47,7 @@ function App() {
                 <Route
                   path="/event/:eventId"
                   element={
-                    <ProtectedRoute requireUser>
+                    <ProtectedRoute>
                       <EventDetails />
                     </ProtectedRoute>
                   }
@@ -55,7 +55,7 @@ function App() {
                 <Route
                   path="/explore"
                   element={
-                    <ProtectedRoute requireUser>
+                    <ProtectedRoute>
                       <Explore />
                     </ProtectedRoute>
                   }
@@ -63,7 +63,7 @@ function App() {
                 <Route
                   path="/create"
                   element={
-                    <ProtectedRoute requireUser>
+                    <ProtectedRoute>
                       <EventCreation />
                     </ProtectedRoute>
                   }
@@ -71,7 +71,7 @@ function App() {
                 <Route
                   path="/profile-settings"
                   element={
-                    <ProtectedRoute requireUser>
+                    <ProtectedRoute>
                       {/* Reuse Profile page if specific settings page is not needed */}
                       <Profile />
                     </ProtectedRoute>
@@ -80,7 +80,7 @@ function App() {
                 <Route
                   path="/profile"
                   element={
-                    <ProtectedRoute requireUser>
+                    <ProtectedRoute>
                       <Profile />
                     </ProtectedRoute>
                   }
@@ -88,7 +88,7 @@ function App() {
                 <Route
                   path="/friends"
                   element={
-                    <ProtectedRoute requireUser>
+                    <ProtectedRoute>
                       <Friends />
                     </ProtectedRoute>
                   }
