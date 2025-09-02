@@ -17,18 +17,8 @@ const ProtectedRoute = ({ children, requireBusiness = false, requireUser = false
   useEffect(() => {
     if (loading) return;
 
-    console.debug('ProtectedRoute check:', {
-      userId: user?.id,
-      userType,
-      isBusinessUser,
-      requireBusiness,
-      requireUser,
-      pathname: location.pathname
-    });
-
     // If not authenticated at all, redirect to auth
     if (!user) {
-      console.debug('ProtectedRoute: No user, redirecting to auth');
       navigate('/auth', { 
         state: { from: location.pathname },
         replace: true 
@@ -36,15 +26,8 @@ const ProtectedRoute = ({ children, requireBusiness = false, requireUser = false
       return;
     }
 
-    // Allow all authenticated users access to /app and /explore
-    if (location.pathname.startsWith('/app') || location.pathname.startsWith('/explore')) {
-      console.debug('ProtectedRoute: Allowing access to /app or /explore for all authenticated users');
-      return;
-    }
-
     // If business route required but user is not business AND not admin
     if (requireBusiness && !isBusinessUser && userType !== 'admin') {
-      console.debug('ProtectedRoute: Business route required but user is not business/admin, redirecting to signup');
       navigate('/business/signup', { 
         state: { 
           message: 'Vous devez créer un compte établissement pour accéder à cette page.',
@@ -57,12 +40,9 @@ const ProtectedRoute = ({ children, requireBusiness = false, requireUser = false
 
     // If user route required but user is business
     if (requireUser && isBusinessUser) {
-      console.debug('ProtectedRoute: User route required but user is business, redirecting to /business');
       navigate('/business', { replace: true });
       return;
     }
-
-    console.debug('ProtectedRoute: Access granted');
   }, [user, userType, loading, requireBusiness, requireUser, navigate, location.pathname, isBusinessUser]);
 
   if (loading) {
@@ -81,7 +61,7 @@ const ProtectedRoute = ({ children, requireBusiness = false, requireUser = false
     return null; // Will redirect via useEffect
   }
 
-  if (requireUser && isBusinessUser && !location.pathname.startsWith('/app') && !location.pathname.startsWith('/explore')) {
+  if (requireUser && isBusinessUser) {
     return null; // Will redirect via useEffect
   }
 
