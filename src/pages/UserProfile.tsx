@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, MapPin, Users, Heart, Star, Edit3, TrendingUp, Activity, Award, LogOut } from 'lucide-react';
+import FriendButton from '../components/FriendButton';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '../hooks/useUserProfile';
@@ -94,6 +94,12 @@ const UserProfile = () => {
                 <LogOut className="h-4 w-4 mr-2" />
                 Déconnexion
               </Button>
+              <Link to="/friends">
+                <Button variant="outline" size="sm" className="w-full">
+                  <Users className="h-4 w-4 mr-2" />
+                  Mes amis
+                </Button>
+              </Link>
             </div>
           </div>
         </div>

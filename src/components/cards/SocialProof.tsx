@@ -1,13 +1,25 @@
+
 import React from 'react';
-import FriendsAvatars from './FriendsAvatars';
+import EnhancedSocialProof from './EnhancedSocialProof';
 import { Friend } from '@/types/unified';
 
 interface SocialProofProps {
-  friendsParticipating: Friend[];
+  eventId?: string;
+  friendsParticipating?: Friend[];
   totalParticipants: number;
 }
 
-const SocialProof: React.FC<SocialProofProps> = ({ friendsParticipating, totalParticipants }) => {
+const SocialProof: React.FC<SocialProofProps> = ({ 
+  eventId,
+  friendsParticipating = [], 
+  totalParticipants 
+}) => {
+  // Si on a un eventId, utiliser la version améliorée qui charge les amis réels
+  if (eventId) {
+    return <EnhancedSocialProof eventId={eventId} totalParticipants={totalParticipants} />;
+  }
+
+  // Sinon, garder la logique existante pour la compatibilité
   const getSocialText = () => {
     if (friendsParticipating.length > 0) {
       if (friendsParticipating.length === 1) {
@@ -25,7 +37,6 @@ const SocialProof: React.FC<SocialProofProps> = ({ friendsParticipating, totalPa
 
   return (
     <div className="flex items-center space-x-2">
-      <FriendsAvatars friends={friendsParticipating} />
       <span className="text-xs text-muted-foreground">
         {getSocialText()}
       </span>
