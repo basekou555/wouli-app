@@ -8,8 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Calendar, MapPin, Euro, ExternalLink, Check, X, Clock, Filter, RefreshCw, 
-  AlertCircle, Instagram, Edit, RotateCcw, History, ArrowUpDown, Sparkles,
-  Download, Image as ImageIcon
+  AlertCircle, Instagram, Edit, RotateCcw, History, ArrowUpDown, Sparkles 
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -65,7 +64,6 @@ const ValidationInterface = () => {
     targetStatus: string;
   }>({ eventIds: [], currentStatus: '', targetStatus: '' });
   const [enhanceWithAI, setEnhanceWithAI] = useState<PendingEvent[]>([]);
-  const [imageImportProcessing, setImageImportProcessing] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   useEffect(() => {
@@ -73,7 +71,7 @@ const ValidationInterface = () => {
     
     // Realtime subscription sur la table events
     const channel = supabase
-      .channel('events_changes')
+      .channel('events_changes_' + Math.random().toString(36).substr(2, 9))
       .on(
         'postgres_changes',
         {
@@ -141,83 +139,6 @@ const ValidationInterface = () => {
   const onStatusChangeSuccess = () => {
     fetchEvents();
     setSelectedIds(new Set());
-  };
-
-  const importEventImage = async (eventId: string, imageUrl: string) => {
-    if (!imageUrl || imageUrl.includes('supabase.co')) {
-      toast({
-        title: "Image déjà hébergée",
-        description: "Cette image est déjà hébergée sur notre serveur.",
-        variant: "default"
-      });
-      return;
-    }
-
-    setImageImportProcessing(prev => new Set([...prev, eventId]));
-
-    try {
-      const { data, error } = await supabase.functions.invoke('cache-event-image', {
-        body: { eventId, imageUrl }
-      });
-
-      if (error) throw error;
-
-      if (data.success) {
-        toast({
-          title: "Image importée",
-          description: "L'image a été hébergée avec succès.",
-          variant: "default"
-        });
-        fetchEvents();
-      } else {
-        throw new Error(data.error || 'Erreur inconnue');
-      }
-    } catch (error: any) {
-      console.error('Erreur import image:', error);
-      toast({
-        title: "Erreur d'importation",
-        description: error.message || "Impossible d'importer l'image.",
-        variant: "destructive"
-      });
-    } finally {
-      setImageImportProcessing(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(eventId);
-        return newSet;
-      });
-    }
-  };
-
-  const bulkImportImages = async () => {
-    const eventsToImport = events.filter(event => 
-      selectedIds.has(event.id) && 
-      event.image_url && 
-      !event.image_url.includes('supabase.co')
-    );
-
-    if (eventsToImport.length === 0) {
-      toast({
-        title: "Aucune image à importer",
-        description: "Sélectionnez des événements avec des images externes.",
-        variant: "default"
-      });
-      return;
-    }
-
-    toast({
-      title: "Import en cours",
-      description: `Import de ${eventsToImport.length} image(s)...`,
-      variant: "default"
-    });
-
-    for (const event of eventsToImport) {
-      await importEventImage(event.id, event.image_url!);
-      await new Promise(resolve => setTimeout(resolve, 500)); // Délai entre les imports
-    }
-  };
-
-  const isExternalImage = (imageUrl: string | null) => {
-    return imageUrl && !imageUrl.includes('supabase.co');
   };
 
   // Utility functions
@@ -442,38 +363,38 @@ const ValidationInterface = () => {
                       {selectedIds.size} sélectionné(s)
                     </span>
                     
-                     {/* Actions selon l'onglet actif */}
-                     {activeTab === 'pending' && (
-                       <>
-                         <Button
-                           onClick={() => {
-                             const selectedEvents = filteredEvents.filter(e => selectedIds.has(e.id));
-                             setEnhanceWithAI(selectedEvents);
-                           }}
-                           size="sm"
-                           className="bg-purple-600 hover:bg-purple-700 text-white"
-                         >
-                           <Sparkles className="w-4 h-4 mr-1" />
-                           Améliorer avec l'IA
-                         </Button>
-                         <Button
-                           onClick={() => handleStatusChange(Array.from(selectedIds), 'pending', 'active')}
-                           size="sm"
-                           className="bg-green-600 hover:bg-green-700 text-white"
-                         >
-                           <Check className="w-4 h-4 mr-1" />
-                           Valider
-                         </Button>
-                         <Button
-                           onClick={() => handleStatusChange(Array.from(selectedIds), 'pending', 'rejected')}
-                           size="sm"
-                           variant="destructive"
-                         >
-                           <X className="w-4 h-4 mr-1" />
-                           Rejeter
-                         </Button>
-                       </>
-                     )}
+                    {/* Actions selon l'onglet actif */}
+                    {activeTab === 'pending' && (
+                      <>
+                        <Button
+                          onClick={() => {
+                            const selectedEvents = filteredEvents.filter(e => selectedIds.has(e.id));
+                            setEnhanceWithAI(selectedEvents);
+                          }}
+                          size="sm"
+                          className="bg-purple-600 hover:bg-purple-700 text-white"
+                        >
+                          <Sparkles className="w-4 h-4 mr-1" />
+                          Améliorer avec l'IA
+                        </Button>
+                        <Button
+                          onClick={() => handleStatusChange(Array.from(selectedIds), 'pending', 'active')}
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          <Check className="w-4 h-4 mr-1" />
+                          Valider
+                        </Button>
+                        <Button
+                          onClick={() => handleStatusChange(Array.from(selectedIds), 'pending', 'rejected')}
+                          size="sm"
+                          variant="destructive"
+                        >
+                          <X className="w-4 h-4 mr-1" />
+                          Rejeter
+                        </Button>
+                      </>
+                    )}
                     
                     {activeTab === 'active' && (
                       <Button
@@ -552,23 +473,14 @@ const ValidationInterface = () => {
                             className="w-5 h-5 text-purple-600 rounded"
                           />
                         </TableCell>
-                         <TableCell>
-                           <div className="relative">
-                             <img
-                               src={event.image_url || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30'}
-                               alt={event.title}
-                               className="w-24 h-24 object-cover rounded-lg cursor-pointer hover:opacity-90"
-                               onClick={() => setShowDetails(event)}
-                               onError={(e) => {
-                                 const target = e.target as HTMLImageElement;
-                                 target.src = 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30';
-                               }}
-                             />
-                             {isExternalImage(event.image_url) && (
-                               <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full border border-white" title="Image externe" />
-                             )}
-                           </div>
-                         </TableCell>
+                        <TableCell>
+                          <img
+                            src={event.image_url || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30'}
+                            alt={event.title}
+                            className="w-24 h-24 object-cover rounded-lg cursor-pointer hover:opacity-90"
+                            onClick={() => setShowDetails(event)}
+                          />
+                        </TableCell>
                         <TableCell>
                           <div>
                             <h3 className="font-semibold text-foreground mb-1">
@@ -600,6 +512,23 @@ const ValidationInterface = () => {
                           <p className="text-sm text-muted-foreground line-clamp-3">
                             {event.description}
                           </p>
+                          <div className="mt-2 flex gap-2">
+                            {event.external_url && (
+                              <a
+                                href={event.external_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-primary hover:underline flex items-center gap-1"
+                              >
+                                {event.external_url.includes('instagram.com') ? (
+                                  <Instagram className="w-3 h-3" />
+                                ) : (
+                                  <ExternalLink className="w-3 h-3" />
+                                )}
+                                {getLinkLabel(event.external_url)}
+                              </a>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="text-center">
                           <div className={`text-2xl font-bold ${getScoreColor(calculateScore(event))}`}>
@@ -678,6 +607,18 @@ const ValidationInterface = () => {
                                 <Edit className="w-4 h-4" />
                               </Button>
                               <Button
+                                onClick={() => {
+                                  setHistoryEventId(event.id);
+                                  setHistoryEventTitle(event.title);
+                                }}
+                                size="icon"
+                                variant="ghost"
+                                className="text-purple-600 hover:bg-purple-50"
+                                title="Historique"
+                              >
+                                <History className="w-4 h-4" />
+                              </Button>
+                              <Button
                                 onClick={() => setShowDetails(event)}
                                 size="icon"
                                 variant="ghost"
@@ -743,19 +684,7 @@ const ValidationInterface = () => {
                 src={showDetails.image_url || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30'} 
                 alt={showDetails.title}
                 className="w-full h-64 object-cover rounded-lg"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30';
-                }}
               />
-              {isExternalImage(showDetails.image_url) && (
-                <div className="absolute top-2 right-2">
-                  <Badge variant="secondary" className="bg-orange-100 text-orange-800">
-                    <ImageIcon className="w-3 h-3 mr-1" />
-                    Image externe
-                  </Badge>
-                </div>
-              )}
             </div>
             
             <DialogHeader>

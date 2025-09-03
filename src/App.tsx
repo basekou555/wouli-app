@@ -1,193 +1,127 @@
+
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import Auth from './pages/Auth';
+import Profile from './pages/Profile';
+
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
-import ErrorBoundary from "@/components/ErrorBoundary";
-import { RatingModal } from "@/components/rating/RatingModal";
-import { useRatingModal } from "@/hooks/useRatingModal";
-import Home from "./pages/Home";
-import Auth from "./pages/Auth";
-import UserApp from "./pages/UserApp";
-import Profile from "./pages/Profile";
-import EventDetails from "./pages/EventDetails";
-import EventPreview from "./pages/EventPreview";
-import Explore from "./pages/Explore";
-import Search from "./pages/Search";
-import UserProfile from "./pages/UserProfile";
-import UserHistory from "./pages/UserHistory";
-import NotFound from "./pages/NotFound";
-import BusinessDashboard from "./pages/BusinessDashboard";
-import BusinessEvents from "./pages/BusinessEvents";
-import BusinessEventDetails from "./pages/BusinessEventDetails";
-import BusinessEventEdit from "./pages/BusinessEventEdit";
-import ProfileSettings from "./pages/ProfileSettings";
-import UserProfileSettings from "./pages/UserProfileSettings";
-import BusinessSignup from "./pages/BusinessSignup";
-import AdminDashboard from "./pages/AdminDashboard";
-import AdminValidationPage from "./pages/AdminValidationPage";
-import ProtectedRoute from "./components/ProtectedRoute";
-import AuthRedirect from "./components/AuthRedirect";
-import { AdminRoute } from "./components/AdminRoute";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import ErrorBoundary from './components/ErrorBoundary';
+import Friends from './pages/Friends';
+import Explore from './pages/Explore';
+// Replaced missing CreateEvent page with existing EventCreation component
+import EventCreation from './components/EventCreation';
+import EventDetails from './pages/EventDetails';
+import BusinessEvents from './pages/BusinessEvents';
+import BusinessDashboard from './pages/BusinessDashboard';
+import ProtectedRoute from './components/ProtectedRoute';
+import UserApp from './pages/UserApp';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 3,
-      refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-    },
-  },
-});
-
-function AppContent() {
-  const { modalState, submitRating, skipRating, canSkip, progress } = useRatingModal();
-
-  return (
-    <>
-      <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/auth" element={
-                  <AuthRedirect>
-                    <Auth />
-                  </AuthRedirect>
-                } />
-                <Route path="/business/signup" element={
-                  <AuthRedirect>
-                    <BusinessSignup />
-                  </AuthRedirect>
-                } />
-                
-                {/* User Routes */}
-                <Route path="/app" element={
-                  <ProtectedRoute>
-                    <UserApp />
-                  </ProtectedRoute>
-                } />
-                <Route path="/profile" element={
-                  <ProtectedRoute>
-                    <Profile />
-                  </ProtectedRoute>
-                } />
-                <Route path="/profil" element={
-                  <ProtectedRoute>
-                    <Profile />
-                  </ProtectedRoute>
-                } />
-                <Route path="/event/:id" element={
-                  <ProtectedRoute>
-                    <EventDetails />
-                  </ProtectedRoute>
-                } />
-                <Route path="/events/:id" element={
-                  <ProtectedRoute>
-                    <EventPreview />
-                  </ProtectedRoute>
-                } />
-                <Route path="/explore" element={<Navigate to="/search" replace />} />
-                <Route path="/search" element={
-                  <ProtectedRoute>
-                    <Search />
-                  </ProtectedRoute>
-                } />
-                <Route path="/user/:id" element={
-                  <ProtectedRoute>
-                    <UserProfile />
-                  </ProtectedRoute>
-                } />
-                <Route path="/history" element={
-                  <ProtectedRoute>
-                    <UserHistory />
-                  </ProtectedRoute>
-                } />
-                <Route path="/profile-settings" element={
-                  <ProtectedRoute>
-                    <ProfileSettings />
-                  </ProtectedRoute>
-                } />
-                <Route path="/user-settings" element={
-                  <ProtectedRoute>
-                    <UserProfileSettings />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Business Routes - Protected */}
-                <Route path="/business" element={
-                  <ProtectedRoute requireBusiness={true}>
-                    <BusinessDashboard />
-                  </ProtectedRoute>
-                } />
-                <Route path="/business/events" element={
-                  <ProtectedRoute requireBusiness={true}>
-                    <BusinessEvents />
-                  </ProtectedRoute>
-                } />
-                <Route path="/business/analytics" element={
-                  <ProtectedRoute requireBusiness={true}>
-                    <BusinessDashboard />
-                  </ProtectedRoute>
-                } />
-                <Route path="/business/settings" element={
-                  <ProtectedRoute requireBusiness={true}>
-                    <BusinessDashboard />
-                  </ProtectedRoute>
-                } />
-                <Route path="/business/event/:id" element={
-                  <ProtectedRoute requireBusiness={true}>
-                    <BusinessEventDetails />
-                  </ProtectedRoute>
-                } />
-                <Route path="/business/event/:id/edit" element={
-                  <ProtectedRoute requireBusiness={true}>
-                    <BusinessEventEdit />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Admin Routes */}
-                <Route path="/admin" element={
-                  <AdminRoute>
-                    <AdminDashboard />
-                  </AdminRoute>
-                } />
-                <Route path="/admin/validation" element={
-                  <AdminRoute>
-                    <AdminValidationPage />
-                  </AdminRoute>
-                } />
-                
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-            
-            <RatingModal
-              isOpen={modalState.isOpen}
-              event={modalState.event}
-              isBlocking={modalState.isBlocking}
-              canSkip={canSkip}
-              progress={progress}
-              onSubmit={submitRating}
-              onSkip={skipRating}
-            />
-          </>
-  );
-}
+const queryClient = new QueryClient();
 
 function App() {
   return (
-    <ErrorBoundary>
+    <AuthProvider>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <AppContent />
-          </TooltipProvider>
-        </AuthProvider>
+        <div className="min-h-screen bg-background">
+          <Toaster />
+          <ErrorBoundary>
+            <BrowserRouter>
+              <Routes>
+                {/* Routes d'authentification */}
+                <Route path="/auth" element={<Auth />} />
+
+                {/* Routes publiques */}
+                <Route path="/" element={<Navigate to="/app" replace />} />
+
+                {/* Interface utilisateur - accessible à tous les utilisateurs authentifiés */}
+                <Route
+                  path="/app"
+                  element={
+                    <ProtectedRoute>
+                      <UserApp />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/event/:eventId"
+                  element={
+                    <ProtectedRoute>
+                      <EventDetails />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/explore"
+                  element={
+                    <ProtectedRoute>
+                      <Explore />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/create"
+                  element={
+                    <ProtectedRoute>
+                      <EventCreation />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/profile-settings"
+                  element={
+                    <ProtectedRoute>
+                      {/* Reuse Profile page if specific settings page is not needed */}
+                      <Profile />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <ProtectedRoute>
+                      <Profile />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/friends"
+                  element={
+                    <ProtectedRoute>
+                      <Friends />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Interface business */}
+                <Route
+                  path="/business"
+                  element={
+                    <ProtectedRoute requireBusiness>
+                      <BusinessDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/business/events"
+                  element={
+                    <ProtectedRoute requireBusiness>
+                      <BusinessEvents />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Fallback */}
+                <Route path="*" element={<Navigate to="/app" replace />} />
+              </Routes>
+            </BrowserRouter>
+          </ErrorBoundary>
+        </div>
       </QueryClientProvider>
-    </ErrorBoundary>
+    </AuthProvider>
   );
 }
 
 export default App;
+

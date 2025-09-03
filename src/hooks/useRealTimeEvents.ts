@@ -10,7 +10,7 @@ export const useRealTimeEvents = (
   useEffect(() => {
     // Subscribe to business_events changes for real-time updates
     const businessEventsChannel = supabase
-      .channel('business_events_changes')
+      .channel('business_events_' + Math.random().toString(36).substr(2, 9))
       .on(
         'postgres_changes',
         {
@@ -28,7 +28,7 @@ export const useRealTimeEvents = (
 
     // Subscribe to event interactions for real-time stats updates
     const likesChannel = supabase
-      .channel('event_likes_changes')
+      .channel('event_likes_' + Math.random().toString(36).substr(2, 9))
       .on(
         'postgres_changes',
         {
@@ -50,7 +50,7 @@ export const useRealTimeEvents = (
       .subscribe();
 
     const participantsChannel = supabase
-      .channel('event_participants_changes')
+      .channel('event_participants_' + Math.random().toString(36).substr(2, 9))
       .on(
         'postgres_changes',
         {

@@ -1,56 +1,39 @@
-
 import React from 'react';
-import { Button } from "@/components/ui/button";
-import { Heart, Search, User } from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Heart, Search, User, Clock } from 'lucide-react';
+import { useLocation, Link } from 'react-router-dom';
+import { cn } from '@/lib/utils';
+import { Users } from 'lucide-react';
 
 const BottomNavigation = () => {
   const location = useLocation();
-  const navigate = useNavigate();
 
   const navItems = [
-    {
-      icon: Heart,
-      label: 'Découvrir',
-      path: '/app',
-      isActive: location.pathname === '/app'
-    },
-    {
-      icon: Search,
-      label: 'Rechercher',
-      path: '/search',
-      isActive: location.pathname === '/search'
-    },
-    {
-      icon: User,
-      label: 'Profil',
-      path: '/profil',
-      isActive: location.pathname === '/profil'
-    }
+    { path: '/app', icon: Heart, label: 'Découvrir' },
+    { path: '/explore', icon: Search, label: 'Explorer' },
+    { path: '/friends', icon: Users, label: 'Amis' },
+    { path: '/profile', icon: User, label: 'Profil' }
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 shadow-lg">
-      <div className="flex justify-around items-center max-w-md mx-auto">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <Button
+    <div className="fixed bottom-0 left-0 w-full bg-white border-t z-50">
+      <div className="container mx-auto px-4">
+        <div className="grid grid-cols-4">
+          {navItems.map((item) => (
+            <Link
               key={item.path}
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center space-y-1 min-w-0 px-3 py-2 ${
-                item.isActive 
-                  ? 'text-purple-600 bg-purple-50' 
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
+              to={item.path}
+              className={cn(
+                "p-4 flex flex-col items-center justify-center text-sm",
+                location.pathname === item.path
+                  ? "text-primary"
+                  : "text-gray-500 hover:text-gray-700"
+              )}
             >
-              <Icon className="h-5 w-5" />
-              <span className="text-xs font-medium">{item.label}</span>
-            </Button>
-          );
-        })}
+              <item.icon className="h-5 w-5 mb-1" />
+              {item.label}
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );
