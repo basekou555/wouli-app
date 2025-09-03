@@ -14,6 +14,7 @@ import {
   getPriceInfo, 
   getLocationDisplay 
 } from '@/utils/eventCardHelpers';
+import ProxiedImage from '@/components/ProxiedImage';
 
 export type EventCardVariant = 'swipe' | 'list' | 'business';
 
@@ -157,9 +158,10 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
       <>
         {/* Zone Image (70%) */}
         <div className="relative aspect-[4/5] cursor-pointer" onClick={onCardClick}>
-          <img 
+          <ProxiedImage 
             src={event.image_url || "https://picsum.photos/400/500?random=event"}
             alt={event.title}
+            eventId={event.id}
             className="w-full h-full object-cover" 
           />
           
@@ -348,9 +350,10 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
         {/* Image avec ratio 4:5 */}
         <div className="relative flex-shrink-0" onClick={onCardClick}>
           <div className="w-20 aspect-[4/5] bg-black rounded-lg overflow-hidden">
-            <img 
+            <ProxiedImage 
               src={event.image_url || "https://picsum.photos/400/500?random=event"}
               alt={event.title}
+              eventId={event.id}
               className="w-full h-full object-contain" 
             />
           </div>
@@ -490,12 +493,14 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
     return (
       <Card className={`overflow-hidden hover:shadow-lg transition-shadow bg-card cursor-pointer ${className}`}>
         <div className="flex gap-4 p-4">
-          <img 
-            src={event.image_url || "https://picsum.photos/400/400?random=event"}
-            alt={event.title}
-            className="w-20 h-20 rounded-lg object-cover flex-shrink-0" 
-            onClick={onCardClick}
-          />
+          <div onClick={onCardClick}>
+            <ProxiedImage 
+              src={event.image_url || "https://picsum.photos/400/400?random=event"}
+              alt={event.title}
+              eventId={event.id}
+              className="w-20 h-20 rounded-lg object-cover flex-shrink-0" 
+            />
+          </div>
           
           <div className="flex-1 min-w-0">
             <div className="flex justify-between items-start mb-2">

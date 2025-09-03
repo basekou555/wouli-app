@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { UnifiedEvent } from '@/types/unified';
+import ProxiedImage from '@/components/ProxiedImage';
 
 interface EventHeroSectionProps {
   event: UnifiedEvent;
@@ -9,9 +10,10 @@ interface EventHeroSectionProps {
 const EventHeroSection: React.FC<EventHeroSectionProps> = ({ event }) => {
   return (
     <div className="relative h-96 w-full bg-black">
-      <img
+      <ProxiedImage
         src={event.image_url || "https://picsum.photos/800/400?random=event"}
         alt={event.title}
+        eventId={event.id}
         className="w-full h-full object-contain"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>

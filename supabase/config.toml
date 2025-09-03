@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.migrate-instagram-images]
 verify_jwt = true
+
+[functions.proxy-image]
+verify_jwt = false
+
+[functions.migrate-images]
+verify_jwt = true
