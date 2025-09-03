@@ -457,14 +457,6 @@ const ValidationInterface = () => {
                            Améliorer avec l'IA
                          </Button>
                          <Button
-                           onClick={bulkImportImages}
-                           size="sm"
-                           className="bg-blue-600 hover:bg-blue-700 text-white"
-                         >
-                           <Download className="w-4 h-4 mr-1" />
-                           Importer Images
-                         </Button>
-                         <Button
                            onClick={() => handleStatusChange(Array.from(selectedIds), 'pending', 'active')}
                            size="sm"
                            className="bg-green-600 hover:bg-green-700 text-white"
@@ -608,23 +600,6 @@ const ValidationInterface = () => {
                           <p className="text-sm text-muted-foreground line-clamp-3">
                             {event.description}
                           </p>
-                          <div className="mt-2 flex gap-2">
-                            {event.external_url && (
-                              <a
-                                href={event.external_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-primary hover:underline flex items-center gap-1"
-                              >
-                                {event.external_url.includes('instagram.com') ? (
-                                  <Instagram className="w-3 h-3" />
-                                ) : (
-                                  <ExternalLink className="w-3 h-3" />
-                                )}
-                                {getLinkLabel(event.external_url)}
-                              </a>
-                            )}
-                          </div>
                         </TableCell>
                         <TableCell className="text-center">
                           <div className={`text-2xl font-bold ${getScoreColor(calculateScore(event))}`}>
@@ -684,22 +659,6 @@ const ValidationInterface = () => {
                             
                             {/* Actions générales */}
                             <div className="flex gap-1">
-                              {isExternalImage(event.image_url) && (
-                                <Button
-                                  onClick={() => importEventImage(event.id, event.image_url!)}
-                                  size="icon"
-                                  variant="ghost"
-                                  className="text-blue-600 hover:bg-blue-50"
-                                  title="Importer l'image"
-                                  disabled={imageImportProcessing.has(event.id)}
-                                >
-                                  {imageImportProcessing.has(event.id) ? (
-                                    <RefreshCw className="w-4 h-4 animate-spin" />
-                                  ) : (
-                                    <Download className="w-4 h-4" />
-                                  )}
-                                </Button>
-                              )}
                               <Button
                                 onClick={() => setEnhanceWithAI([event])}
                                 size="icon"
@@ -717,18 +676,6 @@ const ValidationInterface = () => {
                                 title="Modifier"
                               >
                                 <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                onClick={() => {
-                                  setHistoryEventId(event.id);
-                                  setHistoryEventTitle(event.title);
-                                }}
-                                size="icon"
-                                variant="ghost"
-                                className="text-purple-600 hover:bg-purple-50"
-                                title="Historique"
-                              >
-                                <History className="w-4 h-4" />
                               </Button>
                               <Button
                                 onClick={() => setShowDetails(event)}

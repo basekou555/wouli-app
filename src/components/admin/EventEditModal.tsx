@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,6 +53,7 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
   const [enhancing, setEnhancing] = useState(false);
   const [imageEditorOpen, setImageEditorOpen] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   
 
   useEffect(() => {
@@ -141,6 +142,62 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
     }
   };
 
+  const triggerFileUpload = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !event?.id) return;
+
+    // Validation du fichier
+    if (!file.type.startsWith('image/')) {
+      toast.error('Veuillez sélectionner un fichier image');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) { // 5MB
+      toast.error('L\'image ne doit pas dépasser 5MB');
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      // Upload new image
+      const uploadResult = await uploadEventImage(file, event.id);
+      
+      if (!uploadResult.success || !uploadResult.url) {
+        toast.error(uploadResult.error || 'Erreur lors de l\'upload');
+        return;
+      }
+
+      // Update event in database
+      const updateResult = await updateEventImageUrl(event.id, uploadResult.url);
+      
+      if (!updateResult.success) {
+        toast.error(updateResult.error || 'Erreur lors de la mise à jour');
+        return;
+      }
+
+      // Update local form data
+      setFormData(prev => ({
+        ...prev,
+        image_url: uploadResult.url
+      }));
+
+      toast.success('Image uploadée avec succès');
+    } catch (error) {
+      console.error('Erreur upload:', error);
+      toast.error('Erreur lors de l\'upload de l\'image');
+    } finally {
+      setUploadingImage(false);
+      // Reset input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   const handleImageCrop = async (croppedImageBlob: Blob) => {
     if (!event?.id) return;
 
@@ -204,21 +261,43 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
                   className="w-full h-full object-contain"
                 />
               </div>
-              {(formData.image_url || event.image_url) && (
+              <div className="flex gap-2">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  ref={(input) => (fileInputRef.current = input)}
+                />
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setImageEditorOpen(true)}
+                  onClick={triggerFileUpload}
                   disabled={uploadingImage}
                   className="flex items-center gap-2"
                 >
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  {uploadingImage ? 'Traitement...' : 'Recadrer l\'image'}
+                  {uploadingImage ? 'Upload...' : 'Importer une image'}
                 </Button>
-              )}
+                {(formData.image_url || event.image_url) && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setImageEditorOpen(true)}
+                    disabled={uploadingImage}
+                    className="flex items-center gap-2"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    {uploadingImage ? 'Traitement...' : 'Recadrer l\'image'}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 
