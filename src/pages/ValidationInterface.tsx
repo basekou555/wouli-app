@@ -112,6 +112,25 @@ const ValidationInterface = () => {
     }
   };
 
+  const handleMigrateImages = async () => {
+    try {
+      setProcessingId('bulk');
+      const { data, error } = await supabase.functions.invoke('migrate-instagram-images', {
+        body: { limit: 50 }
+      });
+      if (error) throw error as any;
+      toast({
+        title: 'Migration lancée',
+        description: data?.message || 'Traitement en cours...',
+      });
+      await fetchEvents();
+    } catch (e: any) {
+      console.error('Erreur migration images:', e);
+      toast({ title: 'Erreur', description: e?.message || 'Échec de la migration', variant: 'destructive' });
+    } finally {
+      setProcessingId(null);
+    }
+  };
 
   // Actions rapides (legacy - pour compatibilité)
   const handleApprove = async (eventIds: string | string[]) => {
@@ -274,13 +293,14 @@ const ValidationInterface = () => {
               </p>
             </div>
             
-            <Button
-              onClick={fetchEvents}
-              variant="outline"
-              size="icon"
-            >
-              <RefreshCw className="w-5 h-5" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button onClick={handleMigrateImages} variant="default" size="sm">
+                Migrer images Instagram
+              </Button>
+              <Button onClick={fetchEvents} variant="outline" size="icon">
+                <RefreshCw className="w-5 h-5" />
+              </Button>
+            </div>
           </div>
           
           {/* Stats rapides */}
