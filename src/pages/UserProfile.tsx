@@ -1,24 +1,20 @@
+
 import React, { useEffect, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, MapPin, Users, Heart, Star, Edit3, TrendingUp, Activity, Award, LogOut, Clock, X, Trash2 } from 'lucide-react';
-import FriendButton from '../components/FriendButton';
+import { Calendar, MapPin, Users, Heart, Star, Edit3, TrendingUp, Activity, Award, LogOut } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '../hooks/useUserProfile';
-import { useUserHistory } from '../hooks/useUserHistory';
-import { UserMemories } from '../components/memories/UserMemories';
 import { PageSkeleton } from '../components/LoadingSkeleton';
-import { UnifiedEvent } from '@/types/unified';
 
 const UserProfile = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { profile, userStats, recentActivities, loading } = useUserProfile();
-  const { likedEvents, participatingEvents, loading: historyLoading, removeLikedEvent, removeParticipation } = useUserHistory();
 
   // Rediriger vers l'authentification si pas connecté
   useEffect(() => {
@@ -53,54 +49,6 @@ const UserProfile = () => {
         return `Activité sur "${activity.event}"`;
     }
   };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('fr-FR', {
-      day: 'numeric',
-      month: 'long',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
-  };
-
-  const EventCard = ({ event, onRemove, removeText, removeIcon }: {
-    event: UnifiedEvent;
-    onRemove: (eventId: string) => void;
-    removeText: string;
-    removeIcon: React.ReactNode;
-  }) => (
-    <Card className="overflow-hidden">
-      <div className="relative h-32">
-        <img
-          src={event.image_url || `https://picsum.photos/400/200?random=${event.id}`}
-          alt={event.title}
-          className="w-full h-full object-cover"
-        />
-        <Button
-          variant="destructive"
-          size="icon"
-          className="absolute top-2 right-2 h-6 w-6"
-          onClick={() => onRemove(event.id)}
-        >
-          {removeIcon}
-        </Button>
-      </div>
-      <CardContent className="p-3">
-        <h4 className="font-semibold text-sm mb-2 truncate">{event.title}</h4>
-        <div className="space-y-1 text-xs text-gray-600">
-          <div className="flex items-center">
-            <Calendar className="h-3 w-3 mr-1" />
-            {formatDate(event.date)}
-          </div>
-          <div className="flex items-center">
-            <MapPin className="h-3 w-3 mr-1" />
-            <span className="truncate">{event.location}</span>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
 
   const favoriteCategories = [
     { name: 'Concerts', count: 8, icon: '🎵' },
@@ -146,12 +94,6 @@ const UserProfile = () => {
                 <LogOut className="h-4 w-4 mr-2" />
                 Déconnexion
               </Button>
-              <Link to="/friends">
-                <Button variant="outline" size="sm" className="w-full">
-                  <Users className="h-4 w-4 mr-2" />
-                  Mes amis
-                </Button>
-              </Link>
             </div>
           </div>
         </div>
@@ -197,14 +139,10 @@ const UserProfile = () => {
         </div>
 
         <Tabs defaultValue="activity" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="activity" className="flex items-center">
               <Activity className="h-4 w-4 mr-2" />
               Activité
-            </TabsTrigger>
-            <TabsTrigger value="historique" className="flex items-center">
-              <Clock className="h-4 w-4 mr-2" />
-              Historique
             </TabsTrigger>
             <TabsTrigger value="preferences" className="flex items-center">
               <Star className="h-4 w-4 mr-2" />
@@ -246,85 +184,15 @@ const UserProfile = () => {
                     </div>
                   )}
                 </div>
+                <div className="mt-4 text-center">
+                  <Link to="/history">
+                    <Button variant="outline" size="sm">
+                      Voir l'historique complet
+                    </Button>
+                  </Link>
+                </div>
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="historique" className="mt-6">
-            <Tabs defaultValue="liked" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="liked" className="flex items-center">
-                  <Heart className="h-4 w-4 mr-2" />
-                  Favoris ({likedEvents.length})
-                </TabsTrigger>
-                <TabsTrigger value="participating" className="flex items-center">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Participations ({participatingEvents.length})
-                </TabsTrigger>
-                <TabsTrigger value="memories" className="flex items-center">
-                  <Star className="h-4 w-4 mr-2" />
-                  Memories
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="liked" className="mt-4">
-                {historyLoading ? (
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {[...Array(4)].map((_, i) => (
-                      <div key={i} className="h-40 bg-gray-200 rounded-lg animate-pulse" />
-                    ))}
-                  </div>
-                ) : likedEvents.length > 0 ? (
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {likedEvents.map((event) => (
-                      <EventCard
-                        key={event.id}
-                        event={event}
-                        onRemove={removeLikedEvent}
-                        removeText="Retirer"
-                        removeIcon={<X className="h-3 w-3" />}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Heart className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                    <p className="text-sm text-gray-500">Aucun favori</p>
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="participating" className="mt-4">
-                {historyLoading ? (
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {[...Array(4)].map((_, i) => (
-                      <div key={i} className="h-40 bg-gray-200 rounded-lg animate-pulse" />
-                    ))}
-                  </div>
-                ) : participatingEvents.length > 0 ? (
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {participatingEvents.map((event) => (
-                      <EventCard
-                        key={event.id}
-                        event={event}
-                        onRemove={removeParticipation}
-                        removeText="Annuler"
-                        removeIcon={<Trash2 className="h-3 w-3" />}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Calendar className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                    <p className="text-sm text-gray-500">Aucune participation</p>
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="memories" className="mt-4">
-                <UserMemories />
-              </TabsContent>
-            </Tabs>
           </TabsContent>
 
           <TabsContent value="preferences" className="mt-6">

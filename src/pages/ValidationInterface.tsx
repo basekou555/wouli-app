@@ -71,7 +71,7 @@ const ValidationInterface = () => {
     
     // Realtime subscription sur la table events
     const channel = supabase
-      .channel('events_changes_' + Math.random().toString(36).substr(2, 9))
+      .channel('events_changes')
       .on(
         'postgres_changes',
         {

@@ -53,7 +53,7 @@ const UserApp = () => {
   };
 
   const handleCardClick = (eventId: string) => {
-    navigate(`/event/${eventId}`);
+    navigate(`/events/${eventId}`);
   };
 
   const nextCard = () => {
@@ -138,7 +138,7 @@ const UserApp = () => {
                         navigator.share({
                           title: filteredEvents[currentIndex].title,
                           text: `Découvre cet événement : ${filteredEvents[currentIndex].title}`,
-                          url: window.location.origin + `/event/${filteredEvents[currentIndex].id}`
+                          url: window.location.origin + `/events/${filteredEvents[currentIndex].id}`
                         });
                       }
                     }}
