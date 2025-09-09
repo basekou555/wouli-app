@@ -30,7 +30,14 @@ const ProxiedImage: React.FC<ProxiedImageProps> = ({
         return;
       }
 
-      // Si disableProxy est activé, utiliser l'URL directement
+      // Si disableProxy est activé pour les URLs Instagram, utiliser le fallback directement
+      if (disableProxy && (src.includes('instagram.com') || src.includes('fbcdn.net') || src.includes('scontent.cdninstagram.com'))) {
+        setImageSrc(fallback);
+        setLoading(false);
+        return;
+      }
+
+      // Si disableProxy est activé pour d'autres URLs, utiliser l'URL directement
       if (disableProxy) {
         setImageSrc(src);
         setLoading(false);
