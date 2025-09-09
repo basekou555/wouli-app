@@ -496,12 +496,13 @@ const ValidationInterface = () => {
                         </TableCell>
                         <TableCell>
                            <div onClick={() => setShowDetails(event)}>
-                             <ProxiedImage
-                               src={event.image_url || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30'}
-                               alt={event.title}
-                               eventId={event.id}
-                               className="w-24 h-24 object-cover rounded-lg cursor-pointer hover:opacity-90"
-                             />
+                              <ProxiedImage
+                                src={event.image_url}
+                                alt={event.title}
+                                eventId={event.id}
+                                fallback="/placeholder.svg"
+                                className="w-24 h-24 object-cover rounded-lg cursor-pointer hover:opacity-90"
+                              />
                            </div>
                         </TableCell>
                         <TableCell>
@@ -704,9 +705,10 @@ const ValidationInterface = () => {
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <div className="relative">
               <ProxiedImage 
-                src={showDetails.image_url || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30'} 
+                src={showDetails.image_url} 
                 alt={showDetails.title}
                 eventId={showDetails.id}
+                fallback="/placeholder.svg"
                 className="w-full h-64 object-cover rounded-lg"
               />
             </div>
