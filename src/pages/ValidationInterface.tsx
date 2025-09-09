@@ -501,6 +501,7 @@ const ValidationInterface = () => {
                                 alt={event.title}
                                 eventId={event.id}
                                 fallback="/placeholder.svg"
+                                disableProxy={true}
                                 className="w-24 h-24 object-cover rounded-lg cursor-pointer hover:opacity-90"
                               />
                            </div>
@@ -709,6 +710,7 @@ const ValidationInterface = () => {
                 alt={showDetails.title}
                 eventId={showDetails.id}
                 fallback="/placeholder.svg"
+                disableProxy={true}
                 className="w-full h-64 object-cover rounded-lg"
               />
             </div>

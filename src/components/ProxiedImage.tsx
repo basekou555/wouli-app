@@ -8,6 +8,7 @@ interface ProxiedImageProps {
   className?: string;
   eventId?: string;
   fallback?: string;
+  disableProxy?: boolean;
 }
 
 const ProxiedImage: React.FC<ProxiedImageProps> = ({ 
@@ -15,7 +16,8 @@ const ProxiedImage: React.FC<ProxiedImageProps> = ({
   alt, 
   className = '', 
   eventId,
-  fallback = "https://picsum.photos/400/400?random=event"
+  fallback = "https://picsum.photos/400/400?random=event",
+  disableProxy = false
 }) => {
   const [imageSrc, setImageSrc] = useState<string>(fallback);
   const [loading, setLoading] = useState(true);
@@ -24,6 +26,13 @@ const ProxiedImage: React.FC<ProxiedImageProps> = ({
     const loadImage = async () => {
       if (!src) {
         setImageSrc(fallback);
+        setLoading(false);
+        return;
+      }
+
+      // Si disableProxy est activé, utiliser l'URL directement
+      if (disableProxy) {
+        setImageSrc(src);
         setLoading(false);
         return;
       }
@@ -59,7 +68,7 @@ const ProxiedImage: React.FC<ProxiedImageProps> = ({
     };
 
     loadImage();
-  }, [src, eventId, fallback]);
+  }, [src, eventId, fallback, disableProxy]);
 
   if (loading) {
     return <Skeleton className={className} />;
