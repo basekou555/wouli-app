@@ -11,6 +11,7 @@ import { useUserHistory } from '../hooks/useUserHistory';
 import { PageSkeleton } from '../components/LoadingSkeleton';
 import { UserMemories } from '../components/memories/UserMemories';
 import { UnifiedEvent } from '@/types/unified';
+import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
@@ -34,9 +35,10 @@ const UserHistory = () => {
     <Card className="overflow-hidden">
       <div className="relative h-48">
         <img
-          src={event.image_url || `https://picsum.photos/400/200?random=${event.id}`}
+          src={getProxiedImageUrl(event.image_url) || `https://picsum.photos/400/200?random=${event.id}`}
           alt={event.title}
           className="w-full h-full object-cover"
+          onError={handleImageError}
         />
         <Button
           variant="destructive"

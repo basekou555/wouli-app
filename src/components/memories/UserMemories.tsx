@@ -1,10 +1,11 @@
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { UnifiedEvent } from '@/types/unified';
 import { formatDate } from '@/utils/dateFormatting';
+import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
 
 interface UserMemory extends UnifiedEvent {
   participated_at: string;
@@ -117,9 +118,10 @@ export const UserMemories = () => {
 const MemoryCard = ({ event }: { event: UserMemory }) => (
   <div className="relative rounded-lg overflow-hidden group cursor-pointer hover:scale-105 transition-transform">
     <img 
-      src={event.image_url || `https://picsum.photos/400/200?random=${event.id}`}
+      src={getProxiedImageUrl(event.image_url) || `https://picsum.photos/400/200?random=${event.id}`}
       alt={event.title}
       className="w-full h-32 object-cover"
+      onError={handleImageError}
     />
     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
     <div className="absolute bottom-0 p-3 text-white">

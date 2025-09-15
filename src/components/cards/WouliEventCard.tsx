@@ -12,8 +12,9 @@ import {
   getSocialProofText, 
   formatEventDateTime, 
   getPriceInfo, 
-  getLocationDisplay 
+  getLocationDisplay
 } from '@/utils/eventCardHelpers';
+import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
 
 export type EventCardVariant = 'swipe' | 'list' | 'business';
 
@@ -157,10 +158,11 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
       <>
         {/* Zone Image (70%) */}
         <div className="relative aspect-[4/5] cursor-pointer" onClick={onCardClick}>
-          <img 
-            src={event.image_url || "https://picsum.photos/400/500?random=event"}
+          <img
+            src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/400/500?random=event"}
             alt={event.title}
-            className="w-full h-full object-cover" 
+            className="w-full h-full object-cover"
+            onError={handleImageError}
           />
           
           {/* Badge urgence - coin supérieur droit */}

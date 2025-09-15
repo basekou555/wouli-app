@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { UnifiedEvent } from '@/types/unified';
+import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
 
 interface EventHeroSectionProps {
   event: UnifiedEvent;
@@ -10,9 +11,10 @@ const EventHeroSection: React.FC<EventHeroSectionProps> = ({ event }) => {
   return (
     <div className="relative h-96 w-full bg-black">
       <img
-        src={event.image_url || "https://picsum.photos/800/400?random=event"}
+        src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/800/400?random=event"}
         alt={event.title}
         className="w-full h-full object-contain"
+        onError={handleImageError}
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
       <div className="absolute bottom-0 left-0 right-0 p-6 text-white">

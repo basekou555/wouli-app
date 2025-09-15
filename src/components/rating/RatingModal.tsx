@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -7,6 +7,7 @@ import { Star, Calendar, MapPin, Clock } from 'lucide-react';
 import { UnifiedEvent } from '@/types/unified';
 import { StarRating } from './StarRating';
 import { formatDate, formatTime } from '@/utils/dateFormatting';
+import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
 
 interface RatingModalProps {
   isOpen: boolean;
@@ -75,9 +76,10 @@ export const RatingModal = ({
               <div className="flex items-start space-x-3">
                 {event.image_url && (
                   <img 
-                    src={event.image_url} 
+                    src={getProxiedImageUrl(event.image_url)} 
                     alt={event.title}
                     className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+                    onError={handleImageError}
                   />
                 )}
                 <div className="flex-1 min-w-0">

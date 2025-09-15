@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
+import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
 
 type Event = Tables<'events'>;
 
@@ -300,10 +301,11 @@ const EventDetails = () => {
         {/* Hero image - Priority visual element */}
         <div className="relative aspect-[4/3] md:aspect-[16/9] rounded-2xl overflow-hidden bg-muted group">
           <img
-            src={event.image_url || "https://picsum.photos/800/400?random=event"}
+            src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/800/400?random=event"}
             alt={event.title}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             loading="eager"
+            onError={handleImageError}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
           

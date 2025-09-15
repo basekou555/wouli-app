@@ -1,9 +1,11 @@
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { StarRating } from '@/components/rating/StarRating';
 import { BusinessEvent } from '@/types/events';
 import { Calendar, MapPin, Eye, Heart, Users, MessageSquare, FileDown } from 'lucide-react';
+import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
 
 interface ArchivedEventCardProps {
   event: BusinessEvent;
@@ -25,9 +27,10 @@ export const ArchivedEventCard = ({ event }: ArchivedEventCardProps) => {
           <div className="flex items-start space-x-4">
             {event.image_url && (
               <img 
-                src={event.image_url} 
+                src={getProxiedImageUrl(event.image_url)} 
                 alt={event.title}
                 className="w-16 h-16 rounded-lg object-cover"
+                onError={handleImageError}
               />
             )}
             

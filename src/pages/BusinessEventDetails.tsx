@@ -12,6 +12,7 @@ import WouliMetricsGrid from '@/components/business/analytics/WouliMetricsGrid';
 import RecommendationsSection from '@/components/business/analytics/RecommendationsSection';
 import { useEventAnalytics } from '@/hooks/useEventAnalytics';
 import { hybridAnalyticsService } from '@/services/hybridAnalyticsService';
+import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
 
 const BusinessEventDetails = () => {
   const { id } = useParams();
@@ -93,9 +94,10 @@ const BusinessEventDetails = () => {
       {/* Hero Section */}
       <div className="relative h-48 overflow-hidden">
         <img 
-          src={event.image_url || "https://picsum.photos/1200/400?random=event"} 
+          src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/1200/400?random=event"} 
           alt={event.title}
           className="w-full h-full object-cover"
+          onError={handleImageError}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent" />
         

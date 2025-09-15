@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { enhanceEventContent } from '@/services/aiEnhancementService';
 import { ImageEditorModal } from './ImageEditorModal';
 import { uploadEventImage, updateEventImageUrl } from '@/services/imageUploadService';
+import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
 import { toast } from 'sonner';
 
 interface PendingEvent {
@@ -199,9 +200,10 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
             <div className="space-y-2">
               <div className="w-full aspect-[4/5] rounded-lg border bg-black flex items-center justify-center overflow-hidden">
                 <img 
-                  src={formData.image_url || event.image_url || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30'} 
+                  src={getProxiedImageUrl(formData.image_url || event.image_url) || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30'} 
                   alt="Aperçu"
                   className="w-full h-full object-contain"
+                  onError={handleImageError}
                 />
               </div>
               {(formData.image_url || event.image_url) && (

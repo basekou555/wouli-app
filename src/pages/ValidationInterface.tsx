@@ -13,6 +13,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
 import AdminProfileChecker from '@/components/AdminProfileChecker';
 import { WOULI_CATEGORIES, getCategoryById } from '@/data/wouliCategories';
 import EventEditModal from '@/components/admin/EventEditModal';
@@ -475,10 +476,11 @@ const ValidationInterface = () => {
                         </TableCell>
                         <TableCell>
                           <img
-                            src={event.image_url || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30'}
+                            src={getProxiedImageUrl(event.image_url) || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30'}
                             alt={event.title}
                             className="w-24 h-24 object-cover rounded-lg cursor-pointer hover:opacity-90"
                             onClick={() => setShowDetails(event)}
+                            onError={handleImageError}
                           />
                         </TableCell>
                         <TableCell>
