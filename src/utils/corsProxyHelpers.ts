@@ -4,9 +4,9 @@
 export const getProxiedImageUrl = (imageUrl: string | null | undefined): string => {
   if (!imageUrl) return '';
   
-  // Si l'URL contient Instagram ou Facebook CDN, utilise wsrv.nl pour proxy et optimisation
+  // Si l'URL contient Instagram ou Facebook CDN, utilise le proxy CORS
   if (imageUrl.includes('cdninstagram.com') || imageUrl.includes('fbcdn.net')) {
-    return `https://wsrv.nl/?url=${encodeURIComponent(imageUrl)}&w=400&h=400&fit=cover`;
+    return `https://corsproxy.io/?${encodeURIComponent(imageUrl)}`;
   }
   
   return imageUrl;
