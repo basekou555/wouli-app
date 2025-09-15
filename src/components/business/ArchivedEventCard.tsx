@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { StarRating } from '@/components/rating/StarRating';
 import { BusinessEvent } from '@/types/events';
 import { Calendar, MapPin, Eye, Heart, Users, MessageSquare, FileDown } from 'lucide-react';
-import ProxiedImage from '@/components/ProxiedImage';
 
 interface ArchivedEventCardProps {
   event: BusinessEvent;
@@ -25,10 +24,9 @@ export const ArchivedEventCard = ({ event }: ArchivedEventCardProps) => {
         <div className="flex items-start justify-between">
           <div className="flex items-start space-x-4">
             {event.image_url && (
-              <ProxiedImage 
+              <img 
                 src={event.image_url} 
                 alt={event.title}
-                eventId={event.id}
                 className="w-16 h-16 rounded-lg object-cover"
               />
             )}

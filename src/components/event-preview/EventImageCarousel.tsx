@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import ProxiedImage from '@/components/ProxiedImage';
 
 interface EventImageCarouselProps {
   images: string[];
@@ -23,10 +22,10 @@ const EventImageCarousel: React.FC<EventImageCarouselProps> = ({ images, title }
   if (images.length === 1) {
     return (
       <div className="relative h-96 bg-black rounded-lg overflow-hidden">
-        <ProxiedImage 
+        <img 
           src={images[0]} 
-          alt={title}
           className="w-full h-full object-contain"
+          alt={title}
         />
       </div>
     );
@@ -47,10 +46,10 @@ const EventImageCarousel: React.FC<EventImageCarouselProps> = ({ images, title }
       >
         {images.map((img, idx) => (
           <div key={idx} className="w-full h-full flex-shrink-0 snap-center relative">
-            <ProxiedImage 
+            <img 
               src={img} 
-              alt={imageLabels[idx] || `Image ${idx + 1}`}
               className="w-full h-full object-contain" 
+              alt={imageLabels[idx] || `Image ${idx + 1}`}
             />
             {/* Label sur image */}
             <span className="absolute bottom-4 left-4 bg-black/70 backdrop-blur text-white px-3 py-1 rounded-full text-sm font-medium">

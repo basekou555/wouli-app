@@ -20,7 +20,6 @@ import EventModerationHistory from '@/components/admin/EventModerationHistory';
 import StatusChangeModal from '@/components/admin/StatusChangeModal';
 import EnhanceWithAIModal from '@/components/admin/EnhanceWithAIModal';
 import { getEventStatus } from '@/utils/eventStatus';
-import ProxiedImage from '@/components/ProxiedImage';
 
 interface PendingEvent {
   id: string;
@@ -113,25 +112,6 @@ const ValidationInterface = () => {
     }
   };
 
-  const handleMigrateImages = async () => {
-    try {
-      setProcessingId('bulk');
-      const { data, error } = await supabase.functions.invoke('migrate-images', {
-        body: { limit: 50 }
-      });
-      if (error) throw error as any;
-      toast({
-        title: 'Migration terminée',
-        description: data?.message || 'Images migrées avec succès',
-      });
-      await fetchEvents();
-    } catch (e: any) {
-      console.error('Erreur migration images:', e);
-      toast({ title: 'Erreur', description: e?.message || 'Échec de la migration', variant: 'destructive' });
-    } finally {
-      setProcessingId(null);
-    }
-  };
 
   // Actions rapides (legacy - pour compatibilité)
   const handleApprove = async (eventIds: string | string[]) => {
@@ -294,14 +274,13 @@ const ValidationInterface = () => {
               </p>
             </div>
             
-            <div className="flex items-center gap-2">
-              <Button onClick={handleMigrateImages} variant="default" size="sm">
-                Migrer images Instagram
-              </Button>
-              <Button onClick={fetchEvents} variant="outline" size="icon">
-                <RefreshCw className="w-5 h-5" />
-              </Button>
-            </div>
+            <Button
+              onClick={fetchEvents}
+              variant="outline"
+              size="icon"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </Button>
           </div>
           
           {/* Stats rapides */}
@@ -495,16 +474,12 @@ const ValidationInterface = () => {
                           />
                         </TableCell>
                         <TableCell>
-                           <div onClick={() => setShowDetails(event)}>
-                              <ProxiedImage
-                                src={event.image_url}
-                                alt={event.title}
-                                eventId={event.id}
-                                fallback="/placeholder.svg"
-                                disableProxy={true}
-                                className="w-24 h-24 object-cover rounded-lg cursor-pointer hover:opacity-90"
-                              />
-                           </div>
+                          <img
+                            src={event.image_url || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30'}
+                            alt={event.title}
+                            className="w-24 h-24 object-cover rounded-lg cursor-pointer hover:opacity-90"
+                            onClick={() => setShowDetails(event)}
+                          />
                         </TableCell>
                         <TableCell>
                           <div>
@@ -705,12 +680,9 @@ const ValidationInterface = () => {
         <Dialog open={!!showDetails} onOpenChange={() => setShowDetails(null)}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <div className="relative">
-              <ProxiedImage 
-                src={showDetails.image_url} 
+              <img 
+                src={showDetails.image_url || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30'} 
                 alt={showDetails.title}
-                eventId={showDetails.id}
-                fallback="/placeholder.svg"
-                disableProxy={true}
                 className="w-full h-64 object-cover rounded-lg"
               />
             </div>

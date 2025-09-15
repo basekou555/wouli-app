@@ -401,7 +401,7 @@ const Explore = () => {
                 <Button
                   variant="default"
                   size="icon" 
-                  className="rounded-full bg-gradient-wouli border-2 border-white pointer-events-auto"
+                  className="rounded-full bg-gradient-primary border-2 border-white pointer-events-auto"
                   onClick={() => handleSwipeRight(filteredEvents[currentIndex].id)}
                 >
                   <Heart className={`h-5 w-5 ${userInteractions.liked.has(filteredEvents[currentIndex].id) ? 'fill-current' : ''}`} />

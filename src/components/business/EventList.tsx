@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, MapPin, Eye, Heart, ExternalLink, Trash2, Tag, Clock, Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { BusinessEvent } from '@/types/events';
-import ProxiedImage from '@/components/ProxiedImage';
 
 interface BusinessConfig {
   client_name: string;
@@ -55,12 +54,11 @@ const EventList = ({ config, events, onDeleteEvent, onEditEvent }: EventListProp
                 <CardContent className="p-4">
                   <div className="flex gap-4">
                     {event.image_url && (
-                       <ProxiedImage 
-                         src={event.image_url} 
-                         alt={event.title}
-                         eventId={event.id}
-                         className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
-                       />
+                      <img 
+                        src={event.image_url} 
+                        alt={event.title}
+                        className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+                      />
                     )}
                     
                     <div className="flex-1 min-w-0">

@@ -20,8 +20,8 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				sans: ['Inter', 'system-ui', 'sans-serif'],
-				display: ['Sora', 'Inter', 'system-ui', 'sans-serif'],
+				sans: ['SF Pro Display', 'Inter', 'system-ui', 'sans-serif'],
+				display: ['SF Pro Display', 'Inter', 'system-ui', 'sans-serif'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',
@@ -177,18 +177,11 @@ export default {
 					'0%': { transform: 'translateX(0) rotate(0deg)', opacity: '1' },
 					'100%': { transform: 'translateX(30px) rotate(5deg)', opacity: '0.9' },
 				},
-				// Wouli Signature Animations
-				'heartbeat': {
-					'0%': { transform: 'scale(1)', opacity: '1' },
-					'25%': { transform: 'scale(1.05)', opacity: '0.9' },
-					'50%': { transform: 'scale(1.1)', opacity: '0.8' },
-					'75%': { transform: 'scale(1.05)', opacity: '0.9' },
-					'100%': { transform: 'scale(1)', opacity: '1' },
-				},
-				'like-pop': {
+				// Like Animation
+				'like-bounce': {
 					'0%': { transform: 'scale(1)' },
-					'50%': { transform: 'scale(1.3) rotate(5deg)' },
-					'100%': { transform: 'scale(1) rotate(0deg)' },
+					'50%': { transform: 'scale(1.2)' },
+					'100%': { transform: 'scale(1)' },
 				},
 			},
 			animation: {
@@ -205,11 +198,10 @@ export default {
 				'scale': 'scale 0.3s ease-out forwards',
 				'scale-up': 'scale-up 0.5s ease-out forwards',
 				'slide-up-ease': 'slide-up-ease 0.4s ease-out forwards',
-				// Wouli Signature Animations
+				// Wouli Animations
 				'swipe-left': 'swipe-left 0.3s ease-out',
 				'swipe-right': 'swipe-right 0.3s ease-out',
-				'heartbeat': 'heartbeat 1.5s ease-in-out infinite',
-				'like-pop': 'like-pop 0.4s ease-out',
+				'like-bounce': 'like-bounce 0.3s ease-out',
 			},
 		}
 	},

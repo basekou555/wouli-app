@@ -28,7 +28,7 @@ const UrgentBadge: React.FC<UrgentBadgeProps> = ({ eventDate, eventTime }) => {
 
   return (
     <Badge 
-      className="absolute top-3 right-3 bg-urgent text-urgent-foreground border-none animate-heartbeat text-xs font-medium px-2 py-1 rounded-lg shadow-lg"
+      className="absolute top-3 right-3 bg-red-500 text-white border-none animate-pulse hover:animate-none text-xs font-medium px-2 py-1 rounded-lg shadow-lg"
     >
       {urgentLabel}
     </Badge>
