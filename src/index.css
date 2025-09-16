@@ -80,13 +80,55 @@
     @apply min-h-[44px] min-w-[44px];
   }
   
-  /* Swipe animations */
+  /* Swipe animations optimisées */
   .swipe-left {
     @apply -rotate-[5deg] -translate-x-[30px] opacity-90;
   }
   
   .swipe-right {
     @apply rotate-[5deg] translate-x-[30px] opacity-90;
+  }
+
+  /* Container pour cartes swipeables - Optimisations performance */
+  .wouli-swipe-container {
+    /* Isolation des gestes tactiles */
+    touch-action: pan-y; /* Permet scroll vertical, bloque swipe horizontal natif */
+    -webkit-touch-callout: none; /* Désactive le menu contextuel sur iOS */
+    -webkit-user-select: none;   /* Désactive la sélection de texte */
+    user-select: none;
+    
+    /* Optimisations GPU */
+    will-change: transform;
+    transform: translateZ(0); /* Force l'accélération GPU */
+    backface-visibility: hidden;
+  }
+
+  /* Contenu de carte optimisé */
+  .wouli-card-content {
+    /* Optimisations rendering */
+    will-change: transform, opacity;
+    transform: translateZ(0);
+    
+    /* Responsive breakpoints pour cartes swipe */
+    @apply w-full max-w-[343px];
+  }
+
+  /* Touch targets optimisés pour mobile */
+  @media (max-width: 768px) {
+    .wouli-swipe-container {
+      /* Plus de sensibilité sur mobile */
+      touch-action: pan-y;
+    }
+    
+    .wouli-card-content {
+      /* Taille optimisée mobile */
+      @apply max-w-[320px];
+    }
+  }
+
+  /* Protection contre l'over-scroll sur mobile */
+  .wouli-swipe-container * {
+    overscroll-behavior: contain;
   }
   
   /* Hover scale */

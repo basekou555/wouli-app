@@ -168,14 +168,25 @@ export default {
 					from: { transform: 'translateY(20px)', opacity: '0' },
 					to: { transform: 'translateY(0)', opacity: '1' },
 				},
-				// Wouli Swipe Animations
+				// Wouli Swipe Animations optimisées
 				'swipe-left': {
 					'0%': { transform: 'translateX(0) rotate(0deg)', opacity: '1' },
+					'50%': { transform: 'translateX(-15px) rotate(-2deg)', opacity: '0.95' },
 					'100%': { transform: 'translateX(-30px) rotate(-5deg)', opacity: '0.9' },
 				},
 				'swipe-right': {
 					'0%': { transform: 'translateX(0) rotate(0deg)', opacity: '1' },
+					'50%': { transform: 'translateX(15px) rotate(2deg)', opacity: '0.95' },
 					'100%': { transform: 'translateX(30px) rotate(5deg)', opacity: '0.9' },
+				},
+				// Animation pour overlay feedback
+				'overlay-show': {
+					'0%': { transform: 'scale(0.8)', opacity: '0' },
+					'100%': { transform: 'scale(1)', opacity: '1' },
+				},
+				'overlay-hide': {
+					'0%': { transform: 'scale(1)', opacity: '1' },
+					'100%': { transform: 'scale(0.8)', opacity: '0' },
 				},
 				// Like Animation
 				'like-bounce': {
@@ -198,10 +209,12 @@ export default {
 				'scale': 'scale 0.3s ease-out forwards',
 				'scale-up': 'scale-up 0.5s ease-out forwards',
 				'slide-up-ease': 'slide-up-ease 0.4s ease-out forwards',
-				// Wouli Animations
-				'swipe-left': 'swipe-left 0.3s ease-out',
-				'swipe-right': 'swipe-right 0.3s ease-out',
+				// Wouli Animations optimisées
+				'swipe-left': 'swipe-left 0.2s ease-out',
+				'swipe-right': 'swipe-right 0.2s ease-out',
 				'like-bounce': 'like-bounce 0.3s ease-out',
+				'overlay-show': 'overlay-show 0.1s ease-out',
+				'overlay-hide': 'overlay-hide 0.1s ease-out',
 			},
 		}
 	},
