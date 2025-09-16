@@ -154,9 +154,16 @@
     transform-origin: center center;
   }
 
-  /* Piste horizontale visuelle */
-  .wouli-swipe-track {
-    position: relative;
+/* Pressable class for react-tinder-card buttons */
+.pressable {
+  pointer-events: auto !important;
+  z-index: 999;
+  position: relative;
+}
+
+/* Piste horizontale visuelle */
+.wouli-swipe-track {
+  position: relative;
     
     /* Guides visuels subtils */
     &::before {
