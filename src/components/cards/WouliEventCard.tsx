@@ -108,7 +108,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
           {onShare && (
             <Button 
               size="sm"
-              className="absolute top-3 left-3 w-10 h-10 bg-white/90 backdrop-blur rounded-full p-0 hover:bg-white border-0"
+              className="pressable absolute top-3 left-3 w-10 h-10 bg-white/90 backdrop-blur rounded-full p-0 hover:bg-white border-0"
               onClick={(e) => {
                 e.stopPropagation();
                 onShare();
@@ -181,8 +181,11 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
               <Button 
                 variant="outline" 
                 size="sm"
-                className="h-11 flex-1 bg-gray-100 hover:bg-gray-200 border-gray-200"
-                onClick={onDislike}
+                className="pressable h-11 flex-1 bg-gray-100 hover:bg-gray-200 border-gray-200"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDislike();
+                }}
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -190,14 +193,17 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
             
             {/* Bouton Participer */}
             <Button 
-              className={`h-11 font-semibold ${
+              className={`pressable h-11 font-semibold ${
                 onDislike ? 'flex-[2]' : 'flex-1'
               } ${
                 isParticipating 
                   ? 'bg-green-500 hover:bg-green-600 text-white' 
                   : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white'
               }`}
-              onClick={onParticipate}
+              onClick={(e) => {
+                e.stopPropagation();
+                onParticipate();
+              }}
             >
               {isParticipating ? '✅ Inscrit' : 'Participer'}
             </Button>
@@ -206,12 +212,15 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
             <Button 
               variant="outline" 
               size="sm"
-              className={`h-11 flex-1 border-2 ${
+              className={`pressable h-11 flex-1 border-2 ${
                 isLiked 
                   ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' 
                   : 'bg-background hover:bg-muted border-border'
               }`}
-              onClick={onLike}
+              onClick={(e) => {
+                e.stopPropagation();
+                onLike();
+              }}
             >
               <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
             </Button>
@@ -228,12 +237,12 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
         <TinderCard
           onSwipe={handleSwipe}
           onCardLeftScreen={handleCardLeftScreen}
-          preventSwipe={[]} // Permet swipe dans toutes les directions
-          swipeRequirementType="velocity"
-          swipeThreshold={0.3}
+          preventSwipe={['up', 'down']} // Bloquer swipes verticaux
+          swipeRequirementType="position"
+          swipeThreshold={Math.round(window.innerWidth * 0.4)}
           className="absolute w-full h-full"
         >
-          <Card className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card cursor-grab active:cursor-grabbing ${className}`}>
+          <Card className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card cursor-grab active:cursor-grabbing ${className}`} style={{ overflow: 'hidden' }}>
             <SwipeCardContent />
           </Card>
         </TinderCard>

@@ -80,6 +80,17 @@
     @apply min-h-[44px] min-w-[44px];
   }
   
+  /* Pressable elements for better touch interactions */
+  .pressable {
+    @apply touch-manipulation select-none active:scale-95 transition-transform duration-75;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+  
   /* Swipe animations */
   .swipe-left {
     @apply -rotate-[5deg] -translate-x-[30px] opacity-90;
