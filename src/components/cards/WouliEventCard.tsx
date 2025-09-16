@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import TinderCard from 'react-tinder-card';
 import { Card } from '@/components/ui/card';
@@ -48,19 +48,9 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
   onSwipeLeft,
   onSwipeRight
 }) => {
-  // useRef pour éviter re-renders pendant drag (hotfix)
-  const swipeDirectionRef = useRef<'left' | 'right' | null>(null);
-  const isSwipeActiveRef = useRef(false);
-  const lastPositionRef = useRef({ x: 0, y: 0, timestamp: 0 });
-  
-  // États UI pour les overlays (débounced)
-  const [uiSwipeDirection, setUiSwipeDirection] = useState<'left' | 'right' | null>(null);
-  const [uiIsSwipeActive, setUiIsSwipeActive] = useState(false);
-  
-  // Contraintes de mouvement optimisées
-  const VERTICAL_LIMIT = 40; // ±40px maximum
-  const MAX_SPEED = 600; // 600px/s maximum
-  const MAX_ANGLE = 20; // ±20° maximum
+  // États pour overlay indicators et swipe
+  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
+  const [isSwipeActive, setIsSwipeActive] = useState(false);
 
   // Vibration helper avec fallback gracieux
   const vibrate = (pattern: number | number[]) => {
@@ -69,89 +59,25 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
     }
   };
 
-  // Fonctions utilitaires pour contraintes de mouvement (stabilisées)
-  const constrainMovement = useCallback((x: number, y: number, timestamp: number) => {
-    const lastPos = lastPositionRef.current;
-    
-    // Calcul de la vitesse
-    const deltaTime = timestamp - lastPos.timestamp;
-    if (deltaTime > 0) {
-      const deltaX = x - lastPos.x;
-      const deltaY = y - lastPos.y;
-      const velocity = Math.sqrt(deltaX * deltaX + deltaY * deltaY) / deltaTime * 1000; // px/s
-      
-      // Plafonnement de la vitesse
-      if (velocity > MAX_SPEED) {
-        const ratio = MAX_SPEED / velocity;
-        x = lastPos.x + deltaX * ratio;
-        y = lastPos.y + deltaY * ratio;
-      }
-    }
-    
-    // Limitation verticale à ±40px
-    y = Math.max(-VERTICAL_LIMIT, Math.min(VERTICAL_LIMIT, y));
-    
-    // Calcul et limitation de l'angle
-    const angle = Math.atan2(Math.abs(y), Math.abs(x)) * (180 / Math.PI);
-    if (angle > MAX_ANGLE) {
-      // Correction pour rester dans l'angle maximum
-      const maxY = Math.abs(x) * Math.tan(MAX_ANGLE * Math.PI / 180);
-      y = y > 0 ? Math.min(y, maxY) : Math.max(y, -maxY);
-    }
-    
-    return { x, y };
-  }, [VERTICAL_LIMIT, MAX_SPEED, MAX_ANGLE]);
+  // Callbacks temps réel pour feedback utilisateur
+  const handleSwipeStart = () => {
+    setIsSwipeActive(true);
+  };
 
-  // Callbacks optimisés avec debounce pour UI updates
-  const handleSwipeStart = useCallback((element?: Element) => {
-    isSwipeActiveRef.current = true;
-    lastPositionRef.current = { x: 0, y: 0, timestamp: Date.now() };
-    
-    // Update UI avec debounce
-    setUiIsSwipeActive(true);
-  }, []);
-
-  const handleSwipeUpdate = useCallback((direction: string, position?: { x: number; y: number }) => {
-    const now = Date.now();
-    
-    if (position) {
-      // Application des contraintes de mouvement
-      const constrained = constrainMovement(position.x, position.y, now);
-      lastPositionRef.current = { ...constrained, timestamp: now };
-      
-      // Mise à jour de la direction avec correction automatique
-      if (Math.abs(constrained.x) > 30) { // Seuil pour déterminer la direction
-        const newDirection = constrained.x > 0 ? 'right' : 'left';
-        swipeDirectionRef.current = newDirection;
-        setUiSwipeDirection(newDirection);
-      } else {
-        swipeDirectionRef.current = null;
-        setUiSwipeDirection(null);
-      }
+  const handleSwipeUpdate = (direction: string) => {
+    // Mise à jour temps réel des overlays pendant le swipe
+    if (direction === 'right' || direction === 'left') {
+      setSwipeDirection(direction as 'left' | 'right');
     } else {
-      // Fallback pour l'ancienne API
-      if (direction === 'right' || direction === 'left') {
-        const newDirection = direction as 'left' | 'right';
-        swipeDirectionRef.current = newDirection;
-        setUiSwipeDirection(newDirection);
-      } else {
-        swipeDirectionRef.current = null;
-        setUiSwipeDirection(null);
-      }
+      setSwipeDirection(null);
     }
-  }, [constrainMovement]);
+  };
 
-  // Handlers pour TinderCard (stabilisés)
-  const handleSwipe = useCallback((direction: string) => {
+  // Handlers pour TinderCard
+  const handleSwipe = (direction: string) => {
     console.log(`🔄 Swipe ${direction} détecté`);
-    
-    // Reset refs
-    swipeDirectionRef.current = null;
-    isSwipeActiveRef.current = false;
-    
-    // Reset UI
-    setUiSwipeDirection(null);
-    setUiIsSwipeActive(false);
+    setSwipeDirection(null);
+    setIsSwipeActive(false);
     
     vibrate([10, 30, 10]);
     
@@ -162,29 +88,29 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
       console.log('⬅️ Swipe LEFT - Dislike');
       onSwipeLeft?.();
     }
-  }, [onSwipeRight, onSwipeLeft]);
+  };
 
-  const handleCardLeftScreen = useCallback(() => {
+  const handleCardLeftScreen = () => {
     console.log('📤 Carte sortie de l\'écran');
-    swipeDirectionRef.current = null;
-    isSwipeActiveRef.current = false;
-    setUiSwipeDirection(null);
-    setUiIsSwipeActive(false);
-  }, []);
+    setSwipeDirection(null);
+    setIsSwipeActive(false);
+  };
 
-  // Protection contre les conflits de navigation (optimisée)
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+  // Protection contre les conflits de navigation
+  const handleTouchStart = (e: React.TouchEvent) => {
     if (enableSwipe) {
       e.stopPropagation();
     }
-  }, [enableSwipe]);
+  };
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (enableSwipe && isSwipeActiveRef.current) {
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (enableSwipe && isSwipeActive) {
       // Permettre le mouvement horizontal, bloquer le vertical
+      const touch = e.touches[0];
+      const initialTouch = e.currentTarget.getBoundingClientRect();
       // Cette logique sera gérée par react-tinder-card
     }
-  }, [enableSwipe]);
+  };
 
   // Card content for swipe variant
   const SwipeCardContent = () => {
@@ -215,7 +141,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
           {onShare && (
             <Button 
               size="sm"
-              className="pressable absolute top-3 left-3 w-10 h-10 bg-white/90 backdrop-blur rounded-full p-0 hover:bg-white border-0"
+              className="absolute top-3 left-3 w-10 h-10 bg-white/90 backdrop-blur rounded-full p-0 hover:bg-white border-0"
               onClick={(e) => {
                 e.stopPropagation();
                 onShare();
@@ -288,11 +214,8 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
               <Button 
                 variant="outline" 
                 size="sm"
-                className="pressable h-11 flex-1 bg-gray-100 hover:bg-gray-200 border-gray-200"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDislike();
-                }}
+                className="h-11 flex-1 bg-gray-100 hover:bg-gray-200 border-gray-200"
+                onClick={onDislike}
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -300,17 +223,14 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
             
             {/* Bouton Participer */}
             <Button 
-              className={`pressable h-11 font-semibold ${
+              className={`h-11 font-semibold ${
                 onDislike ? 'flex-[2]' : 'flex-1'
               } ${
                 isParticipating 
                   ? 'bg-green-500 hover:bg-green-600 text-white' 
                   : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white'
               }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onParticipate();
-              }}
+              onClick={onParticipate}
             >
               {isParticipating ? '✅ Inscrit' : 'Participer'}
             </Button>
@@ -319,15 +239,12 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
             <Button 
               variant="outline" 
               size="sm"
-              className={`pressable h-11 flex-1 border-2 ${
+              className={`h-11 flex-1 border-2 ${
                 isLiked 
                   ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' 
                   : 'bg-background hover:bg-muted border-border'
               }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onLike();
-              }}
+              onClick={onLike}
             >
               <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
             </Button>
@@ -341,7 +258,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
   if (variant === 'swipe') {
     return enableSwipe ? (
       <div 
-        className="relative wouli-swipe-container overflow-hidden"
+        className="relative wouli-swipe-container"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
       >
@@ -349,12 +266,10 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
           onSwipe={handleSwipe}
           onCardLeftScreen={handleCardLeftScreen}
           preventSwipe={['up', 'down']} // Swipe horizontal uniquement
-          swipeRequirementType="position" // Position pour plus de contrôle
-          swipeThreshold={Math.round(window.innerWidth * 0.35)} // 35% de la largeur d'écran
+          swipeRequirementType="velocity"
+          swipeThreshold={0.2} // Plus sensible pour une meilleure UX
           className="absolute w-full h-full"
-          // Configuration optimisée
-          flickOnSwipe={false} // Désactiver le flick pour plus de contrôle
-          // Callbacks temps réel pour overlays avec contraintes
+          // Callbacks temps réel pour overlays
           // @ts-ignore - Ces props ne sont pas typées dans react-tinder-card mais fonctionnent
           onSwipeStart={handleSwipeStart}
           onSwipeUpdate={handleSwipeUpdate}
@@ -365,7 +280,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
             bg-card cursor-grab active:cursor-grabbing
             transform-gpu will-change-transform
             touch-pan-y
-            ${uiIsSwipeActive ? 'transition-none' : 'transition-transform duration-200'}
+            ${isSwipeActive ? 'transition-none' : 'transition-transform duration-200'}
             ${className}
           `}>
             <div className="wouli-card-content">
@@ -379,7 +294,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
           className={`
             absolute top-6 left-6 text-4xl z-50 pointer-events-none
             transform transition-all duration-100 ease-out
-            ${uiSwipeDirection === 'right' ? 'scale-110 opacity-100' : 'scale-95 opacity-0'}
+            ${swipeDirection === 'right' ? 'scale-110 opacity-100' : 'scale-95 opacity-0'}
           `}
         >
           ❤️
@@ -389,24 +304,24 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
           className={`
             absolute top-6 right-6 text-4xl z-50 pointer-events-none
             transform transition-all duration-100 ease-out
-            ${uiSwipeDirection === 'left' ? 'scale-110 opacity-100' : 'scale-95 opacity-0'}
+            ${swipeDirection === 'left' ? 'scale-110 opacity-100' : 'scale-95 opacity-0'}
           `}
         >
           ❌
         </div>
 
         {/* Indicateur de direction pendant swipe */}
-        {uiIsSwipeActive && (
+        {isSwipeActive && (
           <div className="absolute inset-0 pointer-events-none z-40">
             <div className={`
               absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2
               text-white text-lg font-bold px-4 py-2 rounded-full backdrop-blur-sm
               transition-all duration-100
-              ${uiSwipeDirection === 'right' ? 'bg-green-500/80' : 
-                uiSwipeDirection === 'left' ? 'bg-red-500/80' : 'bg-gray-500/80'}
+              ${swipeDirection === 'right' ? 'bg-green-500/80' : 
+                swipeDirection === 'left' ? 'bg-red-500/80' : 'bg-gray-500/80'}
             `}>
-              {uiSwipeDirection === 'right' ? '👍 J\'aime' : 
-               uiSwipeDirection === 'left' ? '👎 Pas intéressé' : '↔️ Glissez'}
+              {swipeDirection === 'right' ? '👍 J\'aime' : 
+               swipeDirection === 'left' ? '👎 Pas intéressé' : '↔️ Glissez'}
             </div>
           </div>
         )}
@@ -449,7 +364,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
           {onShare && (
             <Button 
               size="sm"
-              className="pressable absolute top-1 left-1 w-6 h-6 bg-white/90 backdrop-blur rounded-full p-0 hover:bg-white border-0"
+              className="absolute top-1 left-1 w-6 h-6 bg-white/90 backdrop-blur rounded-full p-0 hover:bg-white border-0"
               onClick={(e) => {
                 e.stopPropagation();
                 onShare();
@@ -512,30 +427,24 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
           <div className="flex gap-2">
             <Button 
               size="sm" 
-              className={`pressable flex-1 h-8 text-xs transition-all ${
+              className={`flex-1 h-8 text-xs transition-all ${
                 isParticipating 
                   ? 'bg-green-500 hover:bg-green-600 text-white' 
                   : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white'
               }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onParticipate();
-              }}
+              onClick={onParticipate}
             >
               {isParticipating ? 'Inscrit' : 'Participer'}
             </Button>
             <Button 
               size="sm" 
               variant="outline"
-              className={`pressable w-8 h-8 p-0 transition-all border-2 ${
+              className={`w-8 h-8 p-0 transition-all border-2 ${
                 isLiked 
                   ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' 
                   : 'hover:bg-muted border-border'
               }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onLike();
-              }}
+              onClick={onLike}
             >
               <Heart className={`h-3 w-3 ${isLiked ? 'fill-current text-red-500' : ''}`} />
             </Button>
@@ -625,28 +534,8 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
                 {getEventStatus()}
               </Badge>
               <div className="flex gap-2">
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  className="pressable"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    /* Event edit handler */
-                  }}
-                >
-                  Modifier
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  className="pressable"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    /* Event stats handler */
-                  }}
-                >
-                  Stats
-                </Button>
+                <Button size="sm" variant="outline">Modifier</Button>
+                <Button size="sm" variant="outline">Stats</Button>
               </div>
             </div>
           </div>
