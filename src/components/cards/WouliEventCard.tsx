@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useSpring, animated, to } from '@react-spring/web';
-import { useDrag } from '@use-gesture/react';
+import TinderCard from 'react-tinder-card';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -49,15 +48,8 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
   onSwipeLeft,
   onSwipeRight
 }) => {
-  // États pour React Spring
-  const [isDragging, setIsDragging] = useState(false);
-
-  // React Spring pour animations ultra-fluides
-  const [{ x, rotate, scale }, api] = useSpring(() => ({ 
-    x: 0, 
-    rotate: 0, 
-    scale: 1 
-  }));
+  // États pour overlay indicators
+  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
 
   // Vibration helper avec fallback gracieux
   const vibrate = (pattern: number | number[]) => {
@@ -66,86 +58,26 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
     }
   };
 
-  // Drag handler ultra-optimisé avec use-gesture
-  const bind = useDrag(({ 
-    offset: [ox], 
-    velocity: [vx], 
-    down,
-    first,
-    cancel
-  }) => {
-    if (!enableSwipe) return;
+  // Handlers pour TinderCard
+  const handleSwipe = (direction: string) => {
+    console.log(`🔄 Swipe ${direction} détecté`);
+    setSwipeDirection(null); // Reset overlay
     
-    if (down) {
-      // FEEDBACK INSTANTANÉ au premier drag
-      if (first) {
-        setIsDragging(true);
-        vibrate(8); // Vibration de démarrage
-      }
-      
-      // PENDANT LE DRAG - Animation instantanée
-      api.start({ 
-        x: ox, 
-        rotate: ox * 0.1, 
-        scale: 1.05,
-        immediate: true  // Zéro lag !
-      });
-    } else {
-      // FIN DU DRAG - ÉVALUATION SWIPE
-      setIsDragging(false);
-      
-      const velocity = Math.abs(vx);
-      const distance = Math.abs(ox);
-      
-      console.log('🔄 Drag ended:', { offset: ox, velocity });
-      
-      // ÉVALUATION INTELLIGENTE inspirée react-tinder-card
-      const swipeRequirementType = 'velocity';
-      let shouldSwipe = false;
-      
-      if (swipeRequirementType === 'velocity') {
-        shouldSwipe = velocity > 0.3;  // Basé sur vitesse
-      } else {
-        shouldSwipe = distance > window.innerWidth * 0.3; // 30% de l'écran
-      }
-      
-      if (shouldSwipe) {
-        // SWIPE VALIDÉ - Animation de sortie
-        vibrate([10, 30, 10]);
-        
-        api.start({ 
-          x: ox > 0 ? window.innerWidth : -window.innerWidth,
-          rotate: ox > 0 ? 45 : -45,
-          scale: 0.8,
-          config: { tension: 200, friction: 20 }
-        });
-        
-        setTimeout(() => {
-          if (ox > 0) {
-            console.log('➡️ Swipe RIGHT validé - Like');
-            onSwipeRight?.();
-          } else {
-            console.log('⬅️ Swipe LEFT validé - Dislike');
-            onSwipeLeft?.();
-          }
-        }, 200);
-        
-      } else {
-        // RETOUR AU CENTRE
-        console.log('🔄 Swipe annulé - retour au centre');
-        api.start({ 
-          x: 0, 
-          rotate: 0, 
-          scale: 1,
-          config: { tension: 400, friction: 30 }
-        });
-      }
+    vibrate([10, 30, 10]);
+    
+    if (direction === 'right') {
+      console.log('➡️ Swipe RIGHT - Like');
+      onSwipeRight?.();
+    } else if (direction === 'left') {
+      console.log('⬅️ Swipe LEFT - Dislike');
+      onSwipeLeft?.();
     }
-  }, {
-    axis: 'x',
-    bounds: { left: -200, right: 200 },
-    rubberband: true
-  });
+  };
+
+  const handleCardLeftScreen = () => {
+    console.log('📤 Carte sortie de l\'écran');
+    setSwipeDirection(null);
+  };
 
   // Card content for swipe variant
   const SwipeCardContent = () => {
@@ -293,43 +225,41 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
   if (variant === 'swipe') {
     return enableSwipe ? (
       <div className="relative">
-        <animated.div
-          {...bind()}
-          style={{
-            x,
-            rotate,
-            scale,
-            transform: 'translate3d(0,0,0)', // GPU acceleration
-            touchAction: 'none',
-            willChange: 'transform'
-          }}
-          className="cursor-grab active:cursor-grabbing"
+        <TinderCard
+          onSwipe={handleSwipe}
+          onCardLeftScreen={handleCardLeftScreen}
+          preventSwipe={[]} // Permet swipe dans toutes les directions
+          swipeRequirementType="velocity"
+          swipeThreshold={0.3}
+          className="absolute w-full h-full"
         >
-          <Card className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card ${className}`}>
+          <Card className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card cursor-grab active:cursor-grabbing ${className}`}>
             <SwipeCardContent />
           </Card>
-        </animated.div>
+        </TinderCard>
 
-        {/* OVERLAYS AVEC EMOJIS REACT SPRING */}
-        <animated.div
+        {/* OVERLAYS AVEC EMOJIS - Logique préservée */}
+        <div
           style={{
-            opacity: to([x], (x) => x > 50 ? (x - 50) / 100 : 0),
-            pointerEvents: 'none'
+            opacity: swipeDirection === 'right' ? 1 : 0,
+            pointerEvents: 'none',
+            transition: 'opacity 0.1s ease-out'
           }}
           className="absolute top-6 left-6 text-4xl z-50"
         >
           ❤️
-        </animated.div>
+        </div>
         
-        <animated.div
+        <div
           style={{
-            opacity: to([x], (x) => x < -50 ? (-x - 50) / 100 : 0),
-            pointerEvents: 'none'
+            opacity: swipeDirection === 'left' ? 1 : 0,
+            pointerEvents: 'none',
+            transition: 'opacity 0.1s ease-out'
           }}
           className="absolute top-6 right-6 text-4xl z-50"
         >
           ❌
-        </animated.div>
+        </div>
       </div>
     ) : (
       <Card className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card ${className}`}>
