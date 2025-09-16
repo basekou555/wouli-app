@@ -51,6 +51,14 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
   // États pour overlay indicators et swipe
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
   const [isSwipeActive, setIsSwipeActive] = useState(false);
+  
+  // Contraintes de mouvement
+  const VERTICAL_LIMIT = 40; // ±40px maximum
+  const MAX_SPEED = 600; // 600px/s maximum
+  const MAX_ANGLE = 20; // ±20° maximum
+  
+  // État pour le suivi du mouvement
+  const [lastPosition, setLastPosition] = useState({ x: 0, y: 0, timestamp: 0 });
 
   // Vibration helper avec fallback gracieux
   const vibrate = (pattern: number | number[]) => {
@@ -59,17 +67,64 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
     }
   };
 
-  // Callbacks temps réel pour feedback utilisateur
-  const handleSwipeStart = () => {
-    setIsSwipeActive(true);
+  // Fonctions utilitaires pour contraintes de mouvement
+  const constrainMovement = (x: number, y: number, timestamp: number) => {
+    // Calcul de la vitesse
+    const deltaTime = timestamp - lastPosition.timestamp;
+    if (deltaTime > 0) {
+      const deltaX = x - lastPosition.x;
+      const deltaY = y - lastPosition.y;
+      const velocity = Math.sqrt(deltaX * deltaX + deltaY * deltaY) / deltaTime * 1000; // px/s
+      
+      // Plafonnement de la vitesse
+      if (velocity > MAX_SPEED) {
+        const ratio = MAX_SPEED / velocity;
+        x = lastPosition.x + deltaX * ratio;
+        y = lastPosition.y + deltaY * ratio;
+      }
+    }
+    
+    // Limitation verticale à ±40px
+    y = Math.max(-VERTICAL_LIMIT, Math.min(VERTICAL_LIMIT, y));
+    
+    // Calcul et limitation de l'angle
+    const angle = Math.atan2(Math.abs(y), Math.abs(x)) * (180 / Math.PI);
+    if (angle > MAX_ANGLE) {
+      // Correction pour rester dans l'angle maximum
+      const maxY = Math.abs(x) * Math.tan(MAX_ANGLE * Math.PI / 180);
+      y = y > 0 ? Math.min(y, maxY) : Math.max(y, -maxY);
+    }
+    
+    return { x, y };
   };
 
-  const handleSwipeUpdate = (direction: string) => {
-    // Mise à jour temps réel des overlays pendant le swipe
-    if (direction === 'right' || direction === 'left') {
-      setSwipeDirection(direction as 'left' | 'right');
+  // Callbacks temps réel pour feedback utilisateur avec contraintes
+  const handleSwipeStart = (element?: Element) => {
+    setIsSwipeActive(true);
+    setLastPosition({ x: 0, y: 0, timestamp: Date.now() });
+  };
+
+  const handleSwipeUpdate = (direction: string, position?: { x: number; y: number }) => {
+    const now = Date.now();
+    
+    if (position) {
+      // Application des contraintes de mouvement
+      const constrained = constrainMovement(position.x, position.y, now);
+      setLastPosition({ ...constrained, timestamp: now });
+      
+      // Mise à jour de la direction avec correction automatique
+      if (Math.abs(constrained.x) > 30) { // Seuil pour déterminer la direction
+        setSwipeDirection(constrained.x > 0 ? 'right' : 'left');
+      } else {
+        setSwipeDirection(null);
+      }
     } else {
-      setSwipeDirection(null);
+      // Fallback pour l'ancienne API
+      if (direction === 'right' || direction === 'left') {
+        setSwipeDirection(direction as 'left' | 'right');
+      } else {
+        setSwipeDirection(null);
+      }
     }
   };
 
@@ -266,10 +321,12 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
           onSwipe={handleSwipe}
           onCardLeftScreen={handleCardLeftScreen}
           preventSwipe={['up', 'down']} // Swipe horizontal uniquement
-          swipeRequirementType="velocity"
-          swipeThreshold={0.2} // Plus sensible pour une meilleure UX
+          swipeRequirementType="position" // Changé à position pour plus de contrôle
+          swipeThreshold={80} // Seuil plus élevé pour éviter les swipes accidentels
           className="absolute w-full h-full"
-          // Callbacks temps réel pour overlays
+          // Configuration pour mouvement contraint
+          flickOnSwipe={false} // Désactiver le flick pour plus de contrôle
+          // Callbacks temps réel pour overlays avec contraintes
           // @ts-ignore - Ces props ne sont pas typées dans react-tinder-card mais fonctionnent
           onSwipeStart={handleSwipeStart}
           onSwipeUpdate={handleSwipeUpdate}
