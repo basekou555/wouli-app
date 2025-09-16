@@ -48,9 +48,8 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
   onSwipeLeft,
   onSwipeRight
 }) => {
-  // États pour overlay indicators et swipe
+  // États pour overlay indicators
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
-  const [isSwipeActive, setIsSwipeActive] = useState(false);
 
   // Vibration helper avec fallback gracieux
   const vibrate = (pattern: number | number[]) => {
@@ -59,25 +58,10 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
     }
   };
 
-  // Callbacks temps réel pour feedback utilisateur
-  const handleSwipeStart = () => {
-    setIsSwipeActive(true);
-  };
-
-  const handleSwipeUpdate = (direction: string) => {
-    // Mise à jour temps réel des overlays pendant le swipe
-    if (direction === 'right' || direction === 'left') {
-      setSwipeDirection(direction as 'left' | 'right');
-    } else {
-      setSwipeDirection(null);
-    }
-  };
-
   // Handlers pour TinderCard
   const handleSwipe = (direction: string) => {
     console.log(`🔄 Swipe ${direction} détecté`);
-    setSwipeDirection(null);
-    setIsSwipeActive(false);
+    setSwipeDirection(null); // Reset overlay
     
     vibrate([10, 30, 10]);
     
@@ -93,23 +77,6 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
   const handleCardLeftScreen = () => {
     console.log('📤 Carte sortie de l\'écran');
     setSwipeDirection(null);
-    setIsSwipeActive(false);
-  };
-
-  // Protection contre les conflits de navigation
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (enableSwipe) {
-      e.stopPropagation();
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (enableSwipe && isSwipeActive) {
-      // Permettre le mouvement horizontal, bloquer le vertical
-      const touch = e.touches[0];
-      const initialTouch = e.currentTarget.getBoundingClientRect();
-      // Cette logique sera gérée par react-tinder-card
-    }
   };
 
   // Card content for swipe variant
@@ -257,74 +224,42 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
   // VARIANTE SWIPE
   if (variant === 'swipe') {
     return enableSwipe ? (
-      <div 
-        className="relative wouli-swipe-container"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-      >
+      <div className="relative">
         <TinderCard
           onSwipe={handleSwipe}
           onCardLeftScreen={handleCardLeftScreen}
-          preventSwipe={['up', 'down']} // Swipe horizontal uniquement
+          preventSwipe={[]} // Permet swipe dans toutes les directions
           swipeRequirementType="velocity"
-          swipeThreshold={0.2} // Plus sensible pour une meilleure UX
+          swipeThreshold={0.3}
           className="absolute w-full h-full"
-          // Callbacks temps réel pour overlays
-          // @ts-ignore - Ces props ne sont pas typées dans react-tinder-card mais fonctionnent
-          onSwipeStart={handleSwipeStart}
-          onSwipeUpdate={handleSwipeUpdate}
         >
-          <Card className={`
-            max-w-[343px] w-full 
-            rounded-xl shadow-xl overflow-hidden 
-            bg-card cursor-grab active:cursor-grabbing
-            transform-gpu will-change-transform
-            touch-pan-y
-            ${isSwipeActive ? 'transition-none' : 'transition-transform duration-200'}
-            ${className}
-          `}>
-            <div className="wouli-card-content">
-              <SwipeCardContent />
-            </div>
+          <Card className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card cursor-grab active:cursor-grabbing ${className}`}>
+            <SwipeCardContent />
           </Card>
         </TinderCard>
 
-        {/* OVERLAYS AVEC EMOJIS - Feedback temps réel amélioré */}
+        {/* OVERLAYS AVEC EMOJIS - Logique préservée */}
         <div
-          className={`
-            absolute top-6 left-6 text-4xl z-50 pointer-events-none
-            transform transition-all duration-100 ease-out
-            ${swipeDirection === 'right' ? 'scale-110 opacity-100' : 'scale-95 opacity-0'}
-          `}
+          style={{
+            opacity: swipeDirection === 'right' ? 1 : 0,
+            pointerEvents: 'none',
+            transition: 'opacity 0.1s ease-out'
+          }}
+          className="absolute top-6 left-6 text-4xl z-50"
         >
           ❤️
         </div>
         
         <div
-          className={`
-            absolute top-6 right-6 text-4xl z-50 pointer-events-none
-            transform transition-all duration-100 ease-out
-            ${swipeDirection === 'left' ? 'scale-110 opacity-100' : 'scale-95 opacity-0'}
-          `}
+          style={{
+            opacity: swipeDirection === 'left' ? 1 : 0,
+            pointerEvents: 'none',
+            transition: 'opacity 0.1s ease-out'
+          }}
+          className="absolute top-6 right-6 text-4xl z-50"
         >
           ❌
         </div>
-
-        {/* Indicateur de direction pendant swipe */}
-        {isSwipeActive && (
-          <div className="absolute inset-0 pointer-events-none z-40">
-            <div className={`
-              absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2
-              text-white text-lg font-bold px-4 py-2 rounded-full backdrop-blur-sm
-              transition-all duration-100
-              ${swipeDirection === 'right' ? 'bg-green-500/80' : 
-                swipeDirection === 'left' ? 'bg-red-500/80' : 'bg-gray-500/80'}
-            `}>
-              {swipeDirection === 'right' ? '👍 J\'aime' : 
-               swipeDirection === 'left' ? '👎 Pas intéressé' : '↔️ Glissez'}
-            </div>
-          </div>
-        )}
       </div>
     ) : (
       <Card className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card ${className}`}>
