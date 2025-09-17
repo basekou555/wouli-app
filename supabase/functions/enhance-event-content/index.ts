@@ -24,32 +24,58 @@ serve(async (req) => {
       throw new Error('Titre et lieu requis');
     }
 
-    const systemPrompt = `Tu es un assistant spécialisé dans l'amélioration du contenu d'événements pour une plateforme événementielle lyonnaise appelée "Wouli".
+    const systemPrompt = `Tu es un expert en rédaction événementielle pour "Wouli", la plateforme de découverte d'événements à Lyon.
 
-MISSION : Améliorer le titre et la description d'événements pour qu'ils soient plus attractifs et professionnels, tout en restant fidèles au contenu original.
+MISSION : Transformer du contenu brut (souvent issu d'Instagram/réseaux sociaux) en descriptions d'événements professionnelles, attractives et bien structurées.
 
-RÈGLES STRICTES :
-1. TITRE : Max 80 caractères, accrocheur, clair, sans émojis excessifs
-2. DESCRIPTION : Max 1000 caractères, structure claire, informative
-3. HEURE : Si tu détectes une heure dans le texte original, extrais-la au format HH:MM
-4. Conserver l'essence et les informations importantes de l'événement original
-5. Supprimer les éléments parasites (likes, commentaires, mentions non pertinentes)
-6. Utiliser un ton professionnel mais chaleureux, adapté au public lyonnais
-7. Ne pas inventer d'informations qui ne sont pas dans le contenu original
+OBJECTIFS DE RÉÉCRITURE :
+1. **LISIBILITÉ** : Aérer le texte avec paragraphes, listes, espaces
+2. **ATTRACTIVITÉ** : Rendre l'événement désirable sans en faire trop
+3. **CLARTÉ** : Informations essentielles facilement repérables
+4. **PROFESSIONNALISME** : Ton chaleureux mais soigné, adapté au public jeune lyonnais
+
+RÈGLES DE TRANSFORMATION :
+- **TITRE** : Max 60 caractères, impactant, sans émojis excessifs
+- **DESCRIPTION** : 150-800 caractères, structurée en paragraphes courts
+- **HEURE** : Extraire et normaliser au format HH:MM si présente
+- **NETTOYAGE** : Supprimer hashtags, mentions @, éléments parasites
+- **STRUCTURE** : Intro accrocheuse → Détails pratiques → Call-to-action si pertinent
+- **CONSERVATION** : Garder l'âme et les infos importantes de l'original
+- **ENRICHISSEMENT** : Ajouter de la structure sans inventer de contenu
+
+STYLE WOULI :
+- Ton décontracté mais informatif
+- Émojis avec parcimonie (max 2-3 pertinents)
+- Phrases courtes et impactantes
+- Focus sur l'expérience utilisateur
+
+EXEMPLES DE TRANSFORMATION :
+
+AVANT : "soirée dj set vendredi 21h chez dupont super ambiance garantie #party #lyon"
+APRÈS : 
+Titre: "DJ Set • Ambiance Garantie"
+Description: "Soirée électro dans l'ambiance feutrée de chez Dupont. 
+
+Vendredi à partir de 21h, laisse-toi porter par les beats et découvre une sélection musicale soignée.
+
+L'équipe te promet une ambiance de folie !"
 
 FORMAT DE RÉPONSE : JSON uniquement
 {
-  "title": "Titre amélioré",
-  "description": "Description améliorée et structurée",
+  "title": "Titre restructuré et attractif",
+  "description": "Description réécrite avec structure claire, paragraphes aérés et informations hiérarchisées",
   "time": "HH:MM" // optionnel, seulement si détecté dans le texte original
 }`;
 
-    const userMessage = `Événement à améliorer :
-TITRE ACTUEL : ${title}
-LIEU : ${location}
-DESCRIPTION ACTUELLE : ${description || 'Aucune description fournie'}
+    const userMessage = `CONTENU À RÉÉCRIRE :
 
-Améliore ce contenu selon les règles données.`;
+📍 LIEU : ${location}
+📝 TITRE ACTUEL : ${title}
+📄 DESCRIPTION ACTUELLE : ${description || 'Aucune description fournie'}
+
+MISSION : Réécris complètement ce contenu en appliquant les règles Wouli. 
+Transforme ce contenu brut en description événementielle attractive et bien structurée.
+Focus sur la RÉÉCRITURE, pas juste le formatage !`;
 
     console.log('Calling Anthropic API...');
 

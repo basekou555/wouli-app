@@ -12,8 +12,9 @@ import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { RotateCw, ZoomIn, Image, Crop, Maximize } from 'lucide-react';
+import { RotateCw, ZoomIn, Image, Crop, Maximize, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { AICropSuggestions } from './AICropSuggestions';
 
 interface ImageEditorModalProps {
   isOpen: boolean;
@@ -181,6 +182,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   const [saving, setSaving] = useState(false);
   const [aspectRatio, setAspectRatio] = useState<AspectRatioOption>('4:5');
   const [fillMode, setFillMode] = useState<'crop' | 'fit'>('crop');
+  const [showAISuggestions, setShowAISuggestions] = useState(false);
 
   const onCropComplete = useCallback(
     (croppedArea: Area, croppedAreaPixels: Area) => {
@@ -235,6 +237,10 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     setAspectRatio(newRatio);
     setCrop({ x: 0, y: 0 });
     setZoom(1);
+  };
+
+  const handleAISuggestionCrop = (cropPosition: { x: number; y: number }) => {
+    setCrop(cropPosition);
   };
 
   return (
@@ -324,8 +330,35 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
             )}
           </div>
 
-          {/* Controls */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* AI Suggestions (only in crop mode) */}
+          {fillMode === 'crop' && (
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium">Suggestions intelligentes</span>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowAISuggestions(!showAISuggestions)}
+                  className="h-8"
+                >
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  {showAISuggestions ? 'Masquer' : 'Analyser'}
+                </Button>
+              </div>
+              
+              {showAISuggestions && (
+                <AICropSuggestions
+                  imageUrl={imageUrl}
+                  aspectRatio={ASPECT_RATIOS[aspectRatio].ratio}
+                  onApplyCrop={handleAISuggestionCrop}
+                  onZoomChange={setZoom}
+                />
+              )}
+            </div>
+          )}
+
+          {/* Manual Controls */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
             {fillMode === 'crop' && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">

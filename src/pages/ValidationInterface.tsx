@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +20,8 @@ import EventModerationHistory from '@/components/admin/EventModerationHistory';
 import StatusChangeModal from '@/components/admin/StatusChangeModal';
 import EnhanceWithAIModal from '@/components/admin/EnhanceWithAIModal';
 import { getEventStatus } from '@/utils/eventStatus';
+import { AdminEventPreview } from '@/components/admin/AdminEventPreview';
+import { AdminEventTableRow } from '@/components/admin/AdminEventTableRow';
 
 interface PendingEvent {
   id: string;
@@ -113,7 +114,6 @@ const ValidationInterface = () => {
     }
   };
 
-
   // Actions rapides (legacy - pour compatibilité)
   const handleApprove = async (eventIds: string | string[]) => {
     const ids = Array.isArray(eventIds) ? eventIds : [eventIds];
@@ -143,28 +143,6 @@ const ValidationInterface = () => {
   };
 
   // Utility functions
-  const formatEventDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('fr-FR');
-  };
-
-  const formatEventTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const formatPrice = (price: number | null) => {
-    if (!price || price === 0) return 'Gratuit';
-    return `${price}€`;
-  };
-
-  const getLinkLabel = (url: string | null) => {
-    if (!url) return 'Lien externe';
-    if (url.includes('instagram.com')) return 'Instagram';
-    if (url.includes('shotgun') || url.includes('dice') || url.includes('eventbrite') || url.includes('billetterie')) return 'Billetterie';
-    return 'Lien externe';
-  };
-
   const calculateScore = (event: PendingEvent) => {
     let score = 0;
     if (event.image_url) score += 2;
@@ -242,16 +220,6 @@ const ValidationInterface = () => {
     };
   }, [events, filter]);
 
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, any> = {
-      pending: { variant: 'secondary', label: '⏳ En attente' },
-      active: { variant: 'default', label: '✅ Validé' },
-      rejected: { variant: 'destructive', label: '❌ Rejeté' }
-    };
-    const config = variants[status] || { variant: 'secondary', label: status };
-    return <Badge variant={config.variant}>{config.label}</Badge>;
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -312,12 +280,12 @@ const ValidationInterface = () => {
 
         {/* Onglets par statut */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="pending">En attente ({counts.scopedPending})</TabsTrigger>
-              <TabsTrigger value="active">Validés ({counts.scopedActive})</TabsTrigger>
-              <TabsTrigger value="rejected">Rejetés ({counts.scopedRejected})</TabsTrigger>
-              <TabsTrigger value="all">Tous ({counts.scopedAll})</TabsTrigger>
-            </TabsList>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="pending">En attente ({counts.scopedPending})</TabsTrigger>
+            <TabsTrigger value="active">Validés ({counts.scopedActive})</TabsTrigger>
+            <TabsTrigger value="rejected">Rejetés ({counts.scopedRejected})</TabsTrigger>
+            <TabsTrigger value="all">Tous ({counts.scopedAll})</TabsTrigger>
+          </TabsList>
 
           <TabsContent value={activeTab} className="space-y-4">
             {/* Contrôles */}
@@ -438,7 +406,7 @@ const ValidationInterface = () => {
               </div>
             )}
 
-            {/* Tableau des événements */}
+            {/* Tableau moderne des événements */}
             {processingId === 'bulk' ? (
               <div className="text-center py-12">
                 <LoadingSpinner size="lg" text="Traitement en cours..." />
@@ -455,184 +423,37 @@ const ValidationInterface = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-12"></TableHead>
-                      <TableHead className="w-32">Image</TableHead>
-                      <TableHead>Événement</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Score</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead className="w-12">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.size === filteredEvents.length}
+                          onChange={handleSelectAll}
+                          className="w-4 h-4 text-purple-600 rounded"
+                        />
+                      </TableHead>
+                      <TableHead className="min-w-[300px]">Événement</TableHead>
+                      <TableHead className="max-w-[200px]">Description</TableHead>
+                      <TableHead className="text-center w-24">Score</TableHead>
+                      <TableHead className="w-32">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredEvents.map(event => (
-                      <TableRow key={event.id} className="hover:bg-muted/50">
-                        <TableCell>
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.has(event.id)}
-                            onChange={() => handleSelect(event.id)}
-                            className="w-5 h-5 text-purple-600 rounded"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <img
-                            src={getProxiedImageUrl(event.image_url) || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30'}
-                            alt={event.title}
-                            className="w-24 h-24 object-cover rounded-lg cursor-pointer hover:opacity-90"
-                            onClick={() => setShowDetails(event)}
-                            onError={handleImageError}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <h3 className="font-semibold text-foreground mb-1">
-                              {event.title}
-                            </h3>
-                            <div className="space-y-1 text-sm">
-                              <div className="flex items-center gap-1 text-muted-foreground">
-                                <Calendar className="w-4 h-4" />
-                                {formatEventDate(event.date)} à {formatEventTime(event.date)}
-                              </div>
-                              <div className="flex items-center gap-1 text-muted-foreground">
-                                <MapPin className="w-4 h-4" />
-                                {event.location}
-                              </div>
-                              <div className="flex items-center gap-1 text-muted-foreground">
-                                <Euro className="w-4 h-4" />
-                                {formatPrice(event.price)}
-                              </div>
-                            </div>
-                            <div className="mt-2 flex gap-2">
-                              {getStatusBadge(event.status)}
-                              <Badge variant="secondary">
-                                {getCategoryById(event.category)?.icon} {getCategoryById(event.category)?.name || event.category}
-                              </Badge>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <p className="text-sm text-muted-foreground line-clamp-3">
-                            {event.description}
-                          </p>
-                          <div className="mt-2 flex gap-2">
-                            {event.external_url && (
-                              <a
-                                href={event.external_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-primary hover:underline flex items-center gap-1"
-                              >
-                                {event.external_url.includes('instagram.com') ? (
-                                  <Instagram className="w-3 h-3" />
-                                ) : (
-                                  <ExternalLink className="w-3 h-3" />
-                                )}
-                                {getLinkLabel(event.external_url)}
-                              </a>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className={`text-2xl font-bold ${getScoreColor(calculateScore(event))}`}>
-                            {calculateScore(event)}
-                          </div>
-                          <div className="text-xs text-muted-foreground">/ 10</div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col gap-1">
-                            {/* Actions de statut */}
-                            <div className="flex gap-1">
-                              {event.status === 'pending' && (
-                                <>
-                                  <Button
-                                    onClick={() => handleStatusChange([event.id], 'pending', 'active')}
-                                    size="icon"
-                                    variant="ghost"
-                                    className="text-green-600 hover:bg-green-50"
-                                  >
-                                    <Check className="w-4 h-4" />
-                                  </Button>
-                                  <Button
-                                    onClick={() => handleStatusChange([event.id], 'pending', 'rejected')}
-                                    size="icon"
-                                    variant="ghost"
-                                    className="text-red-600 hover:bg-red-50"
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </Button>
-                                </>
-                              )}
-                              
-                              {event.status === 'active' && (
-                                <Button
-                                  onClick={() => handleStatusChange([event.id], 'active', 'pending')}
-                                  size="icon"
-                                  variant="ghost"
-                                  className="text-orange-600 hover:bg-orange-50"
-                                  title="Remettre en attente"
-                                >
-                                  <RotateCcw className="w-4 h-4" />
-                                </Button>
-                              )}
-                              
-                              {event.status === 'rejected' && (
-                                <Button
-                                  onClick={() => handleStatusChange([event.id], 'rejected', 'pending')}
-                                  size="icon"
-                                  variant="ghost"
-                                  className="text-orange-600 hover:bg-orange-50"
-                                  title="Remettre en attente"
-                                >
-                                  <RotateCcw className="w-4 h-4" />
-                                </Button>
-                              )}
-                            </div>
-                            
-                            {/* Actions générales */}
-                            <div className="flex gap-1">
-                              <Button
-                                onClick={() => setEnhanceWithAI([event])}
-                                size="icon"
-                                variant="ghost"
-                                className="text-purple-600 hover:bg-purple-50"
-                                title="Améliorer avec l'IA"
-                              >
-                                <Sparkles className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                onClick={() => setEditingEvent(event)}
-                                size="icon"
-                                variant="ghost"
-                                className="text-blue-600 hover:bg-blue-50"
-                                title="Modifier"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                onClick={() => {
-                                  setHistoryEventId(event.id);
-                                  setHistoryEventTitle(event.title);
-                                }}
-                                size="icon"
-                                variant="ghost"
-                                className="text-purple-600 hover:bg-purple-50"
-                                title="Historique"
-                              >
-                                <History className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                onClick={() => setShowDetails(event)}
-                                size="icon"
-                                variant="ghost"
-                                className="text-gray-600 hover:bg-gray-50"
-                                title="Détails"
-                              >
-                                <ExternalLink className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </TableCell>
-                      </TableRow>
+                    {filteredEvents.map((event) => (
+                      <AdminEventTableRow
+                        key={event.id}
+                        event={event}
+                        isSelected={selectedIds.has(event.id)}
+                        onSelect={handleSelect}
+                        onPreview={setShowDetails}
+                        onEdit={setEditingEvent}
+                        onHistory={(eventId, eventTitle) => {
+                          setHistoryEventId(eventId);
+                          setHistoryEventTitle(eventTitle);
+                        }}
+                        onStatusChange={handleStatusChange}
+                        calculateScore={calculateScore}
+                        getScoreColor={getScoreColor}
+                      />
                     ))}
                   </TableBody>
                 </Table>
@@ -642,132 +463,73 @@ const ValidationInterface = () => {
         </Tabs>
       </div>
 
-      {/* Modals */}
-      <EventEditModal
-        event={editingEvent}
-        onClose={() => setEditingEvent(null)}
-        onSuccess={() => {
-          fetchEvents();
-        }}
-      />
+      {/* Preview Modal avec WouliEventCard */}
+      <Dialog open={!!showDetails} onOpenChange={() => setShowDetails(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          {showDetails && (
+            <AdminEventPreview
+              event={showDetails}
+              onEdit={setEditingEvent}
+              onHistory={(eventId, eventTitle) => {
+                setHistoryEventId(eventId);
+                setHistoryEventTitle(eventTitle);
+                setShowDetails(null);
+              }}
+              onClose={() => setShowDetails(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
-      <EventModerationHistory
-        eventId={historyEventId}
-        eventTitle={historyEventTitle}
-        onClose={() => {
-          setHistoryEventId(null);
-          setHistoryEventTitle('');
-        }}
-      />
+      {/* Modal d'édition */}
+      {editingEvent && (
+        <EventEditModal
+          event={editingEvent}
+          isOpen={!!editingEvent}
+          onClose={() => setEditingEvent(null)}
+          onSuccess={() => {
+            fetchEvents();
+            setEditingEvent(null);
+          }}
+        />
+      )}
 
-      <StatusChangeModal
-        eventIds={statusChange.eventIds}
-        currentStatus={statusChange.currentStatus}
-        targetStatus={statusChange.targetStatus}
-        onClose={() => setStatusChange({ eventIds: [], currentStatus: '', targetStatus: '' })}
-        onSuccess={onStatusChangeSuccess}
-      />
+      {/* Modal historique */}
+      {historyEventId && (
+        <EventModerationHistory
+          eventId={historyEventId}
+          eventTitle={historyEventTitle}
+          isOpen={!!historyEventId}
+          onClose={() => {
+            setHistoryEventId(null);
+            setHistoryEventTitle('');
+          }}
+        />
+      )}
 
-      <EnhanceWithAIModal
-        events={enhanceWithAI}
-        onClose={() => setEnhanceWithAI([])}
-        onSuccess={() => {
-          fetchEvents();
-          setSelectedIds(new Set());
-        }}
-      />
+      {/* Modal changement de statut */}
+      {statusChange.eventIds.length > 0 && (
+        <StatusChangeModal
+          eventIds={statusChange.eventIds}
+          currentStatus={statusChange.currentStatus}
+          targetStatus={statusChange.targetStatus}
+          isOpen={statusChange.eventIds.length > 0}
+          onClose={() => setStatusChange({ eventIds: [], currentStatus: '', targetStatus: '' })}
+          onSuccess={onStatusChangeSuccess}
+        />
+      )}
 
-      {/* Modal détails (inchangé) */}
-      {showDetails && (
-        <Dialog open={!!showDetails} onOpenChange={() => setShowDetails(null)}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div className="relative">
-              <img 
-                src={showDetails.image_url || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30'} 
-                alt={showDetails.title}
-                className="w-full h-64 object-cover rounded-lg"
-              />
-            </div>
-            
-            <DialogHeader>
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <DialogTitle className="text-2xl font-bold">{showDetails.title}</DialogTitle>
-                  <p className="text-muted-foreground mt-1">
-                    {showDetails.submitter_email && `Proposé par : ${showDetails.submitter_email}`}
-                  </p>
-                  <div className="mt-2">
-                    {getStatusBadge(showDetails.status)}
-                  </div>
-                </div>
-                <span className={`text-2xl font-bold ${getScoreColor(calculateScore(showDetails))}`}>
-                  {calculateScore(showDetails)}/10
-                </span>
-              </div>
-            </DialogHeader>
-            
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Calendar className="w-5 h-5" />
-                <span>{formatEventDate(showDetails.date)} à {formatEventTime(showDetails.date)}</span>
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <MapPin className="w-5 h-5" />
-                <span>{showDetails.location}</span>
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Euro className="w-5 h-5" />
-                <span>{formatPrice(showDetails.price)}</span>
-              </div>
-            </div>
-            
-            {showDetails.description && (
-              <div className="bg-muted p-4 rounded-lg mb-6">
-                <h3 className="font-semibold mb-2">Description</h3>
-                <p className="text-muted-foreground whitespace-pre-wrap">{showDetails.description}</p>
-              </div>
-            )}
-            
-            {showDetails.external_url && (
-              <div className="flex gap-2 mb-6">
-                <a
-                  href={showDetails.external_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 bg-muted text-muted-foreground rounded-lg hover:bg-muted/80"
-                >
-                  {showDetails.external_url.includes('instagram.com') ? (
-                    <Instagram className="w-5 h-5" />
-                  ) : (
-                    <ExternalLink className="w-5 h-5" />
-                  )}
-                  {getLinkLabel(showDetails.external_url)}
-                </a>
-              </div>
-            )}
-            
-            <div className="flex gap-2 pt-6 border-t">
-              <Button
-                onClick={() => setEditingEvent(showDetails)}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                <Edit className="w-5 h-5 mr-2" />
-                Modifier
-              </Button>
-              <Button
-                onClick={() => {
-                  setHistoryEventId(showDetails.id);
-                  setHistoryEventTitle(showDetails.title);
-                }}
-                variant="outline"
-                className="flex-1"
-              >
-                <History className="w-5 h-5 mr-2" />
-                Historique
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+      {/* Modal amélioration IA */}
+      {enhanceWithAI.length > 0 && (
+        <EnhanceWithAIModal
+          events={enhanceWithAI}
+          isOpen={enhanceWithAI.length > 0}
+          onClose={() => setEnhanceWithAI([])}
+          onSuccess={() => {
+            fetchEvents();
+            setEnhanceWithAI([]);
+          }}
+        />
       )}
     </div>
   );
