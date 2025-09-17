@@ -485,7 +485,6 @@ const ValidationInterface = () => {
       {editingEvent && (
         <EventEditModal
           event={editingEvent}
-          isOpen={!!editingEvent}
           onClose={() => setEditingEvent(null)}
           onSuccess={() => {
             fetchEvents();
@@ -499,7 +498,6 @@ const ValidationInterface = () => {
         <EventModerationHistory
           eventId={historyEventId}
           eventTitle={historyEventTitle}
-          isOpen={!!historyEventId}
           onClose={() => {
             setHistoryEventId(null);
             setHistoryEventTitle('');
@@ -513,7 +511,6 @@ const ValidationInterface = () => {
           eventIds={statusChange.eventIds}
           currentStatus={statusChange.currentStatus}
           targetStatus={statusChange.targetStatus}
-          isOpen={statusChange.eventIds.length > 0}
           onClose={() => setStatusChange({ eventIds: [], currentStatus: '', targetStatus: '' })}
           onSuccess={onStatusChangeSuccess}
         />
@@ -523,7 +520,6 @@ const ValidationInterface = () => {
       {enhanceWithAI.length > 0 && (
         <EnhanceWithAIModal
           events={enhanceWithAI}
-          isOpen={enhanceWithAI.length > 0}
           onClose={() => setEnhanceWithAI([])}
           onSuccess={() => {
             fetchEvents();
