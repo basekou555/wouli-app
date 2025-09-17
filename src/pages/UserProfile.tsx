@@ -86,10 +86,18 @@ const UserProfile = () => {
               </div>
             </div>
             <div className="flex flex-col space-y-2">
-              <Button variant="outline" size="sm">
-                <Edit3 className="h-4 w-4 mr-2" />
-                Modifier
-              </Button>
+              <Link to="/user-settings">
+                <Button variant="outline" size="sm" className="w-full">
+                  <Edit3 className="h-4 w-4 mr-2" />
+                  Modifier
+                </Button>
+              </Link>
+              <Link to="/friends">
+                <Button variant="outline" size="sm" className="w-full">
+                  <Users className="h-4 w-4 mr-2" />
+                  Mes amis
+                </Button>
+              </Link>
               <Button variant="ghost" size="sm" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Déconnexion

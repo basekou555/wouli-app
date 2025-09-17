@@ -40,7 +40,7 @@ export const useFriendships = () => {
       }
 
       if (countResult.success) {
-        setPendingCount(countResult.count);
+        setPendingCount(typeof countResult.count === 'number' ? countResult.count : 0);
       }
 
     } catch (error) {

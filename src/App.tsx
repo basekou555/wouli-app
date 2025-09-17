@@ -26,6 +26,7 @@ import ProfileSettings from "./pages/ProfileSettings";
 import UserProfileSettings from "./pages/UserProfileSettings";
 import BusinessSignup from "./pages/BusinessSignup";
 import Friends from "./pages/Friends";
+import UserProfileView from "./pages/UserProfileView";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminValidationPage from "./pages/AdminValidationPage";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -95,7 +96,7 @@ function AppContent() {
                 } />
                 <Route path="/user/:id" element={
                   <ProtectedRoute>
-                    <UserProfile />
+                    <UserProfileView />
                   </ProtectedRoute>
                 } />
                 <Route path="/history" element={

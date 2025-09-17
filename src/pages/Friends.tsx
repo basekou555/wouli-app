@@ -66,28 +66,23 @@ const Friends = () => {
     <AppLayout>
       <div className="container max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => navigate(-1)}
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold">Mes amis</h1>
-              <p className="text-muted-foreground">
-                {acceptedFriends.length} {acceptedFriends.length === 1 ? 'ami' : 'amis'}
-              </p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => navigate(-1)}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div>
+                <h1 className="text-2xl font-bold">Mes amis</h1>
+                <p className="text-muted-foreground">
+                  Gérez vos amis et demandes d'amitié
+                </p>
+              </div>
             </div>
           </div>
-          {pendingCount > 0 && (
-            <Badge variant="secondary" className="bg-primary/10 text-primary">
-              {pendingCount} en attente
-            </Badge>
-          )}
-        </div>
 
         {/* Barre de recherche */}
         <Card>

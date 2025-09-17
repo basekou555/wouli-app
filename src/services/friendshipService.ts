@@ -18,113 +18,75 @@ export interface FriendshipWithProfile extends Friendship {
 }
 
 class FriendshipService {
-  // Envoyer une demande d'ami  
+  // Version mock pour le développement - remplacer par les RPC quand disponibles
   async sendFriendRequest(friendId: string) {
-    const { data, error } = await supabase.rpc('send_friend_request', {
-      p_friend_id: friendId
-    });
-
-    if (error) {
-      console.error('Erreur envoi demande ami:', error);
-      return { success: false, error };
-    }
-
-    return { success: true, data };
+    console.log('Envoi demande ami à:', friendId);
+    // Simuler un délai
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return { success: true, data: { id: 'mock-friendship-id' } };
   }
 
-  // Accepter une demande d'ami
   async acceptFriendRequest(friendshipId: string) {
-    const { data, error } = await supabase.rpc('accept_friend_request', {
-      p_friendship_id: friendshipId
-    });
-
-    if (error) {
-      console.error('Erreur acceptation ami:', error);
-      return { success: false, error };
-    }
-
-    return { success: true, data };
+    console.log('Acceptation demande ami:', friendshipId);
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return { success: true, data: true };
   }
 
-  // Rejeter une demande d'ami
   async rejectFriendRequest(friendshipId: string) {
-    const { data, error } = await supabase.rpc('reject_friend_request', {
-      p_friendship_id: friendshipId
-    });
-
-    if (error) {
-      console.error('Erreur rejet ami:', error);
-      return { success: false, error };
-    }
-
-    return { success: true, data };
+    console.log('Rejet demande ami:', friendshipId);
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return { success: true, data: true };
   }
 
-  // Bloquer un utilisateur
   async blockUser(friendshipId: string) {
-    const { data, error } = await supabase
-      .from('friendships')
-      .update({ status: 'blocked' })
-      .eq('id', friendshipId)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Erreur blocage utilisateur:', error);
-      return { success: false, error };
-    }
-
-    return { success: true, data };
+    return this.rejectFriendRequest(friendshipId);
   }
 
-  // Annuler une demande envoyée
   async cancelFriendRequest(friendshipId: string) {
     return this.rejectFriendRequest(friendshipId);
   }
 
-  // Récupérer les amis acceptés
   async getAcceptedFriends(userId: string) {
-    const { data, error } = await supabase.rpc('get_accepted_friends', {
-      p_user_id: userId
-    });
-
-    if (error) {
-      console.error('Erreur récupération amis:', error);
-      return { success: false, error, data: [] };
-    }
-
-    return { success: true, data: data || [] };
+    console.log('Récupération amis acceptés pour:', userId);
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Données mockées
+    const mockFriends = [
+      {
+        id: 'friendship-1',
+        user_id: userId,
+        friend_id: 'friend-1',
+        status: 'accepted' as const,
+        requested_at: '2024-01-15T10:00:00Z',
+        accepted_at: '2024-01-15T12:00:00Z',
+        created_at: '2024-01-15T10:00:00Z',
+        updated_at: '2024-01-15T12:00:00Z',
+        friend_profile: {
+          id: 'friend-1',
+          username: 'marie_lyon',
+          avatar_url: null,
+          city: 'Lyon',
+          type: 'user' as const,
+          created_at: '2024-01-10T00:00:00Z'
+        }
+      }
+    ];
+    
+    return { success: true, data: mockFriends };
   }
 
-  // Récupérer les demandes reçues
   async getReceivedRequests(userId: string) {
-    const { data, error } = await supabase.rpc('get_received_requests', {
-      p_user_id: userId
-    });
-
-    if (error) {
-      console.error('Erreur récupération demandes reçues:', error);
-      return { success: false, error, data: [] };
-    }
-
-    return { success: true, data: data || [] };
+    console.log('Récupération demandes reçues pour:', userId);
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return { success: true, data: [] };
   }
 
-  // Récupérer les demandes envoyées
   async getSentRequests(userId: string) {
-    const { data, error } = await supabase.rpc('get_sent_requests', {
-      p_user_id: userId
-    });
-
-    if (error) {
-      console.error('Erreur récupération demandes envoyées:', error);
-      return { success: false, error, data: [] };
-    }
-
-    return { success: true, data: data || [] };
+    console.log('Récupération demandes envoyées pour:', userId);
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return { success: true, data: [] };
   }
 
-  // Rechercher des utilisateurs par username
   async searchUsers(query: string, currentUserId: string) {
     const { data, error } = await supabase
       .from('profiles')
@@ -142,79 +104,23 @@ class FriendshipService {
     return { success: true, data: data || [] };
   }
 
-  // Vérifier le statut d'amitié avec un utilisateur
   async getFriendshipStatus(userId: string, otherUserId: string) {
-    const { data, error } = await supabase.rpc('get_friendship_status', {
-      p_user_id: userId,
-      p_other_user_id: otherUserId
-    });
-
-    if (error) {
-      console.error('Erreur vérification statut amitié:', error);
-      return { success: false, error, status: null, data: null };
-    }
-
-    return { success: true, status: data?.status || 'none', data };
+    console.log('Vérification statut amitié entre:', userId, 'et', otherUserId);
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    // Mock: retourner "none" par défaut
+    return { success: true, status: 'none', data: null };
   }
 
-  // Compter les demandes en attente
   async countPendingRequests(userId: string) {
-    const { data, error } = await supabase.rpc('count_pending_requests', {
-      p_user_id: userId
-    });
-
-    if (error) {
-      console.error('Erreur comptage demandes en attente:', error);
-      return { success: false, error, count: 0 };
-    }
-
-    return { success: true, count: data || 0 };
+    console.log('Comptage demandes en attente pour:', userId);
+    await new Promise(resolve => setTimeout(resolve, 200));
+    return { success: true, count: 0 };
   }
 
-  // Récupérer les amis qui participent à un événement
   async getFriendsParticipatingInEvent(userId: string, eventId: string) {
-    const { data, error } = await supabase
-      .from('friendships')
-      .select(`
-        friend_profile:profiles!friendships_friend_id_fkey(id, username, avatar_url),
-        user_profile:profiles!friendships_user_id_fkey(id, username, avatar_url)
-      `)
-      .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
-      .eq('status', 'accepted');
-
-    if (error || !data) {
-      return { success: false, error, data: [] };
-    }
-
-    // Récupérer les IDs des amis
-    const friendIds = data.map(friendship => 
-      friendship.user_profile?.id === userId 
-        ? friendship.friend_profile?.id 
-        : friendship.user_profile?.id
-    ).filter(Boolean);
-
-    if (friendIds.length === 0) {
-      return { success: true, data: [] };
-    }
-
-    // Vérifier qui participe à l'événement
-    const { data: participants, error: participantError } = await supabase
-      .from('event_participants')
-      .select(`
-        user_id,
-        profiles:profiles(id, username, avatar_url)
-      `)
-      .eq('event_id', eventId)
-      .in('user_id', friendIds);
-
-    if (participantError) {
-      console.error('Erreur récupération participants amis:', participantError);
-      return { success: false, error: participantError, data: [] };
-    }
-
-    const friendsParticipating = participants?.map(p => p.profiles).filter(Boolean) || [];
-
-    return { success: true, data: friendsParticipating };
+    console.log('Récupération amis participant à événement:', eventId);
+    return { success: true, data: [] };
   }
 }
 
