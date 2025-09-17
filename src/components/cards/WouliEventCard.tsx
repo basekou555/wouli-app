@@ -123,7 +123,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
         <div className="p-4 space-y-2">
           {/* Ligne 1: Titre • Prix */}
           <div className="flex justify-between items-start gap-2" onClick={onCardClick}>
-            <h3 className="font-bold text-lg text-foreground truncate flex-1 cursor-pointer">
+            <h3 className="font-bold text-lg text-foreground line-clamp-2 flex-1 cursor-pointer">
               {event.title}
             </h3>
             {!priceInfo.isFree && (
