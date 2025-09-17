@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import Cropper from 'react-easy-crop';
 import {
   Dialog,
@@ -9,10 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { RotateCw, ZoomIn, Image, Crop, Maximize, Sparkles } from 'lucide-react';
+import { RotateCw, Sparkles, Crop } from 'lucide-react';
 import { toast } from 'sonner';
 import { AICropSuggestions } from './AICropSuggestions';
 
@@ -162,11 +159,11 @@ const getFittedImg = async (
   });
 };
 
-type AspectRatioOption = '4:5' | '9:16';
-
-const ASPECT_RATIOS = {
-  '4:5': { ratio: 4/5, width: 1080, height: 1350, label: '4:5 (Portrait)' },
-  '9:16': { ratio: 9/16, width: 1080, height: 1920, label: '9:16 (Stories)' }
+// Format fixe 4:5 pour optimiser l'UX
+const TARGET_DIMENSIONS = {
+  ratio: 4/5,
+  width: 1080,
+  height: 1350
 };
 
 export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
@@ -180,9 +177,7 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [saving, setSaving] = useState(false);
-  const [aspectRatio, setAspectRatio] = useState<AspectRatioOption>('4:5');
-  const [fillMode, setFillMode] = useState<'crop' | 'fit'>('crop');
-  const [showAISuggestions, setShowAISuggestions] = useState(false);
+  const [autoApplied, setAutoApplied] = useState(false);
 
   const onCropComplete = useCallback(
     (croppedArea: Area, croppedAreaPixels: Area) => {
@@ -192,36 +187,24 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
   );
 
   const handleSave = async () => {
-    if (fillMode === 'crop' && !croppedAreaPixels) return;
+    if (!croppedAreaPixels) return;
 
     setSaving(true);
     try {
-      const targetDimensions = ASPECT_RATIOS[aspectRatio];
-      
-      let processedImageBlob: Blob;
-      if (fillMode === 'crop') {
-        processedImageBlob = await getCroppedImg(
-          imageUrl,
-          croppedAreaPixels!,
-          rotation,
-          targetDimensions.width,
-          targetDimensions.height
-        );
-      } else {
-        processedImageBlob = await getFittedImg(
-          imageUrl,
-          rotation,
-          targetDimensions.width,
-          targetDimensions.height
-        );
-      }
+      const processedImageBlob = await getCroppedImg(
+        imageUrl,
+        croppedAreaPixels,
+        rotation,
+        TARGET_DIMENSIONS.width,
+        TARGET_DIMENSIONS.height
+      );
       
       await onSave(processedImageBlob);
       onClose();
-      toast.success('Image mise à jour avec succès');
+      toast.success('Image recadrée avec succès');
     } catch (error) {
       console.error('Erreur lors du traitement:', error);
-      toast.error('Erreur lors du traitement de l\'image');
+      toast.error('Erreur lors du recadrage de l\'image');
     } finally {
       setSaving(false);
     }
@@ -231,135 +214,64 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     setCrop({ x: 0, y: 0 });
     setRotation(0);
     setZoom(1);
+    setAutoApplied(false);
   };
 
-  const handleAspectRatioChange = (newRatio: AspectRatioOption) => {
-    setAspectRatio(newRatio);
-    setCrop({ x: 0, y: 0 });
-    setZoom(1);
-  };
-
-  const handleAISuggestionCrop = (cropPosition: { x: number; y: number }) => {
+  const handleAISuggestionCrop = (cropPosition: { x: number; y: number }, zoom: number) => {
     setCrop(cropPosition);
+    setZoom(zoom);
   };
+
+  // Support des raccourcis clavier
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isOpen) return;
+      
+      if (e.key === 'Escape') {
+        onClose();
+      } else if (e.key === 'Enter' && croppedAreaPixels) {
+        handleSave();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, croppedAreaPixels]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+      <DialogContent className="max-w-5xl max-h-[85vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {fillMode === 'crop' ? <Crop className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
-            {fillMode === 'crop' ? 'Recadrer l\'image' : 'Ajuster l\'image'}
+            <Crop className="h-5 w-5" />
+            Recadrer l'image
+            <span className="text-sm text-muted-foreground font-normal ml-2">
+              Format 4:5 - {TARGET_DIMENSIONS.width}×{TARGET_DIMENSIONS.height}px
+            </span>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4">
-          {/* Fill Mode Selector */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Mode de traitement</label>
-            <RadioGroup value={fillMode} onValueChange={(value: 'crop' | 'fit') => setFillMode(value)} className="flex gap-6">
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="crop" id="crop" />
-                <Label htmlFor="crop" className="flex items-center gap-2 cursor-pointer">
-                  <Crop className="h-4 w-4" />
-                  Recadrer (crop)
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="fit" id="fit" />
-                <Label htmlFor="fit" className="flex items-center gap-2 cursor-pointer">
-                  <Maximize className="h-4 w-4" />
-                  Ajuster avec padding
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
-
-          {/* Aspect Ratio Selector */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Image className="h-4 w-4" />
-                Format
-              </label>
-              <span className="text-xs text-muted-foreground">
-                {ASPECT_RATIOS[aspectRatio].width}x{ASPECT_RATIOS[aspectRatio].height}px
-              </span>
-            </div>
-            <Select value={aspectRatio} onValueChange={handleAspectRatioChange}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(ASPECT_RATIOS).map(([key, config]) => (
-                  <SelectItem key={key} value={key}>
-                    {config.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Crop Area */}
-          <div className="relative h-96 bg-black rounded-lg overflow-hidden">
-            {fillMode === 'crop' ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Zone de recadrage principale */}
+          <div className="lg:col-span-2 space-y-4">
+            <div className="relative h-[400px] bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl overflow-hidden border">
               <Cropper
                 image={imageUrl}
                 crop={crop}
                 rotation={rotation}
                 zoom={zoom}
-                aspect={ASPECT_RATIOS[aspectRatio].ratio}
+                aspect={TARGET_DIMENSIONS.ratio}
                 onCropChange={setCrop}
                 onRotationChange={setRotation}
                 onCropComplete={onCropComplete}
                 onZoomChange={setZoom}
+                showGrid={true}
+                objectFit="contain"
               />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center relative">
-                <img
-                  src={imageUrl}
-                  alt="Preview"
-                  className="max-w-full max-h-full object-contain"
-                  style={{
-                    transform: `rotate(${rotation}deg)`,
-                    transformOrigin: 'center'
-                  }}
-                />
-                <div className="absolute inset-0 border-2 border-dashed border-primary/30 rounded pointer-events-none" />
-              </div>
-            )}
-          </div>
-
-          {/* AI Suggestions (only in crop mode) */}
-          {fillMode === 'crop' && (
-            <div className="border-t pt-4">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium">Suggestions intelligentes</span>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setShowAISuggestions(!showAISuggestions)}
-                  className="h-8"
-                >
-                  <Sparkles className="w-3 h-3 mr-1" />
-                  {showAISuggestions ? 'Masquer' : 'Analyser'}
-                </Button>
-              </div>
-              
-              {showAISuggestions && (
-                <AICropSuggestions
-                  imageUrl={imageUrl}
-                  aspectRatio={ASPECT_RATIOS[aspectRatio].ratio}
-                  onApplyCrop={handleAISuggestionCrop}
-                  onZoomChange={setZoom}
-                />
-              )}
             </div>
-          )}
 
-          {/* Manual Controls */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
-            {fillMode === 'crop' && (
+            {/* Contrôles tactiles simplifiés */}
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium">Zoom</label>
@@ -370,32 +282,71 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
                   onValueChange={([value]) => setZoom(value)}
                   min={1}
                   max={3}
-                  step={0.1}
+                  step={0.05}
                   className="w-full"
                 />
               </div>
-            )}
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">Rotation</label>
-                <span className="text-sm text-muted-foreground">{Math.round(rotation)}°</span>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Rotation</label>
+                  <span className="text-sm text-muted-foreground">{Math.round(rotation)}°</span>
+                </div>
+                <Slider
+                  value={[rotation]}
+                  onValueChange={([value]) => setRotation(value)}
+                  min={-45}
+                  max={45}
+                  step={1}
+                  className="w-full"
+                />
               </div>
-              <Slider
-                value={[rotation]}
-                onValueChange={([value]) => setRotation(value)}
-                min={-180}
-                max={180}
-                step={1}
-                className="w-full"
+            </div>
+          </div>
+
+          {/* Panneau latéral - IA + Preview */}
+          <div className="space-y-4">
+            {/* Suggestions IA */}
+            <div className="border rounded-xl p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50">
+              <AICropSuggestions
+                imageUrl={imageUrl}
+                aspectRatio={TARGET_DIMENSIONS.ratio}
+                onApplyCrop={handleAISuggestionCrop}
+                autoApply={!autoApplied}
+                onAutoApplied={() => setAutoApplied(true)}
               />
             </div>
 
-            <div className="flex items-center justify-center">
-              <Button variant="outline" onClick={handleReset} className="flex items-center gap-2">
+            {/* Aperçu temps réel */}
+            {croppedAreaPixels && (
+              <div className="border rounded-xl p-4">
+                <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  Aperçu final
+                </h4>
+                <div className="aspect-[4/5] bg-muted rounded-lg overflow-hidden border-2 border-dashed border-muted-foreground/30">
+                  <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center text-xs text-muted-foreground">
+                    Preview {TARGET_DIMENSIONS.width}×{TARGET_DIMENSIONS.height}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Actions rapides */}
+            <div className="space-y-2">
+              <Button 
+                variant="outline" 
+                onClick={handleReset} 
+                className="w-full flex items-center gap-2"
+                disabled={saving}
+              >
                 <RotateCw className="h-4 w-4" />
                 Réinitialiser
               </Button>
+              
+              <div className="text-xs text-muted-foreground text-center space-y-1">
+                <p>💡 <kbd>ESC</kbd> pour fermer • <kbd>Entrée</kbd> pour sauvegarder</p>
+                <p>Glissez pour déplacer • Pincez pour zoomer</p>
+              </div>
             </div>
           </div>
         </div>
@@ -404,8 +355,19 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
           <Button variant="outline" onClick={onClose} disabled={saving}>
             Annuler
           </Button>
-          <Button onClick={handleSave} disabled={saving || (fillMode === 'crop' && !croppedAreaPixels)}>
-            {saving ? 'Sauvegarde...' : 'Sauvegarder'}
+          <Button 
+            onClick={handleSave} 
+            disabled={saving || !croppedAreaPixels}
+            className="min-w-[120px]"
+          >
+            {saving ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                Traitement...
+              </>
+            ) : (
+              'Sauvegarder'
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
