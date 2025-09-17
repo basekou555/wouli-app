@@ -3,14 +3,19 @@ import React, { useState } from 'react';
 interface EventImageCarouselProps {
   images: string[];
   title: string;
+  isFullWidth?: boolean;
 }
 
-const EventImageCarousel: React.FC<EventImageCarouselProps> = ({ images, title }) => {
+const EventImageCarousel: React.FC<EventImageCarouselProps> = ({ images, title, isFullWidth = false }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   
+  const containerClasses = isFullWidth 
+    ? "relative w-full h-full bg-black" 
+    : "relative h-96 bg-black rounded-lg overflow-hidden";
+
   if (!images || images.length === 0) {
     return (
-        <div className="relative h-96 bg-black rounded-lg overflow-hidden flex items-center justify-center">
+        <div className={`${containerClasses} flex items-center justify-center`}>
           <div className="text-center text-white">
             <h3 className="text-xl font-semibold mb-2">{title}</h3>
             <p className="text-gray-300">Image à venir</p>
@@ -21,10 +26,10 @@ const EventImageCarousel: React.FC<EventImageCarouselProps> = ({ images, title }
 
   if (images.length === 1) {
     return (
-      <div className="relative h-96 bg-black rounded-lg overflow-hidden">
+      <div className={containerClasses}>
         <img 
           src={images[0]} 
-          className="w-full h-full object-contain"
+          className="w-full h-full object-cover"
           alt={title}
         />
       </div>
@@ -34,7 +39,7 @@ const EventImageCarousel: React.FC<EventImageCarouselProps> = ({ images, title }
   const imageLabels = ["L'événement", "Le lieu", "L'ambiance"];
 
   return (
-    <div className="relative h-full bg-black rounded-lg overflow-hidden">
+    <div className={`relative h-full bg-black ${!isFullWidth ? 'rounded-lg' : ''} overflow-hidden`}>
       <div 
         className="flex h-full snap-x snap-mandatory overflow-x-auto scrollbar-hide"
         onScroll={(e) => {
@@ -48,7 +53,7 @@ const EventImageCarousel: React.FC<EventImageCarouselProps> = ({ images, title }
           <div key={idx} className="w-full h-full flex-shrink-0 snap-center relative">
             <img 
               src={img} 
-              className="w-full h-full object-contain" 
+              className="w-full h-full object-cover" 
               alt={imageLabels[idx] || `Image ${idx + 1}`}
             />
             {/* Label sur image */}

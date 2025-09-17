@@ -149,89 +149,77 @@ const EventPreview = () => {
   ].filter(Boolean);
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      {/* Hero Section avec Carrousel */}
-      <div className="relative h-[60vh] min-h-[400px]">
+    <div className="min-h-screen bg-white pb-20">
+      {/* Header buttons fixe */}
+      <div className="fixed top-4 left-4 right-4 flex justify-between z-50">
+        <button 
+          onClick={() => navigate(-1)}
+          className="bg-white/90 backdrop-blur rounded-full p-2 hover:bg-white transition-colors shadow-sm"
+        >
+          <ArrowLeft className="w-5 h-5 text-gray-700" />
+        </button>
+        <button 
+          onClick={handleShare}
+          className="bg-white/90 backdrop-blur rounded-full p-2 hover:bg-white transition-colors shadow-sm"
+        >
+          <Share2 className="w-5 h-5 text-gray-700" />
+        </button>
+      </div>
+
+      {/* Image pleine largeur ratio 4:5 */}
+      <div className="w-full aspect-[4/5] bg-black">
         <EventImageCarousel 
           images={eventImages} 
           title={event.title}
+          isFullWidth={true}
         />
-        
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-        
-        {/* Header buttons */}
-        <div className="absolute top-4 left-4 right-4 flex justify-between z-20">
-          <button 
-            onClick={() => navigate(-1)}
-            className="bg-white/20 backdrop-blur rounded-full p-2 hover:bg-white/30 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 text-white" />
-          </button>
-          <button 
-            onClick={handleShare}
-            className="bg-white/20 backdrop-blur rounded-full p-2 hover:bg-white/30 transition-colors"
-          >
-            <Share2 className="w-5 h-5 text-white" />
-          </button>
-        </div>
-        
-        {/* Infos principales */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 text-white z-10">
-          {/* Badge urgence */}
+      </div>
+
+      {/* Contenu principal */}
+      <div className="px-6 py-6 space-y-6">
+        {/* 1. Titre avec badge urgence */}
+        <div>
           {isToday(event.date) && (
             <span className="inline-flex items-center bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium mb-3">
               <Clock className="w-4 h-4 mr-1" />
               CE SOIR
             </span>
           )}
-          
-          <h1 className="text-3xl font-bold mb-2">{event.title}</h1>
-          
-          <div className="flex flex-wrap gap-4 text-sm">
-            <span className="flex items-center">
-              <Calendar className="w-4 h-4 mr-1" />
-              {formatEventDateTime(event)}
-            </span>
-            <span className="flex items-center">
-              <MapPin className="w-4 h-4 mr-1" />
-              {event.venue || event.location} • {calculateDistance()} min
-            </span>
-          </div>
+          <h1 className="text-3xl font-bold text-gray-900">{event.title}</h1>
         </div>
-      </div>
 
-      {/* Social Proof Section */}
-      <EventSocialProof event={event} />
+        {/* 2. Social Proof Section */}
+        <EventSocialProof event={event} />
 
-      {/* Indicateur de capacité */}
-      {event.max_participants && event.participants >= event.max_participants * 0.7 && (
-        <div className="px-6 py-3 bg-orange-50 border-b border-orange-100">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-orange-600" />
-            <p className="text-sm">
-              <span className="font-semibold">Plus que {event.max_participants - event.participants} places</span>
-              <span className="text-gray-600 ml-1">sur {event.max_participants}</span>
-            </p>
+        {/* Indicateur de capacité */}
+        {event.max_participants && event.participants >= event.max_participants * 0.7 && (
+          <div className="p-4 bg-orange-50 border border-orange-100 rounded-lg">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-orange-600" />
+              <p className="text-sm">
+                <span className="font-semibold">Plus que {event.max_participants - event.participants} places</span>
+                <span className="text-gray-600 ml-1">sur {event.max_participants}</span>
+              </p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Description & Infos Clés */}
-      <div className="px-6 py-4">
-        {/* Description */}
+        {/* 3. Description */}
         {event.description && (
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-2">À propos</h2>
-            <p className="text-gray-700">{event.description}</p>
+          <div>
+            <h2 className="text-lg font-semibold mb-3 text-gray-900">À propos</h2>
+            <p className="text-gray-700 leading-relaxed">{event.description}</p>
           </div>
         )}
         
-        {/* Grille d'informations */}
-        <EventInfoGrid event={event} />
+        {/* 4. Infos pratiques */}
+        <div>
+          <h2 className="text-lg font-semibold mb-4 text-gray-900">Informations pratiques</h2>
+          <EventInfoGrid event={event} />
+        </div>
       </div>
 
-      {/* Section Lieu */}
+      {/* 5. Section Lieu détaillée */}
       <EventLocationSection 
         event={event}
         onOpenMaps={openMaps}
