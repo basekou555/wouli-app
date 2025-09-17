@@ -25,6 +25,7 @@ import BusinessEventEdit from "./pages/BusinessEventEdit";
 import ProfileSettings from "./pages/ProfileSettings";
 import UserProfileSettings from "./pages/UserProfileSettings";
 import BusinessSignup from "./pages/BusinessSignup";
+import Friends from "./pages/Friends";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminValidationPage from "./pages/AdminValidationPage";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -110,6 +111,11 @@ function AppContent() {
                 <Route path="/user-settings" element={
                   <ProtectedRoute>
                     <UserProfileSettings />
+                  </ProtectedRoute>
+                } />
+                <Route path="/friends" element={
+                  <ProtectedRoute>
+                    <Friends />
                   </ProtectedRoute>
                 } />
                 
