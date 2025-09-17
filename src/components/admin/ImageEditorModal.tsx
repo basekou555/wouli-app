@@ -186,8 +186,29 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     []
   );
 
+  // Force initial crop calculation after image loads
+  useEffect(() => {
+    if (isOpen && imageUrl && !croppedAreaPixels) {
+      // Small delay to ensure Cropper is ready
+      const timer = setTimeout(() => {
+        // Trigger initial crop with default values
+        const defaultArea = {
+          x: 0,
+          y: 0, 
+          width: 100,
+          height: 125 // 4:5 ratio
+        };
+        setCroppedAreaPixels(defaultArea);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, imageUrl, croppedAreaPixels]);
+
   const handleSave = async () => {
-    if (!croppedAreaPixels) return;
+    if (!croppedAreaPixels) {
+      toast.error('Veuillez attendre que l\'image soit chargée');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -205,6 +226,24 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     } catch (error) {
       console.error('Erreur lors du traitement:', error);
       toast.error('Erreur lors du recadrage de l\'image');
+      
+      // Retry once automatically
+      try {
+        console.log('Tentative de retry automatique...');
+        const retryBlob = await getCroppedImg(
+          imageUrl,
+          croppedAreaPixels,
+          rotation,
+          TARGET_DIMENSIONS.width,
+          TARGET_DIMENSIONS.height
+        );
+        await onSave(retryBlob);
+        onClose();
+        toast.success('Image recadrée avec succès (retry)');
+      } catch (retryError) {
+        console.error('Échec du retry:', retryError);
+        toast.error('Impossible de traiter l\'image. Veuillez réessayer.');
+      }
     } finally {
       setSaving(false);
     }
@@ -222,21 +261,27 @@ export const ImageEditorModal: React.FC<ImageEditorModalProps> = ({
     setZoom(zoom);
   };
 
-  // Support des raccourcis clavier
+  // Support des raccourcis clavier avec confirmation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return;
       
       if (e.key === 'Escape') {
+        e.preventDefault();
+        if (saving) {
+          toast.warning('Traitement en cours, veuillez patienter...');
+          return;
+        }
         onClose();
-      } else if (e.key === 'Enter' && croppedAreaPixels) {
+      } else if (e.key === 'Enter' && croppedAreaPixels && !saving) {
+        e.preventDefault();
         handleSave();
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, croppedAreaPixels]);
+  }, [isOpen, croppedAreaPixels, saving]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

@@ -400,14 +400,12 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
     </Dialog>
 
     {/* Image Editor Modal */}
-    {(formData.image_url || event.image_url) && (
-      <ImageEditorModal
-        isOpen={imageEditorOpen}
-        onClose={() => setImageEditorOpen(false)}
-        imageUrl={formData.image_url || event.image_url || ''}
-        onSave={handleImageCrop}
-      />
-    )}
+    <ImageEditorModal
+      isOpen={imageEditorOpen}
+      onClose={() => setImageEditorOpen(false)}
+      imageUrl={formData.image_url || event.image_url || ''}
+      onSave={handleImageCrop}
+    />
     </>
   );
 };
