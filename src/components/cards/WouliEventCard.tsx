@@ -97,9 +97,20 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
             onError={handleImageError}
           />
           
+          {/* Zone cliquable transparente pour la navigation */}
+          <div 
+            className="absolute inset-0 z-10"
+            onClick={() => onCardClick?.()}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              onCardClick?.();
+            }}
+            style={{ pointerEvents: 'auto' }}
+          />
+          
           {/* Badge urgence - coin supérieur droit */}
           {urgencyLabel && (
-            <Badge className="absolute top-3 right-3 bg-red-500 text-white border-none animate-pulse hover:animate-none text-xs font-medium px-2 py-1 rounded-lg shadow-lg">
+            <Badge className="absolute top-3 right-3 bg-red-500 text-white border-none animate-pulse hover:animate-none text-xs font-medium px-2 py-1 rounded-lg shadow-lg z-20">
               {urgencyLabel}
             </Badge>
           )}
@@ -108,7 +119,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
           {onShare && (
             <Button 
               size="sm"
-              className="pressable absolute top-3 left-3 w-10 h-10 bg-white/90 backdrop-blur rounded-full p-0 hover:bg-white border-0"
+              className="pressable absolute top-3 left-3 w-10 h-10 bg-white/90 backdrop-blur rounded-full p-0 hover:bg-white border-0 z-20"
               onClick={(e) => {
                 e.stopPropagation();
                 onShare();
@@ -123,8 +134,18 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
           )}
         </div>
         
-        {/* Zone Informations (20%) */}
-        <div className="p-4 space-y-2">
+        {/* Zone Informations (20%) - aussi cliquable */}
+        <div className="p-4 space-y-2 relative">
+          {/* Zone cliquable transparente */}
+          <div 
+            className="absolute inset-0 z-10"
+            onClick={() => onCardClick?.()}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              onCardClick?.();
+            }}
+          />
+          
           {/* Ligne 1: Titre • Prix */}
           <div className="flex justify-between items-start gap-2">
             <h3 className="font-bold text-lg text-foreground line-clamp-2 flex-1">
@@ -259,23 +280,8 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
           className="absolute w-full h-full"
         >
           <Card 
-            className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card cursor-pointer ${className}`}
+            className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card ${className}`}
             style={{ overflow: 'hidden' }}
-            onClick={(e) => {
-              // Vérifier si le clic n'est pas sur un bouton
-              const target = e.target as HTMLElement;
-              if (!target.closest('button') && onCardClick) {
-                onCardClick();
-              }
-            }}
-            onTouchStart={(e) => {
-              // Gestion tactile pour mobile
-              const target = e.target as HTMLElement;
-              if (!target.closest('button') && onCardClick) {
-                e.preventDefault();
-                onCardClick();
-              }
-            }}
           >
             <SwipeCardContent />
           </Card>
@@ -306,21 +312,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
       </div>
     ) : (
       <Card 
-        className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card cursor-pointer ${className}`}
-        onClick={(e) => {
-          // Vérifier si le clic n'est pas sur un bouton
-          const target = e.target as HTMLElement;
-          if (!target.closest('button') && onCardClick) {
-            onCardClick();
-          }
-        }}
-        onTouchStart={(e) => {
-          // Gestion tactile pour mobile
-          const target = e.target as HTMLElement;
-          if (!target.closest('button') && onCardClick) {
-            onCardClick();
-          }
-        }}
+        className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card ${className}`}
       >
         <SwipeCardContent />
       </Card>
