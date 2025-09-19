@@ -89,7 +89,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
     return (
       <>
         {/* Zone Image (70%) */}
-        <div className="relative aspect-[4/5] cursor-pointer" onClick={onCardClick}>
+        <div className="relative aspect-[4/5]">
           <img
             src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/400/500?random=event"}
             alt={event.title}
@@ -122,8 +122,8 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
         {/* Zone Informations (20%) */}
         <div className="p-4 space-y-2">
           {/* Ligne 1: Titre • Prix */}
-          <div className="flex justify-between items-start gap-2" onClick={onCardClick}>
-            <h3 className="font-bold text-lg text-foreground line-clamp-2 flex-1 cursor-pointer">
+          <div className="flex justify-between items-start gap-2">
+            <h3 className="font-bold text-lg text-foreground line-clamp-2 flex-1">
               {event.title}
             </h3>
             {!priceInfo.isFree && (
@@ -135,12 +135,12 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
           </div>
           
           {/* Ligne 2: Heure • Lieu */}
-          <div className="text-sm text-muted-foreground cursor-pointer" onClick={onCardClick}>
+          <div className="text-sm text-muted-foreground">
             {formatEventDateTime(event.date, event.time)} • {getLocationDisplay(event.venue, event.location)}
           </div>
           
           {/* Ligne 3: Social proof */}
-          <div onClick={onCardClick} className="cursor-pointer">
+          <div>
             <div className="flex items-center space-x-2">
               {/* Avatars amis (3 max, 24px, overlap -space-x-2) */}
               {friends.length > 0 && (
@@ -242,7 +242,17 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
           swipeThreshold={Math.round(window.innerWidth * 0.4)}
           className="absolute w-full h-full"
         >
-          <Card className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card cursor-grab active:cursor-grabbing ${className}`} style={{ overflow: 'hidden' }}>
+          <Card 
+            className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card cursor-pointer ${className}`}
+            style={{ overflow: 'hidden' }}
+            onClick={(e) => {
+              // Vérifier si le clic n'est pas sur un bouton
+              const target = e.target as HTMLElement;
+              if (!target.closest('button')) {
+                onCardClick?.();
+              }
+            }}
+          >
             <SwipeCardContent />
           </Card>
         </TinderCard>
@@ -271,7 +281,16 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
         </div>
       </div>
     ) : (
-      <Card className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card ${className}`}>
+      <Card 
+        className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card cursor-pointer ${className}`}
+        onClick={(e) => {
+          // Vérifier si le clic n'est pas sur un bouton
+          const target = e.target as HTMLElement;
+          if (!target.closest('button')) {
+            onCardClick?.();
+          }
+        }}
+      >
         <SwipeCardContent />
       </Card>
     );
