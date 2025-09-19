@@ -1,6 +1,52 @@
 import { supabase } from '@/integrations/supabase/client';
 import { UnifiedEvent } from '@/types/unified';
 import { BusinessEvent } from '@/types/events';
+import { friendshipService } from './friendshipService';
+
+// Fonction utilitaire pour enrichir les événements avec les données sociales
+const enrichEventsWithSocialData = async (events: UnifiedEvent[]): Promise<UnifiedEvent[]> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user || events.length === 0) {
+    return events;
+  }
+
+  // Enrichir chaque événement avec les données sociales
+  const enrichedEvents = await Promise.all(
+    events.map(async (event) => {
+      try {
+        const friendsResult = await friendshipService.getFriendsParticipatingInEvent(user.id, event.id);
+        
+        if (friendsResult.success) {
+          const friendsParticipating = friendsResult.data.map(friend => ({
+            id: friend.id,
+            name: friend.username,
+            avatar: friend.avatar_url || undefined
+          }));
+
+          return {
+            ...event,
+            friendsParticipating,
+            totalParticipants: event.participants,
+            // Déterminer si l'événement est urgent (dans les 4 prochaines heures)
+            isUrgent: new Date(event.date).getTime() - Date.now() < 4 * 60 * 60 * 1000
+          };
+        }
+      } catch (error) {
+        console.warn(`Erreur enrichissement social pour événement ${event.id}:`, error);
+      }
+      
+      return {
+        ...event,
+        friendsParticipating: [],
+        totalParticipants: event.participants,
+        isUrgent: new Date(event.date).getTime() - Date.now() < 4 * 60 * 60 * 1000
+      };
+    })
+  );
+
+  return enrichedEvents;
+};
 
 export const fetchAllEvents = async (): Promise<UnifiedEvent[]> => {
   // Utiliser la vue active_events pour récupérer seulement les événements actifs et futurs
@@ -35,7 +81,7 @@ export const fetchAllEvents = async (): Promise<UnifiedEvent[]> => {
     );
   }
 
-  return allEvents.map(event => ({
+  const unifiedEvents = allEvents.map(event => ({
     id: event.id,
     title: event.title,
     description: event.description,
@@ -48,7 +94,7 @@ export const fetchAllEvents = async (): Promise<UnifiedEvent[]> => {
     participants: event.participants || 0,
     created_at: event.created_at,
     updated_at: event.updated_at,
-    source: event.created_by_type === 'business' ? 'business' : 'user',
+    source: (event.created_by_type === 'business' ? 'business' : 'user') as 'user' | 'business',
     organizer: event.created_by_type === 'business' ? 
       (configMap.get(event.created_by) || 'Établissement') : 
       'Utilisateur',
@@ -62,7 +108,10 @@ export const fetchAllEvents = async (): Promise<UnifiedEvent[]> => {
     address: event.address,
     tags: event.tags,
     external_url: event.external_url
-  }));
+  } as UnifiedEvent));
+
+  // Enrichir avec les données sociales
+  return await enrichEventsWithSocialData(unifiedEvents);
 };
 
 export const fetchUserEvents = async (): Promise<UnifiedEvent[]> => {
@@ -102,7 +151,7 @@ const fetchEventsByType = async (type: 'user' | 'business'): Promise<UnifiedEven
     );
   }
 
-  return events.map(event => ({
+  const unifiedEvents = events.map(event => ({
     id: event.id,
     title: event.title,
     description: event.description,
@@ -115,11 +164,11 @@ const fetchEventsByType = async (type: 'user' | 'business'): Promise<UnifiedEven
     participants: event.participants || 0,
     created_at: event.created_at,
     updated_at: event.updated_at,
-    source: type,
+    source: type as 'user' | 'business',
     organizer: type === 'business' ? 
       (configMap.get(event.created_by) || 'Établissement') : 
       'Utilisateur',
-    organizer_type: type,
+    organizer_type: type as 'user' | 'business',
     venue: undefined,
     time: undefined,
     event_type: event.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
@@ -129,7 +178,10 @@ const fetchEventsByType = async (type: 'user' | 'business'): Promise<UnifiedEven
     address: event.address,
     tags: event.tags,
     external_url: event.external_url
-  }));
+  } as UnifiedEvent));
+
+  // Enrichir avec les données sociales
+  return await enrichEventsWithSocialData(unifiedEvents);
 };
 
 // Service pour les événements business (maintient compatibilité avec l'interface existante)
