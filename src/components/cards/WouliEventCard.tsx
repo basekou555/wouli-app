@@ -113,6 +113,10 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
                 e.stopPropagation();
                 onShare();
               }}
+              onTouchStart={(e) => {
+                e.stopPropagation();
+                onShare();
+              }}
             >
               <Share2 className="h-4 w-4 text-gray-700" />
             </Button>
@@ -186,6 +190,10 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
                   e.stopPropagation();
                   onDislike();
                 }}
+                onTouchStart={(e) => {
+                  e.stopPropagation();
+                  onDislike();
+                }}
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -204,6 +212,10 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
                 e.stopPropagation();
                 onParticipate();
               }}
+              onTouchStart={(e) => {
+                e.stopPropagation();
+                onParticipate();
+              }}
             >
               {isParticipating ? '✅ Inscrit' : 'Participer'}
             </Button>
@@ -218,6 +230,10 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
                   : 'bg-background hover:bg-muted border-border'
               }`}
               onClick={(e) => {
+                e.stopPropagation();
+                onLike();
+              }}
+              onTouchStart={(e) => {
                 e.stopPropagation();
                 onLike();
               }}
@@ -248,8 +264,16 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
             onClick={(e) => {
               // Vérifier si le clic n'est pas sur un bouton
               const target = e.target as HTMLElement;
-              if (!target.closest('button')) {
-                onCardClick?.();
+              if (!target.closest('button') && onCardClick) {
+                onCardClick();
+              }
+            }}
+            onTouchStart={(e) => {
+              // Gestion tactile pour mobile
+              const target = e.target as HTMLElement;
+              if (!target.closest('button') && onCardClick) {
+                e.preventDefault();
+                onCardClick();
               }
             }}
           >
@@ -286,8 +310,15 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
         onClick={(e) => {
           // Vérifier si le clic n'est pas sur un bouton
           const target = e.target as HTMLElement;
-          if (!target.closest('button')) {
-            onCardClick?.();
+          if (!target.closest('button') && onCardClick) {
+            onCardClick();
+          }
+        }}
+        onTouchStart={(e) => {
+          // Gestion tactile pour mobile
+          const target = e.target as HTMLElement;
+          if (!target.closest('button') && onCardClick) {
+            onCardClick();
           }
         }}
       >
