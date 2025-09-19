@@ -139,18 +139,24 @@ class FriendshipService {
         .or(`user_id.eq.${userId},friend_id.eq.${userId}`);
 
       if (error) throw error;
+      
+      console.log('🔍 Amitiés trouvées:', friendships?.length || 0, friendships);
 
       // Pour chaque amitié, récupérer le profil de l'ami
       const friendsWithProfiles: FriendshipWithProfile[] = [];
       
       for (const friendship of friendships || []) {
+        // Déterminer qui est l'ami (pas l'utilisateur courant)
         const friendId = friendship.user_id === userId ? friendship.friend_id : friendship.user_id;
+        console.log('👤 Récupération profil ami:', friendId);
         
         const { data: profile } = await supabase
           .from('profiles')
           .select('id, username, avatar_url, city, type, created_at')
           .eq('id', friendId)
           .maybeSingle();
+
+        console.log('📄 Profil récupéré:', profile);
 
         friendsWithProfiles.push({
           ...friendship,
@@ -159,6 +165,7 @@ class FriendshipService {
         });
       }
 
+      console.log('✅ Amis avec profils:', friendsWithProfiles);
       return { success: true, data: friendsWithProfiles };
     } catch (error) {
       console.error('Erreur récupération amis:', error);

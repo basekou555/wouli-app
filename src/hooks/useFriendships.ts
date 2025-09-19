@@ -19,6 +19,8 @@ export const useFriendships = () => {
     if (!user?.id) return;
 
     setLoading(true);
+    console.log('🔄 Chargement amitiés pour utilisateur:', user.id);
+    
     try {
       const [friendsResult, receivedResult, sentResult, countResult] = await Promise.all([
         friendshipService.getAcceptedFriends(user.id),
@@ -27,15 +29,25 @@ export const useFriendships = () => {
         friendshipService.countPendingRequests(user.id)
       ]);
 
+      console.log('📊 Résultats amitiés:', {
+        friends: friendsResult,
+        received: receivedResult,
+        sent: sentResult,
+        count: countResult
+      });
+
       if (friendsResult.success) {
+        console.log('✅ Amis acceptés chargés:', friendsResult.data.length);
         setAcceptedFriends(friendsResult.data as FriendshipWithProfile[]);
       }
 
       if (receivedResult.success) {
+        console.log('✅ Demandes reçues chargées:', receivedResult.data.length);
         setReceivedRequests(receivedResult.data as FriendshipWithProfile[]);
       }
 
       if (sentResult.success) {
+        console.log('✅ Demandes envoyées chargées:', sentResult.data.length);
         setSentRequests(sentResult.data as FriendshipWithProfile[]);
       }
 

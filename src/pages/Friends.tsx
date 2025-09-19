@@ -54,8 +54,9 @@ const Friends = () => {
 
   // Filtrer les amis localement
   const filteredFriends = acceptedFriends.filter(friendship => {
-    const friend = friendship.user_id === user?.id ? friendship.friend_profile : friendship.user_profile;
-    return friend?.username.toLowerCase().includes(localSearchQuery.toLowerCase());
+    // Le friend_profile contient toujours le profil de l'ami (géré côté service)
+    const friend = friendship.friend_profile;
+    return friend?.username?.toLowerCase().includes(localSearchQuery.toLowerCase()) || false;
   });
 
   if (friendshipsLoading) {
@@ -206,42 +207,43 @@ const Friends = () => {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {filteredFriends.map((friendship) => {
-                      const friend = friendship.user_id === user?.id ? friendship.friend_profile : friendship.user_profile;
-                      return (
-                        <div key={friendship.id} className="flex items-center justify-between p-3 rounded-lg border">
-                          <div className="flex items-center space-x-3">
-                            <Avatar className="h-12 w-12">
-                              <AvatarImage src={friend?.avatar_url || ''} />
-                              <AvatarFallback>
-                                {friend?.username?.charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-medium">{friend?.username}</p>
-                              {friend?.city && (
-                                <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-                                  <MapPin className="h-3 w-3" />
-                                  <span>{friend.city}</span>
-                                </div>
-                              )}
-                              {friendship.accepted_at && (
-                                <p className="text-xs text-muted-foreground">
-                                  Amis depuis {new Date(friendship.accepted_at).toLocaleDateString()}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate(`/user/${friend?.id}`)}
-                          >
-                            Voir profil
-                          </Button>
-                        </div>
-                      );
-                    })}
+                     {filteredFriends.map((friendship) => {
+                       // Le friend_profile contient toujours le profil de l'ami
+                       const friend = friendship.friend_profile;
+                       return (
+                         <div key={friendship.id} className="flex items-center justify-between p-3 rounded-lg border">
+                           <div className="flex items-center space-x-3">
+                             <Avatar className="h-12 w-12">
+                               <AvatarImage src={friend?.avatar_url || ''} />
+                               <AvatarFallback>
+                                 {friend?.username?.charAt(0).toUpperCase()}
+                               </AvatarFallback>
+                             </Avatar>
+                             <div>
+                               <p className="font-medium">{friend?.username}</p>
+                               {friend?.city && (
+                                 <div className="flex items-center space-x-1 text-sm text-muted-foreground">
+                                   <MapPin className="h-3 w-3" />
+                                   <span>{friend.city}</span>
+                                 </div>
+                               )}
+                               {friendship.accepted_at && (
+                                 <p className="text-xs text-muted-foreground">
+                                   Amis depuis {new Date(friendship.accepted_at).toLocaleDateString()}
+                                 </p>
+                               )}
+                             </div>
+                           </div>
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={() => navigate(`/user/${friend?.id}`)}
+                           >
+                             Voir profil
+                           </Button>
+                         </div>
+                       );
+                     })}
                   </div>
                 )}
               </CardContent>
