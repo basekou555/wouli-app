@@ -15,7 +15,7 @@ import {
 } from '@/utils/eventCardHelpers';
 import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
 
-export type EventCardVariant = 'swipe' | 'list' | 'business' | 'compact';
+export type EventCardVariant = 'swipe' | 'list' | 'business';
 
 interface WouliEventCardProps {
   event: UnifiedEvent;
@@ -190,7 +190,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
     );
   };
 
-  // VARIANTE SWIPE - VERSION IMMERSIVE POUR EXPLORE
+  // VARIANTE SWIPE
   if (variant === 'swipe') {
     return enableSwipe ? (
       <div className="relative">
@@ -202,9 +202,12 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
           swipeThreshold={Math.round(window.innerWidth * 0.4)}
           className="absolute w-full h-full"
         >
-          <div className="w-full h-full">
+          <Card 
+            className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card ${className}`}
+            style={{ overflow: 'hidden' }}
+          >
             <SwipeCardContent />
-          </div>
+          </Card>
         </TinderCard>
 
         {/* OVERLAYS AVEC EMOJIS - Logique préservée */}
@@ -231,144 +234,11 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
         </div>
       </div>
     ) : (
-      <div className="w-full h-full">
+      <Card 
+        className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card ${className}`}
+      >
         <SwipeCardContent />
-      </div>
-    );
-  }
-
-  // VARIANTE COMPACT - VERSION CARTE POUR USERAPP
-  if (variant === 'compact') {
-    const urgencyLabel = getUrgencyBadge(event.date, event.time);
-    const priceInfo = getPriceInfo(event.price_text);
-    const friends = event.friendsParticipating || [];
-    const totalParticipants = event.totalParticipants || event.participants || 0;
-
-    const CompactCardContent = () => (
-      <Card className="h-full w-full rounded-2xl shadow-2xl overflow-hidden bg-card relative">
-        {/* Image avec overlay gradient */}
-        <div className="relative h-3/5">
-          <img 
-            src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/400/600?random=event"}
-            alt={event.title}
-            className="w-full h-full object-cover"
-            onError={handleImageError}
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-          
-          {/* Badges en haut */}
-          <div className="absolute top-3 left-3 right-3 flex justify-between items-start">
-            {urgencyLabel && (
-              <Badge className="bg-red-500 text-white text-xs font-bold animate-pulse">
-                {urgencyLabel}
-              </Badge>
-            )}
-            <Badge className="bg-white/20 backdrop-blur-md text-white text-xs font-bold">
-              {priceInfo.isFree ? '🎉 Gratuit' : `💰 ${priceInfo.display}`}
-            </Badge>
-          </div>
-        </div>
-        
-        {/* Contenu en bas */}
-        <div className="h-2/5 p-4 flex flex-col justify-between">
-          <div>
-            <h3 className="font-bold text-lg mb-1 line-clamp-2">{event.title}</h3>
-            <div className="text-sm text-muted-foreground mb-2">
-              📍 {getLocationDisplay(event.venue, event.location)} • 🕐 {formatEventDateTime(event.date, event.time)}
-            </div>
-            
-            {/* Social proof */}
-            <div className="flex items-center gap-2 mb-3">
-              {friends.length > 0 && (
-                <div className="flex -space-x-1">
-                  {friends.slice(0, 3).map((friend) => (
-                    <div 
-                      key={friend.id} 
-                      className="w-6 h-6 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-xs font-medium text-white border-2 border-white"
-                    >
-                      {friend.avatar ? (
-                        <img src={friend.avatar} alt={friend.name} className="w-full h-full rounded-full object-cover" />
-                      ) : (
-                        friend.name.charAt(0).toUpperCase()
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-              <span className="text-xs text-muted-foreground">
-                {getSocialProofText(friends, totalParticipants)}
-              </span>
-            </div>
-          </div>
-          
-          {/* Actions */}
-          <div className="flex gap-2">
-            <Button 
-              size="sm" 
-              className={`flex-1 transition-all ${
-                isParticipating 
-                  ? 'bg-green-500 hover:bg-green-600 text-white' 
-                  : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white'
-              }`}
-              onClick={onParticipate}
-            >
-              {isParticipating ? '✓ Inscrit' : 'Participer'}
-            </Button>
-            <Button 
-              size="sm" 
-              variant="outline"
-              className={`px-3 transition-all ${
-                isLiked 
-                  ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' 
-                  : 'hover:bg-muted'
-              }`}
-              onClick={onLike}
-            >
-              <Heart className={`h-4 w-4 ${isLiked ? 'fill-current text-red-500' : ''}`} />
-            </Button>
-          </div>
-        </div>
-        
-        {/* Zone cliquable transparente */}
-        <div 
-          className="absolute inset-0 z-10"
-          onClick={() => onCardClick?.()}
-          style={{ pointerEvents: 'auto' }}
-        />
-        
-        {/* Overlays pendant le swipe */}
-        {swipeDirection === 'left' && (
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rotate-[-15deg] z-30">
-            <div className="text-4xl font-bold text-red-500 border-4 border-red-500 px-3 py-1 rounded-xl bg-white/90 shadow-xl">
-              NOPE
-            </div>
-          </div>
-        )}
-        {swipeDirection === 'right' && (
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 rotate-[15deg] z-30">
-            <div className="text-4xl font-bold text-green-500 border-4 border-green-500 px-3 py-1 rounded-xl bg-white/90 shadow-xl">
-              LIKE
-            </div>
-          </div>
-        )}
       </Card>
-    );
-
-    return enableSwipe ? (
-      <div className="relative w-full h-full">
-        <TinderCard
-          onSwipe={handleSwipe}
-          onCardLeftScreen={handleCardLeftScreen}
-          preventSwipe={['up', 'down']}
-          swipeRequirementType="position"
-          swipeThreshold={Math.round(window.innerWidth * 0.4)}
-          className="absolute w-full h-full"
-        >
-          <CompactCardContent />
-        </TinderCard>
-      </div>
-    ) : (
-      <CompactCardContent />
     );
   }
 

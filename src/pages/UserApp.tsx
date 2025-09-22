@@ -123,7 +123,7 @@ const UserApp = () => {
                 <div className="absolute inset-0 z-10">
                   <WouliEventCard
                     event={filteredEvents[currentIndex]}
-                    variant="compact"
+                    variant="swipe"
                     enableSwipe={true}
                     isLiked={likedEvents.includes(filteredEvents[currentIndex].id)}
                     isParticipating={participatingEvents.includes(filteredEvents[currentIndex].id)}
@@ -151,7 +151,7 @@ const UserApp = () => {
                 <div className="absolute inset-0 z-0 transform scale-95 opacity-50 pointer-events-none">
                   <WouliEventCard
                     event={filteredEvents[currentIndex + 1]}
-                    variant="compact"
+                    variant="swipe"
                     enableSwipe={false}
                     isLiked={likedEvents.includes(filteredEvents[currentIndex + 1].id)}
                     isParticipating={participatingEvents.includes(filteredEvents[currentIndex + 1].id)}
