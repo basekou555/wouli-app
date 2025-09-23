@@ -129,7 +129,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
           </div>
           
           {/* Social proof */}
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-3">
             {/* Avatars des amis */}
             {friends.length > 0 && (
               <div className="flex -space-x-2">
@@ -158,58 +158,6 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
               }
             </span>
           </div>
-
-          {/* FIX: restauration design carte swipe + immersion - Boutons d'action fixes */}
-          <div className="flex justify-center gap-6 relative z-30">
-            {/* Bouton Dislike/Cross */}
-            <Button 
-              size="lg"
-              variant="outline"
-              className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-red-500/80 hover:border-red-500 transition-all duration-300 min-h-[44px] min-w-[44px]"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDislike?.();
-              }}
-              aria-label="Ne pas aimer cet événement"
-            >
-              <X className="h-6 w-6" />
-            </Button>
-
-            {/* Bouton Participer */}
-            <Button 
-              size="lg"
-              className={`px-8 h-14 rounded-full font-bold text-lg transition-all duration-300 min-h-[44px] shadow-lg ${
-                isParticipating 
-                  ? 'bg-green-500 hover:bg-green-600 text-white border-2 border-green-400' 
-                  : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-2 border-white/20'
-              }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onParticipate();
-              }}
-              aria-label={isParticipating ? "Vous participez déjà" : "Participer à cet événement"}
-            >
-              {isParticipating ? '✓ Inscrit' : 'Participer'}
-            </Button>
-
-            {/* Bouton Like/Heart */}
-            <Button 
-              size="lg"
-              variant="outline"
-              className={`w-14 h-14 rounded-full backdrop-blur-md border-white/20 transition-all duration-300 min-h-[44px] min-w-[44px] ${
-                isLiked 
-                  ? 'bg-red-500/80 border-red-500 text-white hover:bg-red-600/80' 
-                  : 'bg-white/10 text-white hover:bg-pink-500/80 hover:border-pink-500'
-              }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onLike();
-              }}
-              aria-label={isLiked ? "Retirer de vos favoris" : "Ajouter à vos favoris"}
-            >
-              <Heart className={`h-6 w-6 ${isLiked ? 'fill-current' : ''}`} />
-            </Button>
-          </div>
         </div>
         
         {/* Overlays dynamiques (apparaissent pendant le swipe) */}
@@ -228,9 +176,9 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
           </div>
         )}
         
-        {/* Zone cliquable transparente pour la navigation - FIX: exclut les boutons */}
+        {/* Zone cliquable transparente pour la navigation */}
         <div 
-          className="absolute inset-0 z-10"
+          className="absolute inset-0 z-0"
           onClick={(e) => {
             // Ne pas déclencher si on clique sur un bouton ou un élément interactif
             if ((e.target as HTMLElement).closest('button')) {
