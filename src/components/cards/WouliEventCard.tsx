@@ -178,12 +178,10 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
         
         {/* Zone cliquable transparente pour la navigation */}
         <div 
-          className="absolute inset-0 z-0"
-          onClick={(e) => {
-            // Ne pas déclencher si on clique sur un bouton ou un élément interactif
-            if ((e.target as HTMLElement).closest('button')) {
-              return;
-            }
+          className="absolute inset-0 z-10"
+          onClick={() => onCardClick?.()}
+          onTouchEnd={(e) => {
+            e.preventDefault();
             onCardClick?.();
           }}
           style={{ pointerEvents: 'auto' }}
@@ -304,7 +302,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
           </div>
           
           {/* Actions */}
-          <div className="flex gap-2 relative z-20">
+          <div className="flex gap-2">
             <Button 
               size="sm" 
               className={`flex-1 transition-all ${
@@ -312,10 +310,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
                   ? 'bg-green-500 hover:bg-green-600 text-white' 
                   : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white'
               }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onParticipate();
-              }}
+              onClick={onParticipate}
             >
               {isParticipating ? '✓ Inscrit' : 'Participer'}
             </Button>
@@ -327,26 +322,17 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
                   ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' 
                   : 'hover:bg-muted'
               }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onLike();
-              }}
+              onClick={onLike}
             >
               <Heart className={`h-4 w-4 ${isLiked ? 'fill-current text-red-500' : ''}`} />
             </Button>
           </div>
         </div>
         
-        {/* Zone cliquable transparente - exclut les boutons */}
+        {/* Zone cliquable transparente */}
         <div 
-          className="absolute inset-0 z-0"
-          onClick={(e) => {
-            // Ne pas déclencher si on clique sur un bouton
-            if ((e.target as HTMLElement).closest('button')) {
-              return;
-            }
-            onCardClick?.();
-          }}
+          className="absolute inset-0 z-10"
+          onClick={() => onCardClick?.()}
           style={{ pointerEvents: 'auto' }}
         />
         
@@ -477,7 +463,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
           </div>
           
           {/* Actions - 2 boutons seulement */}
-          <div className="flex gap-2 relative z-20">
+          <div className="flex gap-2">
             <Button 
               size="sm" 
               className={`flex-1 h-8 text-xs transition-all ${
@@ -485,10 +471,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
                   ? 'bg-green-500 hover:bg-green-600 text-white' 
                   : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white'
               }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onParticipate();
-              }}
+              onClick={onParticipate}
             >
               {isParticipating ? 'Inscrit' : 'Participer'}
             </Button>
@@ -500,10 +483,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
                   ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' 
                   : 'hover:bg-muted border-border'
               }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onLike();
-              }}
+              onClick={onLike}
             >
               <Heart className={`h-3 w-3 ${isLiked ? 'fill-current text-red-500' : ''}`} />
             </Button>
