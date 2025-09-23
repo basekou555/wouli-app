@@ -114,16 +114,16 @@ const UserApp = () => {
       )}
 
       {/* Card Stack Container */}
-      <div className="flex-1 flex items-center justify-center px-4 pb-28 pt-4">
+      <div className="flex-1 flex items-center justify-center px-4 pb-24">
         <div className="w-full max-w-sm relative">
           {filteredEvents.length > 0 ? (
-            <div className="relative h-[480px] sm:h-[520px] md:h-[540px] max-h-[calc(100vh-200px)]">
+            <div className="relative h-[520px] sm:h-[580px] md:h-[600px]">
               {/* Current Card */}
               {currentIndex < filteredEvents.length && (
                 <div className="absolute inset-0 z-10">
                   <WouliEventCard
                     event={filteredEvents[currentIndex]}
-                    variant="compact"
+                    variant="swipe"
                     enableSwipe={true}
                     isLiked={likedEvents.includes(filteredEvents[currentIndex].id)}
                     isParticipating={participatingEvents.includes(filteredEvents[currentIndex].id)}
@@ -151,7 +151,7 @@ const UserApp = () => {
                 <div className="absolute inset-0 z-0 transform scale-95 opacity-50 pointer-events-none">
                   <WouliEventCard
                     event={filteredEvents[currentIndex + 1]}
-                    variant="compact"
+                    variant="swipe"
                     enableSwipe={false}
                     isLiked={likedEvents.includes(filteredEvents[currentIndex + 1].id)}
                     isParticipating={participatingEvents.includes(filteredEvents[currentIndex + 1].id)}
