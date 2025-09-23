@@ -297,70 +297,67 @@ const Explore = () => {
   }
 
   return (
-    <AppLayout>
-      <div className="h-full flex flex-col">
-        <ExploreHeader 
-          searchTerm={searchTerm}
-          onSearchChange={handleSearchChange}
-          onToggleFilters={toggleFilters}
-          onClearFilters={clearFilters}
-        />
+    <div className="h-screen bg-[#0A0A0B] flex flex-col overflow-hidden">
+      {/* Header fixe avec filtres (5% hauteur) */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-black/40 backdrop-blur-md border-b border-white/10">
+        <div className="flex items-center justify-between p-4 h-16">
+          {/* Notifications à gauche */}
+          <Button variant="ghost" size="icon" className="text-white/80 hover:text-white">
+            <div className="relative">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5-5-5h5V3h0z" />
+              </svg>
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></div>
+            </div>
+          </Button>
 
-        {showFilters && (
-          <ExploreFilters 
-            selectedCategory={selectedCategory}
-            onCategoryChange={handleCategoryChange}
-          />
-        )}
+          {/* Filtres horizontaux scrollables */}
+          <div className="flex-1 flex justify-end">
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide max-w-64">
+              <Button 
+                variant={selectedCategory === null ? "default" : "outline"}
+                size="sm" 
+                className="whitespace-nowrap text-xs bg-white/10 border-white/20 text-white hover:bg-white/20"
+                onClick={() => handleCategoryChange(null)}
+              >
+                Tout
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="whitespace-nowrap text-xs bg-white/10 border-white/20 text-white hover:bg-white/20"
+                onClick={() => {/* Logic for tonight filter */}}
+              >
+                Ce soir
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="whitespace-nowrap text-xs bg-white/10 border-white/20 text-white hover:bg-white/20"
+                onClick={() => {/* Logic for tomorrow filter */}}
+              >
+                Demain
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="whitespace-nowrap text-xs bg-white/10 border-white/20 text-white hover:bg-white/20"
+                onClick={() => {/* Logic for free filter */}}
+              >
+                Gratuit
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
 
-        <div className="flex-1 flex items-center justify-center p-4 relative">
-          {/* Container pour le stack Tinder-like */}
-          <div className="relative h-[600px] w-full max-w-sm mx-auto">
-            {/* CARTE 3 - Fond lointain */}
-            {currentIndex + 2 < filteredEvents.length && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="transform scale-90 opacity-20 -z-20 blur-sm">
-                  <WouliEventCard
-                    event={filteredEvents[currentIndex + 2]}
-                    variant="swipe"
-                    isLiked={userInteractions.liked.has(filteredEvents[currentIndex + 2].id)}
-                    isParticipating={userInteractions.participating.has(filteredEvents[currentIndex + 2].id)}
-                    onLike={() => {}}
-                    onParticipate={() => {}}
-                    onDislike={() => {}}
-                    onShare={() => {}}
-                    onCardClick={() => {}}
-                    enableSwipe={false}
-                    className="w-full h-full"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* CARTE 2 - Fond proche */}
-            {currentIndex + 1 < filteredEvents.length && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="transform scale-95 opacity-40 -z-10">
-                  <WouliEventCard
-                    event={filteredEvents[currentIndex + 1]}
-                    variant="swipe"
-                    isLiked={userInteractions.liked.has(filteredEvents[currentIndex + 1].id)}
-                    isParticipating={userInteractions.participating.has(filteredEvents[currentIndex + 1].id)}
-                    onLike={() => {}}
-                    onParticipate={() => {}}
-                    onDislike={() => {}}
-                    onShare={() => {}}
-                    onCardClick={() => {}}
-                    enableSwipe={false}
-                    className="w-full h-full"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* CARTE 1 - Active (swipable) */}
-            {currentIndex < filteredEvents.length && (
-              <div className="absolute inset-0 flex items-center justify-center z-10">
+      {/* Zone carte immersive (85% hauteur) */}
+      <div className="flex-1 flex items-center justify-center px-2 pt-20 pb-28">
+        <div className="w-full h-full max-w-md mx-auto relative">
+          {currentIndex < filteredEvents.length ? (
+            <>
+              {/* Carte active */}
+              <div className="absolute inset-0 z-10">
                 <WouliEventCard
                   event={filteredEvents[currentIndex]}
                   variant="swipe"
@@ -385,47 +382,80 @@ const Explore = () => {
                   className="w-full h-full"
                 />
               </div>
-            )}
-            
-            {/* Action buttons overlay - centrés en bas */}
-            {currentIndex < filteredEvents.length && (
-              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-4 z-20 pointer-events-none">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="rounded-full bg-background/80 backdrop-blur-sm border-2 pointer-events-auto"
-                  onClick={handleSwipeLeft}
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-                <Button
-                  variant="default"
-                  size="icon" 
-                  className="rounded-full bg-gradient-primary border-2 border-white pointer-events-auto"
-                  onClick={() => handleSwipeRight(filteredEvents[currentIndex].id)}
-                >
-                  <Heart className={`h-5 w-5 ${userInteractions.liked.has(filteredEvents[currentIndex].id) ? 'fill-current' : ''}`} />
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Message de fin */}
-          {currentIndex >= filteredEvents.length && (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">Plus d'événements à découvrir !</p>
-              <Button onClick={clearFilters} className="mt-4">
-                Réinitialiser les filtres
+              
+              {/* Carte suivante en arrière-plan */}
+              {currentIndex + 1 < filteredEvents.length && (
+                <div className="absolute inset-0 z-0 transform scale-95 opacity-30 pointer-events-none">
+                  <WouliEventCard
+                    event={filteredEvents[currentIndex + 1]}
+                    variant="swipe"
+                    isLiked={userInteractions.liked.has(filteredEvents[currentIndex + 1].id)}
+                    isParticipating={userInteractions.participating.has(filteredEvents[currentIndex + 1].id)}
+                    onLike={() => {}}
+                    onParticipate={() => {}}
+                    onDislike={() => {}}
+                    onShare={() => {}}
+                    onCardClick={() => {}}
+                    enableSwipe={false}
+                    className="w-full h-full"
+                  />
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-8 text-white">
+              <p className="text-white/60 mb-4">Plus d'événements à découvrir !</p>
+              <Button onClick={clearFilters} variant="outline" className="border-white/20 text-white hover:bg-white/10">
+                Réinitialiser
               </Button>
             </div>
           )}
           
-          {filteredEvents.length === 0 && !loading && (
-            <EmptyState onReset={clearFilters} />
+          {filteredEvents.length === 0 && (
+            <div className="text-center py-8 text-white">
+              <p className="text-white/60">Aucun événement trouvé</p>
+            </div>
           )}
         </div>
       </div>
-    </AppLayout>
+
+      {/* Boutons d'action fixes (10% hauteur) */}
+      {currentIndex < filteredEvents.length && (
+        <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-40">
+          <div className="flex items-center space-x-6">
+            {/* Dislike */}
+            <Button
+              variant="outline"
+              size="icon"
+              className="w-14 h-14 rounded-full bg-white/10 border-2 border-white/20 text-white hover:bg-white/20 backdrop-blur-md"
+              onClick={handleSwipeLeft}
+            >
+              <X className="h-6 w-6" />
+            </Button>
+            
+            {/* Save/Star */}
+            <Button
+              variant="outline"
+              size="icon"
+              className="w-12 h-12 rounded-full bg-white/10 border-2 border-white/20 text-yellow-400 hover:bg-white/20 backdrop-blur-md"
+              onClick={() => {/* Add save logic */}}
+            >
+              ⭐
+            </Button>
+            
+            {/* Like */}
+            <Button
+              variant="default"
+              size="icon"
+              className="w-14 h-14 rounded-full bg-gradient-to-r from-pink-500 to-red-500 border-2 border-white/20 text-white hover:from-pink-600 hover:to-red-600 shadow-lg"
+              onClick={() => handleSwipeRight(filteredEvents[currentIndex].id)}
+            >
+              <Heart className={`h-6 w-6 ${userInteractions.liked.has(filteredEvents[currentIndex].id) ? 'fill-current' : ''}`} />
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
