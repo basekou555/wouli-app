@@ -114,57 +114,89 @@ const UserApp = () => {
       )}
 
       {/* Card Stack Container */}
-      <div className="flex-1 flex items-center justify-center px-4 pb-28 pt-4">
-        <div className="w-full max-w-sm relative">
-          {filteredEvents.length > 0 ? (
-            <div className="relative h-[480px] sm:h-[520px] md:h-[540px] max-h-[calc(100vh-200px)]">
-              {/* Current Card */}
-              {currentIndex < filteredEvents.length && (
-                <div className="absolute inset-0 z-10">
-                  <WouliEventCard
-                    event={filteredEvents[currentIndex]}
-                    variant="compact"
-                    enableSwipe={true}
-                    isLiked={likedEvents.includes(filteredEvents[currentIndex].id)}
-                    isParticipating={participatingEvents.includes(filteredEvents[currentIndex].id)}
-                    onLike={() => handleLike(filteredEvents[currentIndex].id)}
-                    onDislike={handleDislike}
-                    onSwipeLeft={handleDislike}
-                    onSwipeRight={() => handleLike(filteredEvents[currentIndex].id)}
-                    onParticipate={() => handleParticipate(filteredEvents[currentIndex].id)}
-                    onCardClick={() => handleCardClick(filteredEvents[currentIndex].id)}
-                    onShare={() => {
-                      if (navigator.share) {
-                        navigator.share({
-                          title: filteredEvents[currentIndex].title,
-                          text: `Découvre cet événement : ${filteredEvents[currentIndex].title}`,
-                          url: window.location.origin + `/events/${filteredEvents[currentIndex].id}`
-                        });
-                      }
-                    }}
-                  />
-                </div>
-              )}
-              
-              {/* Next Card Preview */}
-              {currentIndex + 1 < filteredEvents.length && (
-                <div className="absolute inset-0 z-0 transform scale-95 opacity-50 pointer-events-none">
-                  <WouliEventCard
-                    event={filteredEvents[currentIndex + 1]}
-                    variant="compact"
-                    enableSwipe={false}
-                    isLiked={likedEvents.includes(filteredEvents[currentIndex + 1].id)}
-                    isParticipating={participatingEvents.includes(filteredEvents[currentIndex + 1].id)}
-                    onLike={() => {}}
-                    onSwipeLeft={() => {}}
-                    onSwipeRight={() => {}}
-                    onParticipate={() => {}}
-                    onCardClick={() => handleCardClick(filteredEvents[currentIndex + 1].id)}
-                  />
-                </div>
-              )}
+      <div className="flex-1 relative">
+        {filteredEvents.length > 0 ? (
+          <div className="absolute inset-0">
+            {/* Current Card */}
+            {currentIndex < filteredEvents.length && (
+              <div className="absolute inset-0 z-10">
+                <WouliEventCard
+                  event={filteredEvents[currentIndex]}
+                  variant="swipe"
+                  enableSwipe={true}
+                  isLiked={likedEvents.includes(filteredEvents[currentIndex].id)}
+                  isParticipating={participatingEvents.includes(filteredEvents[currentIndex].id)}
+                  onLike={() => handleLike(filteredEvents[currentIndex].id)}
+                  onDislike={handleDislike}
+                  onSwipeLeft={handleDislike}
+                  onSwipeRight={() => handleLike(filteredEvents[currentIndex].id)}
+                  onParticipate={() => handleParticipate(filteredEvents[currentIndex].id)}
+                  onCardClick={() => handleCardClick(filteredEvents[currentIndex].id)}
+                  onShare={() => {
+                    if (navigator.share) {
+                      navigator.share({
+                        title: filteredEvents[currentIndex].title,
+                        text: `Découvre cet événement : ${filteredEvents[currentIndex].title}`,
+                        url: window.location.origin + `/events/${filteredEvents[currentIndex].id}`
+                      });
+                    }
+                  }}
+                />
+              </div>
+            )}
+            
+            {/* Next Card Preview */}
+            {currentIndex + 1 < filteredEvents.length && (
+              <div className="absolute inset-0 z-0 transform scale-95 opacity-50 pointer-events-none">
+                <WouliEventCard
+                  event={filteredEvents[currentIndex + 1]}
+                  variant="swipe"
+                  enableSwipe={false}
+                  isLiked={likedEvents.includes(filteredEvents[currentIndex + 1].id)}
+                  isParticipating={participatingEvents.includes(filteredEvents[currentIndex + 1].id)}
+                  onLike={() => {}}
+                  onSwipeLeft={() => {}}
+                  onSwipeRight={() => {}}
+                  onParticipate={() => {}}
+                  onCardClick={() => handleCardClick(filteredEvents[currentIndex + 1].id)}
+                />
+              </div>
+            )}
+
+            {/* Fixed Action Buttons */}
+            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20">
+              <div className="flex items-center justify-center gap-6">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="w-14 h-14 rounded-full bg-background/80 backdrop-blur-sm hover:bg-destructive hover:text-destructive-foreground border-2"
+                  onClick={handleDislike}
+                >
+                  ✕
+                </Button>
+                
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="w-16 h-16 rounded-full bg-background/80 backdrop-blur-sm hover:bg-secondary hover:text-secondary-foreground border-2"
+                  onClick={() => currentEvent && handleParticipate(currentEvent.id)}
+                >
+                  ★
+                </Button>
+                
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="w-14 h-14 rounded-full bg-background/80 backdrop-blur-sm hover:bg-primary hover:text-primary-foreground border-2"
+                  onClick={() => currentEvent && handleLike(currentEvent.id)}
+                >
+                  ❤️
+                </Button>
+              </div>
             </div>
-          ) : (
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-full">
             <div className="text-center p-8">
               <p className="text-muted-foreground">Aucun événement disponible dans cette catégorie</p>
               <Button 
@@ -175,8 +207,8 @@ const UserApp = () => {
                 Voir tous les événements
               </Button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       <BottomNavigation />
