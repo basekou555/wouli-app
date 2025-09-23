@@ -179,4 +179,19 @@
   .instagram-gradient {
     background: var(--wouli-gradient);
   }
+  
+  /* Text shadow for readability on dark backgrounds */
+  .text-shadow {
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }
