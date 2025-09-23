@@ -79,7 +79,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
     setSwipeDirection(null);
   };
 
-  // Card content for swipe variant
+  // Immersive Tinder-like content for swipe variant
   const SwipeCardContent = () => {
     const urgencyLabel = getUrgencyBadge(event.date, event.time);
     const priceInfo = getPriceInfo(event.price_text);
@@ -87,235 +87,138 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
     const totalParticipants = event.totalParticipants || event.participants || 0;
 
     return (
-      <>
-        {/* Zone Image (70%) */}
-        <div className="relative aspect-[4/5]">
-          <img
+      <div className="h-full w-full bg-gradient-to-b from-transparent to-black/60 rounded-2xl overflow-hidden shadow-2xl relative">
+        {/* Image plein écran */}
+        <div className="absolute inset-0">
+          <img 
             src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/400/500?random=event"}
             alt={event.title}
             className="w-full h-full object-cover"
             onError={handleImageError}
           />
-          
-          {/* Zone cliquable transparente pour la navigation */}
-          <div 
-            className="absolute inset-0 z-10"
-            onClick={() => onCardClick?.()}
-            onTouchEnd={(e) => {
-              e.preventDefault();
-              onCardClick?.();
-            }}
-            style={{ pointerEvents: 'auto' }}
-          />
-          
-          {/* Badge urgence - coin supérieur droit */}
-          {urgencyLabel && (
-            <Badge className="absolute top-3 right-3 bg-red-500 text-white border-none animate-pulse hover:animate-none text-xs font-medium px-2 py-1 rounded-lg shadow-lg z-20">
-              {urgencyLabel}
-            </Badge>
-          )}
-          
-          {/* Bouton partage - coin supérieur gauche */}
-          {onShare && (
-            <Button 
-              size="sm"
-              className="pressable absolute top-3 left-3 w-10 h-10 bg-white/90 backdrop-blur rounded-full p-0 hover:bg-white border-0 z-20"
-              onClick={(e) => {
-                e.stopPropagation();
-                onShare();
-              }}
-              onTouchStart={(e) => {
-                e.stopPropagation();
-                onShare();
-              }}
-            >
-              <Share2 className="h-4 w-4 text-gray-700" />
-            </Button>
-          )}
+          {/* Gradient overlay pour lisibilité du texte */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
         </div>
         
-        {/* Zone Informations (20%) - aussi cliquable */}
-        <div className="p-4 space-y-2 relative">
-          {/* Zone cliquable transparente */}
-          <div 
-            className="absolute inset-0 z-10"
-            onClick={() => onCardClick?.()}
-            onTouchEnd={(e) => {
-              e.preventDefault();
-              onCardClick?.();
+        {/* Zone cliquable transparente pour navigation */}
+        <div 
+          className="absolute inset-0 z-10"
+          onClick={() => onCardClick?.()}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            onCardClick?.();
+          }}
+          style={{ pointerEvents: 'auto' }}
+        />
+        
+        {/* Badge urgence - coin supérieur droit */}
+        {urgencyLabel && (
+          <Badge className="absolute top-4 right-4 bg-red-500/90 backdrop-blur-sm text-white border-none animate-pulse text-sm font-medium px-3 py-1 rounded-lg shadow-lg z-20">
+            {urgencyLabel}
+          </Badge>
+        )}
+        
+        {/* Bouton partage - coin supérieur gauche */}
+        {onShare && (
+          <Button 
+            size="sm"
+            className="absolute top-4 left-4 w-12 h-12 bg-white/20 backdrop-blur-md rounded-full p-0 hover:bg-white/30 border-0 z-20"
+            onClick={(e) => {
+              e.stopPropagation();
+              onShare();
             }}
-          />
+          >
+            <Share2 className="h-5 w-5 text-white" />
+          </Button>
+        )}
+        
+        {/* Contenu en bas de carte */}
+        <div className="absolute bottom-0 p-6 text-white z-20">
+          <h2 className="text-3xl font-bold mb-2 text-white drop-shadow-lg">
+            {event.title}
+          </h2>
+          <div className="flex items-center gap-4 text-sm mb-3">
+            <span className="flex items-center gap-1">
+              📍 {getLocationDisplay(event.venue, event.location)}
+            </span>
+            <span className="flex items-center gap-1">
+              🕐 {formatEventDateTime(event.date, event.time)}
+            </span>
+            <span className="flex items-center gap-1">
+              💰 {priceInfo.isFree ? 'Gratuit' : priceInfo.display}
+            </span>
+          </div>
           
-          {/* Ligne 1: Titre • Prix */}
-          <div className="flex justify-between items-start gap-2">
-            <h3 className="font-bold text-lg text-foreground line-clamp-2 flex-1">
-              {event.title}
-            </h3>
-            {!priceInfo.isFree && (
-              <div className="flex items-center gap-1 text-purple-500 font-semibold whitespace-nowrap">
-                <Euro className="w-4 h-4" />
-                <span>{priceInfo.display}</span>
+          {/* Social proof */}
+          <div className="flex items-center gap-2">
+            {friends.length > 0 && (
+              <div className="flex -space-x-2">
+                {friends.slice(0, 3).map((friend) => (
+                  <div 
+                    key={friend.id} 
+                    className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-sm font-medium text-white border-2 border-white"
+                  >
+                    {friend.avatar ? (
+                      <img src={friend.avatar} alt={friend.name} className="w-full h-full rounded-full object-cover" />
+                    ) : (
+                      friend.name.charAt(0).toUpperCase()
+                    )}
+                  </div>
+                ))}
               </div>
             )}
-          </div>
-          
-          {/* Ligne 2: Heure • Lieu */}
-          <div className="text-sm text-muted-foreground">
-            {formatEventDateTime(event.date, event.time)} • {getLocationDisplay(event.venue, event.location)}
-          </div>
-          
-          {/* Ligne 3: Social proof */}
-          <div>
-            <div className="flex items-center space-x-2">
-              {/* Avatars amis (3 max, 24px, overlap -space-x-2) */}
-              {friends.length > 0 && (
-                <div className="flex -space-x-2">
-                  {friends.slice(0, 3).map((friend) => (
-                    <div 
-                      key={friend.id} 
-                      className="w-6 h-6 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-xs font-medium text-white border-2 border-white"
-                    >
-                      {friend.avatar ? (
-                        <img src={friend.avatar} alt={friend.name} className="w-full h-full rounded-full object-cover" />
-                      ) : (
-                        friend.name.charAt(0).toUpperCase()
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-              
-              {/* Texte social proof */}
-              <span className="text-xs text-muted-foreground">
-                {friends.length > 0 
-                  ? `${friends.length} amis, ${totalParticipants} total`
-                  : totalParticipants > 0 
-                    ? `${totalParticipants} personnes intéressées`
-                    : "Sois le premier"
-                }
-              </span>
-            </div>
+            <span className="text-sm opacity-90">
+              {friends.length > 0 
+                ? `${friends.length} amis, +${totalParticipants - friends.length} autres`
+                : totalParticipants > 0 
+                  ? `+${totalParticipants} personnes intéressées`
+                  : "Sois le premier de tes amis"
+              }
+            </span>
           </div>
         </div>
         
-        {/* Zone Actions (10%) */}
-        <div className="px-4 pb-4">
-          <div className="flex gap-3">
-            {/* Bouton × */}
-            {onDislike && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="pressable h-11 flex-1 bg-gray-100 hover:bg-gray-200 border-gray-200"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDislike();
-                }}
-                onTouchStart={(e) => {
-                  e.stopPropagation();
-                  onDislike();
-                }}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-            
-            {/* Bouton Participer */}
-            <Button 
-              className={`pressable h-11 font-semibold ${
-                onDislike ? 'flex-[2]' : 'flex-1'
-              } ${
-                isParticipating 
-                  ? 'bg-green-500 hover:bg-green-600 text-white' 
-                  : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white'
-              }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onParticipate();
-              }}
-              onTouchStart={(e) => {
-                e.stopPropagation();
-                onParticipate();
-              }}
-            >
-              {isParticipating ? '✅ Inscrit' : 'Participer'}
-            </Button>
-            
-            {/* Bouton ♡ */}
-            <Button 
-              variant="outline" 
-              size="sm"
-              className={`pressable h-11 flex-1 border-2 ${
-                isLiked 
-                  ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' 
-                  : 'bg-background hover:bg-muted border-border'
-              }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onLike();
-              }}
-              onTouchStart={(e) => {
-                e.stopPropagation();
-                onLike();
-              }}
-            >
-              <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
-            </Button>
+        {/* Overlays dynamiques (apparaissent pendant le swipe) */}
+        {swipeDirection === 'left' && (
+          <div className="absolute top-20 left-10 rotate-[-30deg] z-30">
+            <span className="text-6xl font-bold text-red-500 border-4 border-red-500 px-4 py-2 rounded-xl bg-white/10 backdrop-blur-sm">
+              NOPE
+            </span>
           </div>
-        </div>
-      </>
+        )}
+        {swipeDirection === 'right' && (
+          <div className="absolute top-20 right-10 rotate-[30deg] z-30">
+            <span className="text-6xl font-bold text-green-500 border-4 border-green-500 px-4 py-2 rounded-xl bg-white/10 backdrop-blur-sm">
+              LIKE
+            </span>
+          </div>
+        )}
+      </div>
     );
   };
 
-  // VARIANTE SWIPE
+  // VARIANTE SWIPE - Format immersif Tinder
   if (variant === 'swipe') {
     return enableSwipe ? (
-      <div className="relative">
+      <div className="relative w-full h-full">
         <TinderCard
           onSwipe={handleSwipe}
           onCardLeftScreen={handleCardLeftScreen}
           preventSwipe={['up', 'down']} // Bloquer swipes verticaux
+          flickOnSwipe={true} // Animation fluide
           swipeRequirementType="position"
-          swipeThreshold={Math.round(window.innerWidth * 0.4)}
+          swipeThreshold={100} // Distance minimum pour valider
           className="absolute w-full h-full"
         >
-          <Card 
-            className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card ${className}`}
-            style={{ overflow: 'hidden' }}
-          >
+          <div className={`w-full h-full ${className}`}>
             <SwipeCardContent />
-          </Card>
+          </div>
         </TinderCard>
-
-        {/* OVERLAYS AVEC EMOJIS - Logique préservée */}
-        <div
-          style={{
-            opacity: swipeDirection === 'right' ? 1 : 0,
-            pointerEvents: 'none',
-            transition: 'opacity 0.1s ease-out'
-          }}
-          className="absolute top-6 left-6 text-4xl z-50"
-        >
-          ❤️
-        </div>
-        
-        <div
-          style={{
-            opacity: swipeDirection === 'left' ? 1 : 0,
-            pointerEvents: 'none',
-            transition: 'opacity 0.1s ease-out'
-          }}
-          className="absolute top-6 right-6 text-4xl z-50"
-        >
-          ❌
-        </div>
       </div>
     ) : (
-      <Card 
-        className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card ${className}`}
-      >
+      <div className={`w-full h-full ${className}`}>
         <SwipeCardContent />
-      </Card>
+      </div>
     );
   }
 
