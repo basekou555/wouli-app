@@ -85,13 +85,11 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
     const priceInfo = getPriceInfo(event.price_text);
     const friends = event.friendsParticipating || [];
     const totalParticipants = event.totalParticipants || event.participants || 0;
-    const locationText = getLocationDisplay(event.venue, event.location);
-    const dateTimeText = formatEventDateTime(event.date, event.time);
 
     return (
       <>
-        {/* Image section - ratio 4:5 */}
-        <div className="relative aspect-[4/5] w-full">
+        {/* Zone Image (70%) */}
+        <div className="relative aspect-[4/5]">
           <img
             src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/400/500?random=event"}
             alt={event.title}
@@ -110,27 +108,18 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
             style={{ pointerEvents: 'auto' }}
           />
           
-          {/* Urgency Badge */}
+          {/* Badge urgence - coin supérieur droit */}
           {urgencyLabel && (
-            <div className="absolute top-4 left-4">
-              <span className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                {urgencyLabel}
-              </span>
-            </div>
+            <Badge className="absolute top-3 right-3 bg-red-500 text-white border-none animate-pulse hover:animate-none text-xs font-medium px-2 py-1 rounded-lg shadow-lg z-20">
+              {urgencyLabel}
+            </Badge>
           )}
           
-          {/* Price Badge */}
-          <div className="absolute top-4 right-4">
-            <span className="bg-white/90 backdrop-blur-sm text-gray-900 px-3 py-1 rounded-full text-sm font-semibold">
-              {priceInfo.display}
-            </span>
-          </div>
-          
-          {/* Bouton partage - coin supérieur gauche si pas de badge urgence */}
-          {onShare && !urgencyLabel && (
+          {/* Bouton partage - coin supérieur gauche */}
+          {onShare && (
             <Button 
               size="sm"
-              className="pressable absolute top-4 left-4 w-10 h-10 bg-white/90 backdrop-blur rounded-full p-0 hover:bg-white border-0 z-20"
+              className="pressable absolute top-3 left-3 w-10 h-10 bg-white/90 backdrop-blur rounded-full p-0 hover:bg-white border-0 z-20"
               onClick={(e) => {
                 e.stopPropagation();
                 onShare();
@@ -143,26 +132,10 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
               <Share2 className="h-4 w-4 text-gray-700" />
             </Button>
           )}
-          
-          {/* Swipe Overlays */}
-          {swipeDirection === 'left' && (
-            <div className="absolute inset-0 flex items-center justify-center bg-red-500/20">
-              <div className="transform rotate-[-30deg] border-4 border-red-500 rounded-xl px-4 py-2">
-                <span className="text-4xl font-bold text-red-500">NOPE</span>
-              </div>
-            </div>
-          )}
-          {swipeDirection === 'right' && (
-            <div className="absolute inset-0 flex items-center justify-center bg-green-500/20">
-              <div className="transform rotate-[30deg] border-4 border-green-500 rounded-xl px-4 py-2">
-                <span className="text-4xl font-bold text-green-500">LIKE</span>
-              </div>
-            </div>
-          )}
         </div>
         
-        {/* Event Info Section - Sous l'image, PAS en overlay */}
-        <div className="p-4 flex-1 flex flex-col justify-between bg-white">
+        {/* Zone Informations (20%) - aussi cliquable */}
+        <div className="p-4 space-y-2 relative">
           {/* Zone cliquable transparente */}
           <div 
             className="absolute inset-0 z-10"
@@ -173,53 +146,121 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
             }}
           />
           
-          <div>
-            {/* Title en gros */}
-            <h2 className="text-2xl font-bold text-gray-900 mb-2 line-clamp-2">
+          {/* Ligne 1: Titre • Prix */}
+          <div className="flex justify-between items-start gap-2">
+            <h3 className="font-bold text-lg text-foreground line-clamp-2 flex-1">
               {event.title}
-            </h2>
-            
-            {/* Location, Time, Price sur une ligne */}
-            <div className="flex items-center gap-4 text-sm text-gray-600 mb-3 flex-wrap">
-              <span className="flex items-center gap-1">
-                📍 {locationText}
-              </span>
-              <span className="flex items-center gap-1">
-                🕐 {dateTimeText}
-              </span>
-              <span className="flex items-center gap-1">
-                💰 {priceInfo.display}
+            </h3>
+            {!priceInfo.isFree && (
+              <div className="flex items-center gap-1 text-purple-500 font-semibold whitespace-nowrap">
+                <Euro className="w-4 h-4" />
+                <span>{priceInfo.display}</span>
+              </div>
+            )}
+          </div>
+          
+          {/* Ligne 2: Heure • Lieu */}
+          <div className="text-sm text-muted-foreground">
+            {formatEventDateTime(event.date, event.time)} • {getLocationDisplay(event.venue, event.location)}
+          </div>
+          
+          {/* Ligne 3: Social proof */}
+          <div>
+            <div className="flex items-center space-x-2">
+              {/* Avatars amis (3 max, 24px, overlap -space-x-2) */}
+              {friends.length > 0 && (
+                <div className="flex -space-x-2">
+                  {friends.slice(0, 3).map((friend) => (
+                    <div 
+                      key={friend.id} 
+                      className="w-6 h-6 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-xs font-medium text-white border-2 border-white"
+                    >
+                      {friend.avatar ? (
+                        <img src={friend.avatar} alt={friend.name} className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        friend.name.charAt(0).toUpperCase()
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Texte social proof */}
+              <span className="text-xs text-muted-foreground">
+                {friends.length > 0 
+                  ? `${friends.length} amis, ${totalParticipants} total`
+                  : totalParticipants > 0 
+                    ? `${totalParticipants} personnes intéressées`
+                    : "Sois le premier"
+                }
               </span>
             </div>
           </div>
-          
-          {/* Social Proof */}
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            {/* Friends avatars placeholder */}
-            {friends.length > 0 && (
-              <div className="flex -space-x-1">
-                {friends.slice(0, 3).map((friend) => (
-                  <div 
-                    key={friend.id} 
-                    className="w-6 h-6 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-xs font-medium text-white border-2 border-white"
-                  >
-                    {friend.avatar ? (
-                      <img src={friend.avatar} alt={friend.name} className="w-full h-full rounded-full object-cover" />
-                    ) : (
-                      friend.name.charAt(0).toUpperCase()
-                    )}
-                  </div>
-                ))}
-              </div>
+        </div>
+        
+        {/* Zone Actions (10%) */}
+        <div className="px-4 pb-4">
+          <div className="flex gap-3">
+            {/* Bouton × */}
+            {onDislike && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="pressable h-11 flex-1 bg-gray-100 hover:bg-gray-200 border-gray-200"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDislike();
+                }}
+                onTouchStart={(e) => {
+                  e.stopPropagation();
+                  onDislike();
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
             )}
-            <span>
-              {friends.length > 0 
-                ? `${friends.length} amis, ${totalParticipants} total`
-                : totalParticipants > 0 
-                  ? `${totalParticipants} personnes intéressées`
-                  : "Sois le premier de tes amis"
-              }
-            </span>
+            
+            {/* Bouton Participer */}
+            <Button 
+              className={`pressable h-11 font-semibold ${
+                onDislike ? 'flex-[2]' : 'flex-1'
+              } ${
+                isParticipating 
+                  ? 'bg-green-500 hover:bg-green-600 text-white' 
+                  : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white'
+              }`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onParticipate();
+              }}
+              onTouchStart={(e) => {
+                e.stopPropagation();
+                onParticipate();
+              }}
+            >
+              {isParticipating ? '✅ Inscrit' : 'Participer'}
+            </Button>
+            
+            {/* Bouton ♡ */}
+            <Button 
+              variant="outline" 
+              size="sm"
+              className={`pressable h-11 flex-1 border-2 ${
+                isLiked 
+                  ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' 
+                  : 'bg-background hover:bg-muted border-border'
+              }`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onLike();
+              }}
+              onTouchStart={(e) => {
+                e.stopPropagation();
+                onLike();
+              }}
+            >
+              <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
+            </Button>
           </div>
         </div>
       </>
@@ -229,39 +270,52 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
   // VARIANTE SWIPE
   if (variant === 'swipe') {
     return enableSwipe ? (
-      <div className="relative w-full h-full">
+      <div className="relative">
         <TinderCard
-          onSwipe={(dir) => {
-            if (dir === 'left') {
-              setSwipeDirection('left');
-              setTimeout(() => {
-                onSwipeLeft?.();
-                setSwipeDirection(null);
-              }, 200);
-            } else if (dir === 'right') {
-              setSwipeDirection('right');
-              setTimeout(() => {
-                onSwipeRight?.();
-                setSwipeDirection(null);
-              }, 200);
-            }
-          }}
-          onCardLeftScreen={() => setSwipeDirection(null)}
-          preventSwipe={['up', 'down']}
-          flickOnSwipe={true}
+          onSwipe={handleSwipe}
+          onCardLeftScreen={handleCardLeftScreen}
+          preventSwipe={['up', 'down']} // Bloquer swipes verticaux
           swipeRequirementType="position"
-          swipeThreshold={100}
+          swipeThreshold={Math.round(window.innerWidth * 0.4)}
           className="absolute w-full h-full"
         >
-          <div className="w-full bg-white rounded-2xl shadow-2xl overflow-hidden h-full flex flex-col">
+          <Card 
+            className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card ${className}`}
+            style={{ overflow: 'hidden' }}
+          >
             <SwipeCardContent />
-          </div>
+          </Card>
         </TinderCard>
+
+        {/* OVERLAYS AVEC EMOJIS - Logique préservée */}
+        <div
+          style={{
+            opacity: swipeDirection === 'right' ? 1 : 0,
+            pointerEvents: 'none',
+            transition: 'opacity 0.1s ease-out'
+          }}
+          className="absolute top-6 left-6 text-4xl z-50"
+        >
+          ❤️
+        </div>
+        
+        <div
+          style={{
+            opacity: swipeDirection === 'left' ? 1 : 0,
+            pointerEvents: 'none',
+            transition: 'opacity 0.1s ease-out'
+          }}
+          className="absolute top-6 right-6 text-4xl z-50"
+        >
+          ❌
+        </div>
       </div>
     ) : (
-      <div className="w-full bg-white rounded-2xl shadow-2xl overflow-hidden h-full flex flex-col">
+      <Card 
+        className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card ${className}`}
+      >
         <SwipeCardContent />
-      </div>
+      </Card>
     );
   }
 
