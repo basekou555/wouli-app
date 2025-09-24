@@ -7,7 +7,6 @@ import { WOULI_CATEGORIES as categories } from '../data/wouliCategories';
 import { useAllEvents } from '@/hooks/useAllEvents';
 import { useSimpleEventInteractions } from '@/hooks/useSimpleEventInteractions';
 import { useAuth } from '../contexts/AuthContext';
-import { useRealTimeEvents } from '../hooks/useRealTimeEvents';
 import { supabase } from '@/integrations/supabase/client';
 import BottomNavigation from '../components/BottomNavigation';
 import WouliEventCard from '@/components/cards/WouliEventCard';
@@ -41,8 +40,8 @@ const UserApp = () => {
     return selectedCategory === 'all' ? allEvents : allEvents.filter(event => event.category === selectedCategory);
   }, [allEvents, selectedCategory]);
 
-  // Set up real-time updates for event stats
-  useRealTimeEvents(filteredEvents, refetch);
+  // Real-time updates will be handled by periodic refetch for now
+  // useRealTimeEvents causes subscription conflicts when called with refetch
 
   // Redirection vers auth si pas connecté
   useEffect(() => {
