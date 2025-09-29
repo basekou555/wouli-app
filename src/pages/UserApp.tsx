@@ -114,10 +114,10 @@ const UserApp = () => {
       )}
 
       {/* Card Stack Container */}
-      <div className="flex-1 flex items-center justify-center px-3 overflow-hidden">
-        <div className="w-full h-full flex items-center justify-center pb-20">
+      <div className="flex-1 flex items-center justify-center px-3 pb-20 overflow-hidden">
+        <div className="w-full h-full flex items-center justify-center">
           {filteredEvents.length > 0 ? (
-            <div className="relative w-full h-full max-w-sm mx-auto flex items-center justify-center">
+            <div className="relative w-full max-h-full flex items-center justify-center">
               {/* Current Card */}
               {currentIndex < filteredEvents.length && (
                 <div className="absolute inset-0 z-10">
