@@ -280,7 +280,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
           className="absolute w-full h-full"
         >
           <Card 
-            className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card ${className}`}
+            className={`w-full rounded-xl shadow-xl overflow-hidden bg-card ${className}`}
             style={{ overflow: 'hidden' }}
           >
             <SwipeCardContent />
@@ -312,7 +312,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
       </div>
     ) : (
       <Card 
-        className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card ${className}`}
+        className={`w-full rounded-xl shadow-xl overflow-hidden bg-card ${className}`}
       >
         <SwipeCardContent />
       </Card>

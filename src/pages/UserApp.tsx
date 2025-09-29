@@ -114,8 +114,8 @@ const UserApp = () => {
       )}
 
       {/* Card Stack Container */}
-      <div className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-sm relative">
+      <div className="flex-1 flex items-center justify-center px-3">
+        <div className="w-full relative">
           {filteredEvents.length > 0 ? (
             <div className="relative h-[600px]">
               {/* Current Card */}
