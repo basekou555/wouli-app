@@ -72,7 +72,7 @@ const UserApp = () => {
     return <PageSkeleton />;
   }
   return (
-    <div className="min-h-screen bg-background flex flex-col pb-20">
+    <div className="min-h-screen bg-background flex flex-col pb-24">
       {/* Header */}
       <div className="bg-card shadow-sm p-4">
         <div className="flex items-center justify-between">
@@ -114,7 +114,7 @@ const UserApp = () => {
       )}
 
       {/* Card Stack Container */}
-      <div className="flex-1 flex items-center justify-center px-3">
+      <div className="flex-1 flex items-center justify-center px-3 pb-4">
         <div className="w-full relative">
           {filteredEvents.length > 0 ? (
             <div className="relative h-[600px]">
