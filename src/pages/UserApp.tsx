@@ -72,9 +72,9 @@ const UserApp = () => {
     return <PageSkeleton />;
   }
   return (
-    <div className="min-h-screen bg-background flex flex-col pb-24">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="bg-card shadow-sm p-4">
+      <div className="bg-card shadow-sm p-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gradient">Wouli</h1>
@@ -96,7 +96,7 @@ const UserApp = () => {
 
       {/* Filters */}
       {showFilters && (
-        <div className="bg-card border-b p-4">
+        <div className="bg-card border-b p-4 flex-shrink-0">
           <div className="flex gap-2 overflow-x-auto pb-2">
             {categories.map(category => (
               <Button 
@@ -114,10 +114,10 @@ const UserApp = () => {
       )}
 
       {/* Card Stack Container */}
-      <div className="flex-1 flex items-center justify-center px-3 pb-4">
-        <div className="w-full relative">
+      <div className="flex-1 flex items-center justify-center px-3 pb-20 overflow-hidden">
+        <div className="w-full h-full flex items-center justify-center">
           {filteredEvents.length > 0 ? (
-            <div className="relative h-[600px]">
+            <div className="relative w-full max-h-full flex items-center justify-center">
               {/* Current Card */}
               {currentIndex < filteredEvents.length && (
                 <div className="absolute inset-0 z-10">
