@@ -87,9 +87,9 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
     const totalParticipants = event.totalParticipants || event.participants || 0;
 
     return (
-      <>
+      <div className="h-full flex flex-col">
         {/* Zone Image (70%) */}
-        <div className="relative aspect-[4/5]">
+        <div className="relative flex-1 min-h-0">
           <img
             src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/400/500?random=event"}
             alt={event.title}
@@ -135,7 +135,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
         </div>
         
         {/* Zone Informations (20%) - aussi cliquable */}
-        <div className="p-4 space-y-2 relative">
+        <div className="p-4 space-y-2 relative flex-shrink-0">
           {/* Zone cliquable transparente */}
           <div 
             className="absolute inset-0 z-10"
@@ -199,7 +199,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
         </div>
         
         {/* Zone Actions (10%) */}
-        <div className="px-4 pb-4">
+        <div className="px-4 pb-4 flex-shrink-0">
           <div className="flex gap-3">
             {/* Bouton × */}
             {onDislike && (
@@ -263,7 +263,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
             </Button>
           </div>
         </div>
-      </>
+      </div>
     );
   };
 
@@ -279,10 +279,10 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
           swipeThreshold={Math.round(window.innerWidth * 0.4)}
           className="absolute w-full h-full"
         >
-          <Card 
-            className={`w-full rounded-xl shadow-xl overflow-hidden bg-card ${className}`}
-            style={{ overflow: 'hidden' }}
-          >
+      <Card 
+        className={`w-full h-full max-h-[calc(100vh-180px)] rounded-xl shadow-xl overflow-hidden bg-card ${className}`}
+        style={{ overflow: 'hidden' }}
+      >
             <SwipeCardContent />
           </Card>
         </TinderCard>
@@ -312,7 +312,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
       </div>
     ) : (
       <Card 
-        className={`w-full rounded-xl shadow-xl overflow-hidden bg-card ${className}`}
+        className={`w-full h-full max-h-[calc(100vh-180px)] rounded-xl shadow-xl overflow-hidden bg-card ${className}`}
       >
         <SwipeCardContent />
       </Card>
