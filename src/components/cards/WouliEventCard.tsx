@@ -88,8 +88,8 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
 
     return (
       <>
-        {/* Zone Image (70%) */}
-        <div className="relative aspect-[4/5]">
+        {/* Zone Image (ratio 4:5) */}
+        <div className="relative aspect-[4/5] rounded-t-2xl overflow-hidden">
           <img
             src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/400/500?random=event"}
             alt={event.title}
@@ -119,7 +119,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
           {onShare && (
             <Button 
               size="sm"
-              className="pressable absolute top-3 left-3 w-10 h-10 bg-white/90 backdrop-blur rounded-full p-0 hover:bg-white border-0 z-20"
+              className="absolute top-3 left-3 w-10 h-10 bg-white/90 backdrop-blur rounded-full p-0 hover:bg-white border-0 z-20"
               onClick={(e) => {
                 e.stopPropagation();
                 onShare();
@@ -132,10 +132,24 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
               <Share2 className="h-4 w-4 text-gray-700" />
             </Button>
           )}
+
+          {/* Badge prix - coin inférieur droit */}
+          <div className="absolute bottom-3 right-3 z-20">
+            <Badge 
+              variant={priceInfo.isFree ? "secondary" : "default"}
+              className={`${
+                priceInfo.isFree 
+                  ? 'bg-green-500/90 text-white' 
+                  : 'bg-purple-500/90 text-white'
+              } backdrop-blur-sm border-none font-semibold`}
+            >
+              {priceInfo.display}
+            </Badge>
+          </div>
         </div>
         
-        {/* Zone Informations (20%) - aussi cliquable */}
-        <div className="p-4 space-y-2 relative">
+        {/* Zone Informations - SOUS l'image */}
+        <div className="p-4 space-y-3 bg-background rounded-b-2xl">
           {/* Zone cliquable transparente */}
           <div 
             className="absolute inset-0 z-10"
@@ -146,121 +160,47 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
             }}
           />
           
-          {/* Ligne 1: Titre • Prix */}
-          <div className="flex justify-between items-start gap-2">
-            <h3 className="font-bold text-lg text-foreground line-clamp-2 flex-1">
-              {event.title}
-            </h3>
-            {!priceInfo.isFree && (
-              <div className="flex items-center gap-1 text-purple-500 font-semibold whitespace-nowrap">
-                <Euro className="w-4 h-4" />
-                <span>{priceInfo.display}</span>
+          {/* Titre en gros */}
+          <h3 className="font-bold text-2xl text-foreground line-clamp-2">
+            {event.title}
+          </h3>
+          
+          {/* Ligne info : lieu, heure, prix */}
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <span>{formatEventDateTime(event.date, event.time)}</span>
+            <span>•</span>
+            <span>{getLocationDisplay(event.venue, event.location)}</span>
+          </div>
+          
+          {/* Social proof */}
+          <div className="flex items-center space-x-2">
+            {/* Avatars amis */}
+            {friends.length > 0 && (
+              <div className="flex -space-x-2">
+                {friends.slice(0, 3).map((friend) => (
+                  <div 
+                    key={friend.id} 
+                    className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-sm font-medium text-white border-2 border-white"
+                  >
+                    {friend.avatar ? (
+                      <img src={friend.avatar} alt={friend.name} className="w-full h-full rounded-full object-cover" />
+                    ) : (
+                      friend.name.charAt(0).toUpperCase()
+                    )}
+                  </div>
+                ))}
               </div>
             )}
-          </div>
-          
-          {/* Ligne 2: Heure • Lieu */}
-          <div className="text-sm text-muted-foreground">
-            {formatEventDateTime(event.date, event.time)} • {getLocationDisplay(event.venue, event.location)}
-          </div>
-          
-          {/* Ligne 3: Social proof */}
-          <div>
-            <div className="flex items-center space-x-2">
-              {/* Avatars amis (3 max, 24px, overlap -space-x-2) */}
-              {friends.length > 0 && (
-                <div className="flex -space-x-2">
-                  {friends.slice(0, 3).map((friend) => (
-                    <div 
-                      key={friend.id} 
-                      className="w-6 h-6 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-xs font-medium text-white border-2 border-white"
-                    >
-                      {friend.avatar ? (
-                        <img src={friend.avatar} alt={friend.name} className="w-full h-full rounded-full object-cover" />
-                      ) : (
-                        friend.name.charAt(0).toUpperCase()
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-              
-              {/* Texte social proof */}
-              <span className="text-xs text-muted-foreground">
-                {friends.length > 0 
-                  ? `${friends.length} amis, ${totalParticipants} total`
-                  : totalParticipants > 0 
-                    ? `${totalParticipants} personnes intéressées`
-                    : "Sois le premier"
-                }
-              </span>
-            </div>
-          </div>
-        </div>
-        
-        {/* Zone Actions (10%) */}
-        <div className="px-4 pb-4">
-          <div className="flex gap-3">
-            {/* Bouton × */}
-            {onDislike && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="pressable h-11 flex-1 bg-gray-100 hover:bg-gray-200 border-gray-200"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDislike();
-                }}
-                onTouchStart={(e) => {
-                  e.stopPropagation();
-                  onDislike();
-                }}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
             
-            {/* Bouton Participer */}
-            <Button 
-              className={`pressable h-11 font-semibold ${
-                onDislike ? 'flex-[2]' : 'flex-1'
-              } ${
-                isParticipating 
-                  ? 'bg-green-500 hover:bg-green-600 text-white' 
-                  : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white'
-              }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onParticipate();
-              }}
-              onTouchStart={(e) => {
-                e.stopPropagation();
-                onParticipate();
-              }}
-            >
-              {isParticipating ? '✅ Inscrit' : 'Participer'}
-            </Button>
-            
-            {/* Bouton ♡ */}
-            <Button 
-              variant="outline" 
-              size="sm"
-              className={`pressable h-11 flex-1 border-2 ${
-                isLiked 
-                  ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' 
-                  : 'bg-background hover:bg-muted border-border'
-              }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onLike();
-              }}
-              onTouchStart={(e) => {
-                e.stopPropagation();
-                onLike();
-              }}
-            >
-              <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
-            </Button>
+            {/* Texte social proof */}
+            <span className="text-sm text-muted-foreground">
+              {friends.length > 0 
+                ? `${friends[0].name} + ${totalParticipants - 1} autres`
+                : totalParticipants > 0 
+                  ? `${totalParticipants} personnes intéressées`
+                  : "Sois le premier de tes amis"
+              }
+            </span>
           </div>
         </div>
       </>
@@ -274,13 +214,14 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
         <TinderCard
           onSwipe={handleSwipe}
           onCardLeftScreen={handleCardLeftScreen}
-          preventSwipe={['up', 'down']} // Bloquer swipes verticaux
+          preventSwipe={['up', 'down']}
           swipeRequirementType="position"
-          swipeThreshold={Math.round(window.innerWidth * 0.4)}
+          swipeThreshold={Math.round(window.innerWidth * 0.3)}
+          flickOnSwipe={true}
           className="absolute w-full h-full"
         >
           <Card 
-            className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card ${className}`}
+            className={`w-full max-w-md mx-auto rounded-2xl shadow-2xl overflow-hidden bg-card ${className}`}
             style={{ overflow: 'hidden' }}
           >
             <SwipeCardContent />
@@ -312,7 +253,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
       </div>
     ) : (
       <Card 
-        className={`max-w-[343px] rounded-xl shadow-xl overflow-hidden bg-card ${className}`}
+        className={`w-full max-w-md mx-auto rounded-2xl shadow-2xl overflow-hidden bg-card ${className}`}
       >
         <SwipeCardContent />
       </Card>
