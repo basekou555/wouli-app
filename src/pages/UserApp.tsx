@@ -100,68 +100,66 @@ const UserApp = () => {
 
       {/* Card Stack Container */}
       <div className="flex-1 flex items-center justify-center px-3 overflow-hidden">
-        <div className="w-full h-[calc(100vh-210px)] flex items-center justify-center">
-          {filteredEvents.length > 0 ? (
-            <div className="relative w-full max-h-full flex items-center justify-center">
-              {/* Current Card */}
-              {currentIndex < filteredEvents.length && (
-                <div className="absolute inset-0 z-10">
-                  <WouliEventCard
-                    event={filteredEvents[currentIndex]}
-                    variant="swipe"
-                    enableSwipe={true}
-                    isLiked={likedEvents.includes(filteredEvents[currentIndex].id)}
-                    isParticipating={participatingEvents.includes(filteredEvents[currentIndex].id)}
-                    onLike={() => handleLike(filteredEvents[currentIndex].id)}
-                    onDislike={handleDislike}
-                    onSwipeLeft={handleDislike}
-                    onSwipeRight={() => handleLike(filteredEvents[currentIndex].id)}
-                    onParticipate={() => handleParticipate(filteredEvents[currentIndex].id)}
-                    onCardClick={() => handleCardClick(filteredEvents[currentIndex].id)}
-                    onShare={() => {
-                      if (navigator.share) {
-                        navigator.share({
-                          title: filteredEvents[currentIndex].title,
-                          text: `Découvre cet événement : ${filteredEvents[currentIndex].title}`,
-                          url: window.location.origin + `/events/${filteredEvents[currentIndex].id}`
-                        });
-                      }
-                    }}
-                  />
-                </div>
-              )}
-              
-              {/* Next Card Preview */}
-              {currentIndex + 1 < filteredEvents.length && (
-                <div className="absolute inset-0 z-0 transform scale-95 opacity-50 pointer-events-none">
-                  <WouliEventCard
-                    event={filteredEvents[currentIndex + 1]}
-                    variant="swipe"
-                    enableSwipe={false}
-                    isLiked={likedEvents.includes(filteredEvents[currentIndex + 1].id)}
-                    isParticipating={participatingEvents.includes(filteredEvents[currentIndex + 1].id)}
-                    onLike={() => {}}
-                    onSwipeLeft={() => {}}
-                    onSwipeRight={() => {}}
-                    onParticipate={() => {}}
-                    onCardClick={() => handleCardClick(filteredEvents[currentIndex + 1].id)}
-                  />
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="text-center p-8">
-              <p className="text-muted-foreground">Aucun événement disponible dans cette catégorie</p>
-              <Button 
-                variant="outline" 
-                onClick={() => handleCategoryChange('all')} 
-                className="mt-4"
-              >
-                Voir tous les événements
-              </Button>
-            </div>
-          )}
-        </div>
+        {filteredEvents.length > 0 ? (
+          <div className="relative w-full max-w-[400px] mx-auto max-h-full flex items-center justify-center">
+            {/* Current Card */}
+            {currentIndex < filteredEvents.length && (
+              <div className="absolute inset-0 z-10">
+                <WouliEventCard
+                  event={filteredEvents[currentIndex]}
+                  variant="swipe"
+                  enableSwipe={true}
+                  isLiked={likedEvents.includes(filteredEvents[currentIndex].id)}
+                  isParticipating={participatingEvents.includes(filteredEvents[currentIndex].id)}
+                  onLike={() => handleLike(filteredEvents[currentIndex].id)}
+                  onDislike={handleDislike}
+                  onSwipeLeft={handleDislike}
+                  onSwipeRight={() => handleLike(filteredEvents[currentIndex].id)}
+                  onParticipate={() => handleParticipate(filteredEvents[currentIndex].id)}
+                  onCardClick={() => handleCardClick(filteredEvents[currentIndex].id)}
+                  onShare={() => {
+                    if (navigator.share) {
+                      navigator.share({
+                        title: filteredEvents[currentIndex].title,
+                        text: `Découvre cet événement : ${filteredEvents[currentIndex].title}`,
+                        url: window.location.origin + `/events/${filteredEvents[currentIndex].id}`
+                      });
+                    }
+                  }}
+                />
+              </div>
+            )}
+            
+            {/* Next Card Preview */}
+            {currentIndex + 1 < filteredEvents.length && (
+              <div className="absolute inset-0 z-0 transform scale-95 opacity-50 pointer-events-none">
+                <WouliEventCard
+                  event={filteredEvents[currentIndex + 1]}
+                  variant="swipe"
+                  enableSwipe={false}
+                  isLiked={likedEvents.includes(filteredEvents[currentIndex + 1].id)}
+                  isParticipating={participatingEvents.includes(filteredEvents[currentIndex + 1].id)}
+                  onLike={() => {}}
+                  onSwipeLeft={() => {}}
+                  onSwipeRight={() => {}}
+                  onParticipate={() => {}}
+                  onCardClick={() => handleCardClick(filteredEvents[currentIndex + 1].id)}
+                />
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-center p-8">
+            <p className="text-muted-foreground">Aucun événement disponible dans cette catégorie</p>
+            <Button 
+              variant="outline" 
+              onClick={() => handleCategoryChange('all')} 
+              className="mt-4"
+            >
+              Voir tous les événements
+            </Button>
+          </div>
+        )}
       </div>
 
       <BottomNavigation />
