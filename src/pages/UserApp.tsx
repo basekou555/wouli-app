@@ -70,9 +70,9 @@ const UserApp = () => {
     return <PageSkeleton />;
   }
   return (
-    <div className="h-screen bg-background grid grid-rows-[auto_1fr_auto] overflow-hidden">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Header avec Filtres */}
-      <div className="bg-card p-4">
+      <div className="bg-card p-4 flex-shrink-0">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-shrink-0">
             <h1 className="text-2xl font-bold text-gradient">Wouli</h1>
@@ -94,9 +94,9 @@ const UserApp = () => {
       </div>
 
       {/* Card Stack Container */}
-      <div className="flex items-center justify-center px-3 py-4 overflow-hidden">
+      <div className="flex-1 flex items-start justify-center px-3 pt-4 overflow-hidden">
         {filteredEvents.length > 0 ? (
-          <div className="relative w-full max-w-[400px] mx-auto" style={{ aspectRatio: '9/16', maxHeight: '600px' }}>
+          <div className="relative w-full max-w-[400px] mx-auto max-h-full flex items-start justify-center">
             {/* Current Card */}
             {currentIndex < filteredEvents.length && (
               <div className="absolute inset-0 z-10">
