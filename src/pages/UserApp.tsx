@@ -71,18 +71,14 @@ const UserApp = () => {
   }
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="bg-card shadow-sm p-4 flex-shrink-0">
-        <div className="flex items-center justify-between">
+      {/* Header avec Filtres */}
+      <div className="bg-card shadow-sm border-b p-4 flex-shrink-0">
+        <div className="flex items-center justify-between mb-3">
           <div>
             <h1 className="text-2xl font-bold text-gradient">Wouli</h1>
             <p className="text-muted-foreground text-sm">Découvre des événements près de toi</p>
           </div>
         </div>
-      </div>
-
-      {/* Filters - Always Visible */}
-      <div className="bg-card border-b p-4 flex-shrink-0">
         <div className="flex gap-2 overflow-x-auto pb-2">
           {categories.map(category => (
             <Button 
