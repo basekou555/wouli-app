@@ -30,7 +30,7 @@ const BottomNavigation = () => {
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 h-[60px] bg-white border-t border-gray-200 px-4 shadow-lg flex items-center">
+    <div className="fixed bottom-0 left-0 right-0 h-[60px] bg-white px-4 flex items-center">
       <div className="flex justify-around items-center max-w-md mx-auto w-full">
         {navItems.map((item) => {
           const Icon = item.icon;
