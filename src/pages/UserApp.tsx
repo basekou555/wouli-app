@@ -13,7 +13,6 @@ const UserApp = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [likedEvents, setLikedEvents] = useState<string[]>([]);
   const [participatingEvents, setParticipatingEvents] = useState<string[]>([]);
-  const [showFilters, setShowFilters] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -30,7 +29,6 @@ const UserApp = () => {
   const handleCategoryChange = (categoryId: string) => {
     setSelectedCategory(categoryId);
     setCurrentIndex(0);
-    setShowFilters(false);
   };
   const handleLike = async (eventId: string) => {
     if (!likedEvents.includes(eventId)) {
@@ -80,42 +78,29 @@ const UserApp = () => {
             <h1 className="text-2xl font-bold text-gradient">Wouli</h1>
             <p className="text-muted-foreground text-sm">Découvre des événements près de toi</p>
           </div>
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={() => setShowFilters(!showFilters)} 
-            className="relative"
-          >
-            <Filter className="h-4 w-4" />
-            {selectedCategory !== 'all' && (
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full"></div>
-            )}
-          </Button>
         </div>
       </div>
 
-      {/* Filters */}
-      {showFilters && (
-        <div className="bg-card border-b p-4 flex-shrink-0">
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {categories.map(category => (
-              <Button 
-                key={category.id}
-                variant={selectedCategory === category.id ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleCategoryChange(category.id)}
-                className="whitespace-nowrap"
-              >
-                {category.icon} {category.name}
-              </Button>
-            ))}
-          </div>
+      {/* Filters - Always Visible */}
+      <div className="bg-card border-b p-4 flex-shrink-0">
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {categories.map(category => (
+            <Button 
+              key={category.id}
+              variant={selectedCategory === category.id ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleCategoryChange(category.id)}
+              className="whitespace-nowrap"
+            >
+              {category.icon} {category.name}
+            </Button>
+          ))}
         </div>
-      )}
+      </div>
 
       {/* Card Stack Container */}
-      <div className="flex-1 flex items-start justify-center px-3 pt-4 pb-16 overflow-hidden">
-        <div className="w-full h-full max-h-[calc(100vh-180px)] flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center px-3 pt-4 overflow-hidden">
+        <div className="w-full h-[calc(100vh-210px)] flex items-center justify-center">
           {filteredEvents.length > 0 ? (
             <div className="relative w-full max-h-full flex items-center justify-center">
               {/* Current Card */}
