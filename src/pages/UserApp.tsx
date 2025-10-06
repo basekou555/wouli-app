@@ -94,9 +94,9 @@ const UserApp = () => {
       </div>
 
       {/* Card Stack Container */}
-      <div className="flex items-center justify-center px-3 overflow-hidden">
+      <div className="flex items-center justify-center px-3 py-4 overflow-hidden">
         {filteredEvents.length > 0 ? (
-          <div className="relative w-full max-w-[400px] h-[600px] mx-auto">
+          <div className="relative w-full max-w-[400px] mx-auto" style={{ aspectRatio: '9/16', maxHeight: '600px' }}>
             {/* Current Card */}
             {currentIndex < filteredEvents.length && (
               <div className="absolute inset-0 z-10">
