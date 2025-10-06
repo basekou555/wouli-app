@@ -73,24 +73,24 @@ const UserApp = () => {
     <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Header avec Filtres */}
       <div className="bg-card shadow-sm border-b p-4 flex-shrink-0">
-        <div className="flex items-center justify-between mb-3">
-          <div>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-shrink-0">
             <h1 className="text-2xl font-bold text-gradient">Wouli</h1>
             <p className="text-muted-foreground text-sm">Découvre des événements près de toi</p>
           </div>
-        </div>
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {categories.map(category => (
-            <Button 
-              key={category.id}
-              variant={selectedCategory === category.id ? "default" : "outline"}
-              size="sm"
-              onClick={() => handleCategoryChange(category.id)}
-              className="whitespace-nowrap"
-            >
-              {category.icon} {category.name}
-            </Button>
-          ))}
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {categories.map(category => (
+              <Button 
+                key={category.id}
+                variant={selectedCategory === category.id ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleCategoryChange(category.id)}
+                className="whitespace-nowrap"
+              >
+                {category.icon} {category.name}
+              </Button>
+            ))}
+          </div>
         </div>
       </div>
 
