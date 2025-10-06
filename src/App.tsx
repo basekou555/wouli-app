@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { RatingModal } from "@/components/rating/RatingModal";
 import { useRatingModal } from "@/hooks/useRatingModal";
+import { InstallPrompt } from "@/components/InstallPrompt";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import UserApp from "./pages/UserApp";
@@ -49,7 +50,8 @@ function AppContent() {
   return (
     <>
       <BrowserRouter>
-              <Routes>
+        <InstallPrompt />
+        <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/auth" element={
                   <AuthRedirect>
