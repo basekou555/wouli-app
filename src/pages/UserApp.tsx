@@ -81,7 +81,7 @@ const UserApp = () => {
             {categories.map(category => (
               <Button 
                 key={category.id}
-                variant={selectedCategory === category.id ? "default" : "ghost"}
+                variant={selectedCategory === category.id ? "default" : "outline"}
                 size="sm"
                 onClick={() => handleCategoryChange(category.id)}
                 className="whitespace-nowrap"
