@@ -70,7 +70,7 @@ const UserApp = () => {
     return <PageSkeleton />;
   }
   return (
-    <div className="grid grid-rows-[auto_1fr_auto] h-[100dvh] bg-background overflow-hidden">
+    <div className="grid grid-rows-[auto_1fr_auto] h-screen bg-background overflow-hidden" style={{ height: '100dvh' }}>
       {/* Header avec Filtres */}
       <header className="bg-card p-4">
         <div className="flex items-start justify-between gap-4">
