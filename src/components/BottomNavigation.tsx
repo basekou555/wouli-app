@@ -3,11 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Heart, Search, User } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-interface BottomNavigationProps {
-  mode?: 'fixed' | 'inline';
-}
-
-const BottomNavigation = ({ mode = 'fixed' }: BottomNavigationProps) => {
+const BottomNavigation = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -32,12 +28,8 @@ const BottomNavigation = ({ mode = 'fixed' }: BottomNavigationProps) => {
     }
   ];
 
-  const rootClass = mode === 'fixed' 
-    ? 'fixed bottom-0 left-0 right-0' 
-    : 'relative';
-
   return (
-    <div className={`${rootClass} h-[60px] bg-white border-t px-4 flex items-center`}>
+    <div className="fixed bottom-0 left-0 right-0 h-[60px] bg-white border-t px-4 flex items-center">
       <div className="flex justify-around items-center max-w-md mx-auto w-full">
         {navItems.map((item) => {
           const Icon = item.icon;

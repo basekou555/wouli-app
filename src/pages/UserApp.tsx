@@ -70,9 +70,9 @@ const UserApp = () => {
     return <PageSkeleton />;
   }
   return (
-    <div className="grid grid-rows-[auto_1fr_auto] h-screen bg-background overflow-hidden" style={{ height: '100dvh' }}>
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Header avec Filtres */}
-      <header className="bg-card p-4">
+      <div className="bg-card p-4 flex-shrink-0">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-shrink-0">
             <h1 className="text-2xl font-bold text-gradient">Wouli</h1>
@@ -91,12 +91,12 @@ const UserApp = () => {
             ))}
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Card Stack Container */}
-      <main className="flex items-center justify-center w-full h-full overflow-hidden p-4">
+      <div className="flex-1 flex items-start justify-center px-3 pt-4 overflow-hidden">
         {filteredEvents.length > 0 ? (
-          <div className="relative w-[90vw] max-w-[400px] md:max-w-[420px] mx-auto h-full max-h-[600px]">
+          <div className="relative w-full max-w-[400px] mx-auto max-h-full flex items-start justify-center">
             {/* Current Card */}
             {currentIndex < filteredEvents.length && (
               <div className="absolute inset-0 z-10">
@@ -155,9 +155,9 @@ const UserApp = () => {
             </Button>
           </div>
         )}
-      </main>
+      </div>
 
-      <BottomNavigation mode="inline" />
+      <BottomNavigation />
     </div>
   );
 };
