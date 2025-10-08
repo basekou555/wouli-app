@@ -97,8 +97,9 @@ const ValidationInterface = () => {
       const { data, error } = await supabase
         .from('events')
         .select('*')
-        .neq('status', 'archived')
-        .order('created_at', { ascending: false });
+        .in('status', ['pending', 'active', 'rejected'])
+        .order('created_at', { ascending: false })
+        .limit(1000);
 
       if (error) throw error;
       setEvents(data || []);
