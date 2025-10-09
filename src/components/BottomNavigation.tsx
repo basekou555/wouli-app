@@ -30,7 +30,13 @@ const BottomNavigation = () => {
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 h-[60px] bg-white px-4 flex items-center">
+    <div 
+      className="fixed left-0 right-0 h-[60px] bg-white px-4 flex items-center"
+      style={{ 
+        bottom: 'var(--safe-area-inset-bottom)',
+        paddingBottom: 'var(--safe-area-inset-bottom)'
+      }}
+    >
       <div className="flex justify-around items-center max-w-md mx-auto w-full">
         {navItems.map((item) => {
           const Icon = item.icon;

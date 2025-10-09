@@ -70,7 +70,10 @@ const UserApp = () => {
     return <PageSkeleton />;
   }
   return (
-    <div className="h-screen bg-background flex flex-col overflow-hidden">
+    <div 
+      className="bg-background flex flex-col overflow-hidden"
+      style={{ height: 'var(--app-height)' }}
+    >
       {/* Header avec Filtres */}
       <div className="bg-card p-4 flex-shrink-0">
         <div className="flex items-start justify-between gap-4">
