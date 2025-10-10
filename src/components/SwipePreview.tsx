@@ -103,7 +103,7 @@ const SwipePreview = () => {
       }`;
     } else if (index === 1) {
       // Carte du milieu
-      return 'absolute inset-0 z-20 transform -rotate-2 scale-98 transition-all duration-500';
+      return 'absolute inset-0 z-20 transform -rotate-2 scale-[0.98] transition-all duration-500';
     } else {
       // Carte de fond
       return 'absolute inset-0 z-10 transform rotate-3 scale-95 opacity-60 transition-all duration-500';
