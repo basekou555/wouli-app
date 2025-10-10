@@ -71,7 +71,7 @@ const UserApp = () => {
   }
   return (
     <div 
-      className="bg-background flex flex-col overflow-hidden"
+      className="bg-background flex flex-col overflow-hidden pb-16"
       style={{ height: 'max(var(--app-height), 100vh)' }}
     >
       {/* Header avec Filtres */}
