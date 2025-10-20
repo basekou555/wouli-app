@@ -13,7 +13,6 @@ const UserApp = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [likedEvents, setLikedEvents] = useState<string[]>([]);
   const [participatingEvents, setParticipatingEvents] = useState<string[]>([]);
-  const [showFilters, setShowFilters] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -30,7 +29,6 @@ const UserApp = () => {
   const handleCategoryChange = (categoryId: string) => {
     setSelectedCategory(categoryId);
     setCurrentIndex(0);
-    setShowFilters(false);
   };
   const handleLike = async (eventId: string) => {
     if (!likedEvents.includes(eventId)) {
@@ -73,30 +71,12 @@ const UserApp = () => {
   }
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="bg-card shadow-sm p-4 flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <div>
+      {/* Header avec Filtres */}
+      <div className="bg-card p-4 flex-shrink-0">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-shrink-0">
             <h1 className="text-2xl font-bold text-gradient">Wouli</h1>
-            <p className="text-muted-foreground text-sm">Découvre des événements près de toi</p>
           </div>
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={() => setShowFilters(!showFilters)} 
-            className="relative"
-          >
-            <Filter className="h-4 w-4" />
-            {selectedCategory !== 'all' && (
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full"></div>
-            )}
-          </Button>
-        </div>
-      </div>
-
-      {/* Filters */}
-      {showFilters && (
-        <div className="bg-card border-b p-4 flex-shrink-0">
           <div className="flex gap-2 overflow-x-auto pb-2">
             {categories.map(category => (
               <Button 
@@ -111,72 +91,70 @@ const UserApp = () => {
             ))}
           </div>
         </div>
-      )}
+      </div>
 
       {/* Card Stack Container */}
-      <div className="flex-1 flex items-center justify-center px-3 pb-20 overflow-hidden">
-        <div className="w-full h-full flex items-center justify-center">
-          {filteredEvents.length > 0 ? (
-            <div className="relative w-full max-h-full flex items-center justify-center">
-              {/* Current Card */}
-              {currentIndex < filteredEvents.length && (
-                <div className="absolute inset-0 z-10">
-                  <WouliEventCard
-                    event={filteredEvents[currentIndex]}
-                    variant="swipe"
-                    enableSwipe={true}
-                    isLiked={likedEvents.includes(filteredEvents[currentIndex].id)}
-                    isParticipating={participatingEvents.includes(filteredEvents[currentIndex].id)}
-                    onLike={() => handleLike(filteredEvents[currentIndex].id)}
-                    onDislike={handleDislike}
-                    onSwipeLeft={handleDislike}
-                    onSwipeRight={() => handleLike(filteredEvents[currentIndex].id)}
-                    onParticipate={() => handleParticipate(filteredEvents[currentIndex].id)}
-                    onCardClick={() => handleCardClick(filteredEvents[currentIndex].id)}
-                    onShare={() => {
-                      if (navigator.share) {
-                        navigator.share({
-                          title: filteredEvents[currentIndex].title,
-                          text: `Découvre cet événement : ${filteredEvents[currentIndex].title}`,
-                          url: window.location.origin + `/events/${filteredEvents[currentIndex].id}`
-                        });
-                      }
-                    }}
-                  />
-                </div>
-              )}
-              
-              {/* Next Card Preview */}
-              {currentIndex + 1 < filteredEvents.length && (
-                <div className="absolute inset-0 z-0 transform scale-95 opacity-50 pointer-events-none">
-                  <WouliEventCard
-                    event={filteredEvents[currentIndex + 1]}
-                    variant="swipe"
-                    enableSwipe={false}
-                    isLiked={likedEvents.includes(filteredEvents[currentIndex + 1].id)}
-                    isParticipating={participatingEvents.includes(filteredEvents[currentIndex + 1].id)}
-                    onLike={() => {}}
-                    onSwipeLeft={() => {}}
-                    onSwipeRight={() => {}}
-                    onParticipate={() => {}}
-                    onCardClick={() => handleCardClick(filteredEvents[currentIndex + 1].id)}
-                  />
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="text-center p-8">
-              <p className="text-muted-foreground">Aucun événement disponible dans cette catégorie</p>
-              <Button 
-                variant="outline" 
-                onClick={() => handleCategoryChange('all')} 
-                className="mt-4"
-              >
-                Voir tous les événements
-              </Button>
-            </div>
-          )}
-        </div>
+      <div className="flex-1 flex items-start justify-center px-3 pt-4 overflow-hidden">
+        {filteredEvents.length > 0 ? (
+          <div className="relative w-full max-w-[400px] mx-auto max-h-full flex items-start justify-center">
+            {/* Current Card */}
+            {currentIndex < filteredEvents.length && (
+              <div className="absolute inset-0 z-10">
+                <WouliEventCard
+                  event={filteredEvents[currentIndex]}
+                  variant="swipe"
+                  enableSwipe={true}
+                  isLiked={likedEvents.includes(filteredEvents[currentIndex].id)}
+                  isParticipating={participatingEvents.includes(filteredEvents[currentIndex].id)}
+                  onLike={() => handleLike(filteredEvents[currentIndex].id)}
+                  onDislike={handleDislike}
+                  onSwipeLeft={handleDislike}
+                  onSwipeRight={() => handleLike(filteredEvents[currentIndex].id)}
+                  onParticipate={() => handleParticipate(filteredEvents[currentIndex].id)}
+                  onCardClick={() => handleCardClick(filteredEvents[currentIndex].id)}
+                  onShare={() => {
+                    if (navigator.share) {
+                      navigator.share({
+                        title: filteredEvents[currentIndex].title,
+                        text: `Découvre cet événement : ${filteredEvents[currentIndex].title}`,
+                        url: window.location.origin + `/events/${filteredEvents[currentIndex].id}`
+                      });
+                    }
+                  }}
+                />
+              </div>
+            )}
+            
+            {/* Next Card Preview */}
+            {currentIndex + 1 < filteredEvents.length && (
+              <div className="absolute inset-0 z-0 transform scale-95 opacity-50 pointer-events-none">
+                <WouliEventCard
+                  event={filteredEvents[currentIndex + 1]}
+                  variant="swipe"
+                  enableSwipe={false}
+                  isLiked={likedEvents.includes(filteredEvents[currentIndex + 1].id)}
+                  isParticipating={participatingEvents.includes(filteredEvents[currentIndex + 1].id)}
+                  onLike={() => {}}
+                  onSwipeLeft={() => {}}
+                  onSwipeRight={() => {}}
+                  onParticipate={() => {}}
+                  onCardClick={() => handleCardClick(filteredEvents[currentIndex + 1].id)}
+                />
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-center p-8">
+            <p className="text-muted-foreground">Aucun événement disponible dans cette catégorie</p>
+            <Button 
+              variant="outline" 
+              onClick={() => handleCategoryChange('all')} 
+              className="mt-4"
+            >
+              Voir tous les événements
+            </Button>
+          </div>
+        )}
       </div>
 
       <BottomNavigation />
