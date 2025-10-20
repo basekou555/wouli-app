@@ -280,7 +280,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
           className="absolute w-full h-full"
         >
           <Card 
-            className={`w-full rounded-xl overflow-hidden bg-card ${className}`}
+            className={`w-full rounded-xl shadow-xl overflow-hidden bg-card ${className}`}
             style={{ overflow: 'hidden' }}
           >
             <SwipeCardContent />
@@ -312,7 +312,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
       </div>
     ) : (
       <Card 
-        className={`w-full rounded-xl overflow-hidden bg-card ${className}`}
+        className={`w-full rounded-xl shadow-xl overflow-hidden bg-card ${className}`}
       >
         <SwipeCardContent />
       </Card>
@@ -327,7 +327,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
     const totalParticipants = event.totalParticipants || event.participants || 0;
 
     return (
-      <Card className={`flex gap-3 p-3 rounded-lg transition-all duration-300 bg-card cursor-pointer hover-scale ${className}`}>
+      <Card className={`flex gap-3 p-3 rounded-lg hover:shadow-lg transition-all duration-300 bg-card cursor-pointer hover-scale ${className}`}>
         {/* Image avec ratio 4:5 */}
         <div className="relative flex-shrink-0" onClick={onCardClick}>
           <div className="w-20 aspect-[4/5] bg-black rounded-lg overflow-hidden">
@@ -471,7 +471,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
     };
 
     return (
-      <Card className={`overflow-hidden transition-shadow bg-card cursor-pointer ${className}`}>
+      <Card className={`overflow-hidden hover:shadow-lg transition-shadow bg-card cursor-pointer ${className}`}>
         <div className="flex gap-4 p-4">
           <img 
             src={event.image_url || "https://picsum.photos/400/400?random=event"}
