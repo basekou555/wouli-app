@@ -4,7 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowRight, Users, Building, MapPin, Sparkles, MousePointer2 } from "lucide-react";
 import SwipePreview from "@/components/SwipePreview";
 const Home = () => {
-  return <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-neutral-100">
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-neutral-100">
       {/* Header */}
       <div className="bg-background/80 backdrop-blur-sm border-b sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
@@ -173,6 +174,7 @@ const Home = () => {
           </div>
         </div>
       </div>
-    </div>;
+    </div>
+  );
 };
 export default Home;
