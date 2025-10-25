@@ -8,12 +8,15 @@ import BottomNavigation from '../components/BottomNavigation';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
 import WouliEventCard from '@/components/cards/WouliEventCard';
 import { Badge } from '@/components/ui/badge';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { ChevronDown, Check, X } from "lucide-react";
 
 const UserAppGridTest = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [likedEvents, setLikedEvents] = useState<string[]>([]);
   const [participatingEvents, setParticipatingEvents] = useState<string[]>([]);
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -83,43 +86,49 @@ const UserAppGridTest = () => {
         paddingTop: 'var(--safe-top)'
       }}
     >
-      {/* Zone 1 : Header avec Badge Test */}
-      <div className="bg-card p-4 border-b border-border">
-        <div className="flex items-center justify-between gap-4 mb-3">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-gradient">Wouli</h1>
-            <Badge variant="destructive" className="text-xs">
-              TEST GRID
-            </Badge>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/app')}
-          >
-            ← Version stable
+      {/* Zone 1 : Header Compact */}
+      <div className="bg-card px-4 py-2 border-b border-border flex items-center justify-between">
+        {/* Gauche : Bouton Filtres avec catégorie active */}
+        <button
+          onClick={() => setIsFilterDrawerOpen(true)}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+        >
+          <span className="text-lg">
+            {categories.find(c => c.id === selectedCategory)?.icon || '🎯'}
+          </span>
+          <span className="text-sm font-medium">
+            {categories.find(c => c.id === selectedCategory)?.name || 'Filtres'}
+          </span>
+          <ChevronDown className="w-4 h-4" />
+        </button>
+        
+        {/* Droite : Badge TEST + Bouton retour */}
+        <div className="flex items-center gap-2">
+          <Badge variant="destructive" className="text-xs">TEST</Badge>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/app')}>
+            <X className="w-4 h-4" />
           </Button>
-        </div>
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {categories.map(category => (
-            <Button 
-              key={category.id}
-              variant={selectedCategory === category.id ? "default" : "outline"}
-              size="sm"
-              onClick={() => handleCategoryChange(category.id)}
-              className="whitespace-nowrap"
-            >
-              {category.icon} {category.name}
-            </Button>
-          ))}
         </div>
       </div>
 
-      {/* Zone 2 : Swipe Cards avec contraintes de hauteur */}
+      {/* Zone 2 : Swipe Cards avec contraintes strictes */}
       <div 
         className="relative overflow-hidden px-3 flex items-center justify-center"
+        style={{
+          maxHeight: 'calc(100vh - 120px)',
+          minHeight: '400px'
+        }}
       >
-        <div className="relative w-full max-w-[400px]" style={{ maxHeight: '100%', height: '100%' }}>
+        <div 
+          className="relative w-full max-w-[400px]" 
+          style={{ 
+            height: '100%',
+            maxHeight: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
             {filteredEvents.length > 0 ? (
               <>
                 {/* Current Card */}
@@ -191,6 +200,39 @@ const UserAppGridTest = () => {
 
       {/* Zone 3 : BottomNavigation en mode inline */}
       <BottomNavigation variant="inline" />
+
+      {/* Drawer Filtres */}
+      <Drawer open={isFilterDrawerOpen} onOpenChange={setIsFilterDrawerOpen}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Catégories</DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-8 space-y-2">
+            {categories.map(category => (
+              <button
+                key={category.id}
+                onClick={() => {
+                  handleCategoryChange(category.id);
+                  setIsFilterDrawerOpen(false);
+                }}
+                className={`
+                  w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors
+                  ${selectedCategory === category.id 
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'bg-secondary hover:bg-secondary/80'
+                  }
+                `}
+              >
+                <span className="text-2xl">{category.icon}</span>
+                <span className="font-medium">{category.name}</span>
+                {selectedCategory === category.id && (
+                  <Check className="w-5 h-5 ml-auto" />
+                )}
+              </button>
+            ))}
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 };
