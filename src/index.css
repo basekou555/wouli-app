@@ -52,6 +52,31 @@
     --sidebar-accent-foreground: 222.2 47.4% 11.2%;
     --sidebar-border: 214.3 31.8% 91.4%;
     --sidebar-ring: 271 91% 65%;
+    
+    /* Layout Variables for Grid System */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    
+    /* Fixed Zone Heights */
+    --header-height: 70px;
+    --nav-height: 60px;
+    
+    /* Dynamic App Height */
+    --app-height: 100vh;
+  }
+  
+  /* iOS Safari viewport fix */
+  @supports (-webkit-touch-callout: none) {
+    :root {
+      --app-height: calc(100vh - var(--safe-top) - var(--safe-bottom));
+    }
+  }
+  
+  /* Modern browsers with dvh support */
+  @supports (height: 100dvh) {
+    :root {
+      --app-height: 100dvh;
+    }
   }
 
   * {
