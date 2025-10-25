@@ -89,7 +89,7 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
     return (
       <>
         {/* Zone Image (70%) */}
-        <div className="relative aspect-[4/5]">
+        <div className="relative aspect-[4/5] flex-shrink-0" style={{ maxHeight: '65vh' }}>
           <img
             src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/400/500?random=event"}
             alt={event.title}

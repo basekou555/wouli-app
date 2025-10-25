@@ -115,18 +115,17 @@ const UserAppGridTest = () => {
         </div>
       </div>
 
-      {/* Zone 2 : Swipe Cards avec minHeight sécurité */}
+      {/* Zone 2 : Swipe Cards avec contraintes de hauteur */}
       <div 
-        className="relative overflow-hidden px-3"
-        style={{ minHeight: '400px' }}
+        className="relative overflow-hidden px-3 flex items-center justify-center"
       >
-        <div className="h-full flex items-center justify-center">
-          <div className="relative w-full max-w-[400px] h-full">
+        <div className="relative w-full max-w-[400px]" style={{ maxHeight: '100%', height: '100%' }}>
             {filteredEvents.length > 0 ? (
               <>
                 {/* Current Card */}
                 {currentIndex < filteredEvents.length && (
-                  <div className="absolute inset-0 z-10">
+                  <div className="absolute inset-0 z-10 flex items-center">
+                    <div className="w-full" style={{ maxHeight: '100%', overflow: 'hidden' }}>
                     <WouliEventCard
                       event={filteredEvents[currentIndex]}
                       variant="swipe"
@@ -148,13 +147,16 @@ const UserAppGridTest = () => {
                           });
                         }
                       }}
+                      className="max-h-full"
                     />
+                    </div>
                   </div>
                 )}
                 
                 {/* Next Card Preview */}
                 {currentIndex + 1 < filteredEvents.length && (
-                  <div className="absolute inset-0 z-0 transform scale-95 opacity-50 pointer-events-none">
+                  <div className="absolute inset-0 z-0 transform scale-95 opacity-50 pointer-events-none flex items-center">
+                    <div className="w-full" style={{ maxHeight: '100%', overflow: 'hidden' }}>
                     <WouliEventCard
                       event={filteredEvents[currentIndex + 1]}
                       variant="swipe"
@@ -166,7 +168,9 @@ const UserAppGridTest = () => {
                       onSwipeRight={() => {}}
                       onParticipate={() => {}}
                       onCardClick={() => handleCardClick(filteredEvents[currentIndex + 1].id)}
+                      className="max-h-full"
                     />
+                    </div>
                   </div>
                 )}
               </>
@@ -183,7 +187,6 @@ const UserAppGridTest = () => {
               </div>
             )}
           </div>
-        </div>
       </div>
 
       {/* Zone 3 : BottomNavigation en mode inline */}
