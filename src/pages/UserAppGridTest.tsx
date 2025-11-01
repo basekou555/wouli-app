@@ -134,7 +134,15 @@ const UserAppGridTest = () => {
                 {/* Current Card */}
                 {currentIndex < filteredEvents.length && (
                   <div className="absolute inset-0 z-10 flex items-center">
-                    <div className="w-full" style={{ maxHeight: '100%', overflow: 'hidden' }}>
+                    <div 
+                      className="w-full" 
+                      style={{ 
+                        maxHeight: 'calc(100vh - 140px)',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                    >
                     <WouliEventCard
                       event={filteredEvents[currentIndex]}
                       variant="swipe"
@@ -165,7 +173,15 @@ const UserAppGridTest = () => {
                 {/* Next Card Preview */}
                 {currentIndex + 1 < filteredEvents.length && (
                   <div className="absolute inset-0 z-0 transform scale-95 opacity-50 pointer-events-none flex items-center">
-                    <div className="w-full" style={{ maxHeight: '100%', overflow: 'hidden' }}>
+                    <div 
+                      className="w-full" 
+                      style={{ 
+                        maxHeight: 'calc(100vh - 140px)',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                    >
                     <WouliEventCard
                       event={filteredEvents[currentIndex + 1]}
                       variant="swipe"
