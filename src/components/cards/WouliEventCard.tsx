@@ -89,13 +89,31 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
     return (
       <>
         {/* Zone Image (70%) */}
-        <div className="relative flex-shrink-0 w-full aspect-[4/5]">
+        <div 
+          className="relative flex-shrink-0" 
+          style={{ 
+            aspectRatio: '4/5',
+            maxHeight: 'calc(100vh - 200px)',
+            height: 'auto',
+            width: '100%'
+          }}
+        >
           <img
             src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/400/500?random=event"}
             alt={event.title}
-            className="w-full h-full object-cover cursor-pointer"
+            className="w-full h-full object-cover"
             onError={handleImageError}
+          />
+          
+          {/* Zone cliquable transparente pour la navigation */}
+          <div 
+            className="absolute inset-0 z-10"
             onClick={() => onCardClick?.()}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              onCardClick?.();
+            }}
+            style={{ pointerEvents: 'auto' }}
           />
           
           {/* Badge urgence - coin supérieur droit */}
@@ -124,8 +142,17 @@ const WouliEventCard: React.FC<WouliEventCardProps> = ({
           )}
         </div>
         
-        {/* Zone Informations (20%) */}
-        <div className="p-4 space-y-2 relative cursor-pointer" onClick={() => onCardClick?.()}>
+        {/* Zone Informations (20%) - aussi cliquable */}
+        <div className="p-4 space-y-2 relative">
+          {/* Zone cliquable transparente */}
+          <div 
+            className="absolute inset-0 z-10"
+            onClick={() => onCardClick?.()}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              onCardClick?.();
+            }}
+          />
           
           {/* Ligne 1: Titre • Prix */}
           <div className="flex justify-between items-start gap-2">
