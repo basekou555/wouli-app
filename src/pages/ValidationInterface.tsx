@@ -66,6 +66,9 @@ const ValidationInterface = () => {
     targetStatus: string;
   }>({ eventIds: [], currentStatus: '', targetStatus: '' });
   const [enhanceWithAI, setEnhanceWithAI] = useState<PendingEvent[]>([]);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const EVENTS_PER_PAGE = 50;
   const { toast } = useToast();
 
   useEffect(() => {
@@ -92,17 +95,25 @@ const ValidationInterface = () => {
     };
   }, []);
 
-  const fetchEvents = async () => {
+  const fetchEvents = async (pageNum = 0, append = false) => {
     try {
-      const { data, error } = await supabase
+      const start = pageNum * EVENTS_PER_PAGE;
+      const end = start + EVENTS_PER_PAGE - 1;
+
+      const { data, error, count } = await supabase
         .from('events')
-        .select('*')
+        .select('*', { count: 'exact' })
         .neq('status', 'archived')
         .order('created_at', { ascending: false })
-        .abortSignal(AbortSignal.timeout(30000)); // Timeout 30s pour éviter les timeouts avec RLS
+        .range(start, end);
 
       if (error) throw error;
-      setEvents(data || []);
+      
+      const newEvents = data || [];
+      setEvents(append ? [...events, ...newEvents] : newEvents);
+      setHasMore(newEvents.length === EVENTS_PER_PAGE);
+      
+      if (!append) setPage(pageNum);
     } catch (error) {
       console.error('❌ Erreur fetch events:', error);
       toast({
@@ -113,6 +124,12 @@ const ValidationInterface = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchEvents(nextPage, true);
   };
 
   // Actions rapides (legacy - pour compatibilité)
@@ -245,7 +262,7 @@ const ValidationInterface = () => {
             </div>
             
             <Button
-              onClick={fetchEvents}
+              onClick={() => fetchEvents(0, false)}
               variant="outline"
               size="icon"
             >
@@ -420,45 +437,60 @@ const ValidationInterface = () => {
                 </p>
               </div>
             ) : (
-              <div className="bg-card rounded-lg border overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.size === filteredEvents.length}
-                          onChange={handleSelectAll}
-                          className="w-4 h-4 text-purple-600 rounded"
+              <>
+                <div className="bg-card rounded-lg border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.size === filteredEvents.length}
+                            onChange={handleSelectAll}
+                            className="w-4 h-4 text-purple-600 rounded"
+                          />
+                        </TableHead>
+                        <TableHead className="min-w-[300px]">Événement</TableHead>
+                        <TableHead className="max-w-[200px]">Description</TableHead>
+                        <TableHead className="text-center w-24">Score</TableHead>
+                        <TableHead className="w-32">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredEvents.map((event) => (
+                        <AdminEventTableRow
+                          key={event.id}
+                          event={event}
+                          isSelected={selectedIds.has(event.id)}
+                          onSelect={handleSelect}
+                          onPreview={setShowDetails}
+                          onEdit={setEditingEvent}
+                          onHistory={(eventId, eventTitle) => {
+                            setHistoryEventId(eventId);
+                            setHistoryEventTitle(eventTitle);
+                          }}
+                          onStatusChange={handleStatusChange}
+                          calculateScore={calculateScore}
+                          getScoreColor={getScoreColor}
                         />
-                      </TableHead>
-                      <TableHead className="min-w-[300px]">Événement</TableHead>
-                      <TableHead className="max-w-[200px]">Description</TableHead>
-                      <TableHead className="text-center w-24">Score</TableHead>
-                      <TableHead className="w-32">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredEvents.map((event) => (
-                      <AdminEventTableRow
-                        key={event.id}
-                        event={event}
-                        isSelected={selectedIds.has(event.id)}
-                        onSelect={handleSelect}
-                        onPreview={setShowDetails}
-                        onEdit={setEditingEvent}
-                        onHistory={(eventId, eventTitle) => {
-                          setHistoryEventId(eventId);
-                          setHistoryEventTitle(eventTitle);
-                        }}
-                        onStatusChange={handleStatusChange}
-                        calculateScore={calculateScore}
-                        getScoreColor={getScoreColor}
-                      />
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                
+                {/* Bouton "Charger plus" */}
+                {hasMore && (
+                  <div className="flex justify-center mt-4">
+                    <Button
+                      onClick={loadMore}
+                      variant="outline"
+                      className="w-full max-w-md"
+                    >
+                      Charger plus d'événements ({EVENTS_PER_PAGE} suivants)
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </TabsContent>
         </Tabs>
