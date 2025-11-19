@@ -620,12 +620,9 @@ export type Database = {
         Args: { p_event_id: string }
         Returns: undefined
       }
-      archive_past_events: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      archive_past_events: { Args: never; Returns: undefined }
       get_public_business_info: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           avatar_url: string
           bio: string
@@ -650,18 +647,9 @@ export type Database = {
           events_participated: number
         }[]
       }
-      increment_event_views: {
-        Args: { event_id: number }
-        Returns: undefined
-      }
-      is_admin_user: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_business_user: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      increment_event_views: { Args: { event_id: number }; Returns: undefined }
+      is_admin_user: { Args: never; Returns: boolean }
+      is_business_user: { Args: never; Returns: boolean }
       propose_event_public: {
         Args: {
           p_address: string
@@ -676,10 +664,7 @@ export type Database = {
         }
         Returns: string
       }
-      reject_pending_event: {
-        Args: { p_event_id: string }
-        Returns: undefined
-      }
+      reject_pending_event: { Args: { p_event_id: string }; Returns: undefined }
     }
     Enums: {
       event_category: "a-boire" | "a-manger" | "soirees" | "activites"
