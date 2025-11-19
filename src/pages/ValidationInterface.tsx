@@ -98,7 +98,8 @@ const ValidationInterface = () => {
         .from('events')
         .select('*')
         .neq('status', 'archived')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .abortSignal(AbortSignal.timeout(30000)); // Timeout 30s pour éviter les timeouts avec RLS
 
       if (error) throw error;
       setEvents(data || []);
