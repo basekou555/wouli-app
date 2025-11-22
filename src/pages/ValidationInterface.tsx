@@ -95,17 +95,26 @@ const ValidationInterface = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [activeTab]); // Recharger quand l'onglet change
 
   const fetchEvents = async (pageNum = 0, append = false) => {
     try {
       const start = pageNum * EVENTS_PER_PAGE;
       const end = start + EVENTS_PER_PAGE - 1;
 
-      const { data, error, count } = await supabase
+      // Construire la requête en fonction de l'onglet actif
+      let query = supabase
         .from('events')
-        .select('*', { count: 'exact' })
-        .neq('status', 'archived')
+        .select('*', { count: 'exact' });
+
+      // Filtrer par statut selon l'onglet actif
+      if (activeTab === 'all') {
+        query = query.neq('status', 'archived');
+      } else {
+        query = query.eq('status', activeTab);
+      }
+
+      const { data, error, count } = await query
         .order('created_at', { ascending: false })
         .range(start, end);
 
@@ -232,9 +241,8 @@ const ValidationInterface = () => {
   const getFilteredEvents = () => {
     return events
       .filter(event => {
-        // Exclure les événements archivés par statut ou par temporalité
-        if (event.status === 'archived' || getEventStatus(event) === 'archived') return false;
-        if (activeTab !== 'all' && event.status !== activeTab) return false;
+        // Le filtrage par statut est déjà fait côté Supabase
+        // On filtre uniquement par catégorie ici
         if (filter !== 'all' && event.category !== filter) return false;
         return true;
       })
