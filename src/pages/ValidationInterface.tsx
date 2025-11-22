@@ -68,7 +68,9 @@ const ValidationInterface = () => {
   const [enhanceWithAI, setEnhanceWithAI] = useState<PendingEvent[]>([]);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
-  const EVENTS_PER_PAGE = 50;
+  const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const EVENTS_PER_PAGE = 10;
   const { toast } = useToast();
 
   useEffect(() => {
@@ -113,6 +115,9 @@ const ValidationInterface = () => {
       setEvents(append ? [...events, ...newEvents] : newEvents);
       setHasMore(newEvents.length === EVENTS_PER_PAGE);
       
+      // Enregistrer le total
+      if (count !== null) setTotalCount(count);
+      
       if (!append) setPage(pageNum);
     } catch (error) {
       console.error('❌ Erreur fetch events:', error);
@@ -126,10 +131,12 @@ const ValidationInterface = () => {
     }
   };
 
-  const loadMore = () => {
+  const loadMore = async () => {
+    setLoadingMore(true);
     const nextPage = page + 1;
     setPage(nextPage);
-    fetchEvents(nextPage, true);
+    await fetchEvents(nextPage, true);
+    setLoadingMore(false);
   };
 
   // Actions rapides (legacy - pour compatibilité)
@@ -256,9 +263,23 @@ const ValidationInterface = () => {
               <h1 className="text-2xl font-bold text-foreground">
                 Validation des Événements
               </h1>
-              <p className="text-muted-foreground mt-1">
-                Modération complète • {new Date().toLocaleDateString('fr-FR')}
-              </p>
+              <div className="space-y-1">
+                <p className="text-muted-foreground">
+                  Modération complète • {new Date().toLocaleDateString('fr-FR')}
+                </p>
+                {totalCount !== null && (
+                  <div className="flex items-center gap-4 text-sm">
+                    <span className="text-muted-foreground">
+                      {totalCount} événements non archivés
+                    </span>
+                    {counts.pending > 0 && (
+                      <span className="text-orange-600 font-medium">
+                        {counts.pending} en attente de validation
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
             
             <Button
@@ -478,16 +499,38 @@ const ValidationInterface = () => {
                   </Table>
                 </div>
                 
-                {/* Bouton "Charger plus" */}
+                {/* Bouton "Charger plus" amélioré */}
                 {hasMore && (
-                  <div className="flex justify-center mt-4">
+                  <div className="flex flex-col items-center gap-2 mt-6">
                     <Button
                       onClick={loadMore}
                       variant="outline"
-                      className="w-full max-w-md"
+                      className="w-full max-w-md h-12"
+                      disabled={loadingMore}
                     >
-                      Charger plus d'événements ({EVENTS_PER_PAGE} suivants)
+                      {loadingMore ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                          Chargement...
+                        </>
+                      ) : (
+                        `Charger ${EVENTS_PER_PAGE} événements supplémentaires`
+                      )}
                     </Button>
+                    {totalCount !== null && (
+                      <p className="text-xs text-muted-foreground">
+                        {events.length} / {totalCount} événements chargés
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Message de fin */}
+                {!hasMore && filteredEvents.length > 0 && totalCount !== null && (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-muted-foreground">
+                      ✅ Tous les événements ont été chargés ({totalCount})
+                    </p>
                   </div>
                 )}
               </>
