@@ -4,12 +4,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from 'react-router-dom';
 import { WOULI_CATEGORIES as categories } from '../data/wouliCategories';
 import { useAllEvents } from '@/hooks/useAllEvents';
-import BottomNavigation from '../components/BottomNavigation';
+
 import { PageSkeleton } from '@/components/LoadingSkeleton';
 import WouliEventCard from '@/components/cards/WouliEventCard';
 import { Badge } from '@/components/ui/badge';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
-import { ChevronDown, Check, X } from "lucide-react";
+import { ChevronDown, Check, X, Menu } from "lucide-react";
 
 const UserAppGridTest = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -17,6 +17,7 @@ const UserAppGridTest = () => {
   const [likedEvents, setLikedEvents] = useState<string[]>([]);
   const [participatingEvents, setParticipatingEvents] = useState<string[]>([]);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -72,6 +73,15 @@ const UserAppGridTest = () => {
     }
   };
 
+  // Fermer le menu au clic extérieur
+  React.useEffect(() => {
+    const handleClickOutside = () => setIsMenuOpen(false);
+    if (isMenuOpen) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [isMenuOpen]);
+
   if (loading) {
     return <PageSkeleton />;
   }
@@ -81,7 +91,7 @@ const UserAppGridTest = () => {
       className="bg-background overflow-hidden"
       style={{
         display: 'grid',
-        gridTemplateRows: 'auto 1fr auto',
+        gridTemplateRows: 'auto 1fr',
         height: 'var(--app-height)',
         paddingTop: 'var(--safe-top)'
       }}
@@ -102,21 +112,78 @@ const UserAppGridTest = () => {
           <ChevronDown className="w-4 h-4" />
         </button>
         
-        {/* Droite : Badge TEST + Bouton retour */}
+        {/* Droite : Badge TEST + Menu Hamburger */}
         <div className="flex items-center gap-2">
           <Badge variant="destructive" className="text-xs">TEST</Badge>
-          <Button variant="ghost" size="sm" onClick={() => navigate('/app')}>
-            <X className="w-4 h-4" />
-          </Button>
+          
+          {/* Menu flottant */}
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsMenuOpen(!isMenuOpen);
+              }}
+              className="w-10 h-10 rounded-full bg-background shadow-md flex items-center justify-center hover:bg-accent transition-all"
+              aria-label="Menu"
+            >
+              <Menu className="h-5 w-5 text-foreground" />
+            </button>
+
+            {/* Dropdown menu */}
+            {isMenuOpen && (
+              <div className="absolute top-12 right-0 w-48 bg-card rounded-lg shadow-xl border border-border overflow-hidden z-50">
+                <button
+                  onClick={() => {
+                    navigate('/search');
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full px-4 py-3 text-left hover:bg-accent flex items-center gap-3 transition-colors"
+                >
+                  <span className="text-sm font-medium">🔍 Rechercher</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    navigate('/explore');
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full px-4 py-3 text-left hover:bg-accent flex items-center gap-3 transition-colors"
+                >
+                  <span className="text-sm font-medium">🗺️ Explorer</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    navigate('/profile');
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full px-4 py-3 text-left hover:bg-accent flex items-center gap-3 transition-colors"
+                >
+                  <span className="text-sm font-medium">👤 Profil</span>
+                </button>
+
+                <div className="border-t border-border" />
+
+                <button
+                  onClick={() => {
+                    navigate('/app');
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full px-4 py-3 text-left hover:bg-accent flex items-center gap-3 transition-colors"
+                >
+                  <span className="text-sm font-medium text-primary">← Version stable</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Zone 2 : Swipe Cards avec contraintes strictes */}
+      {/* Zone 2 : Swipe Plein Écran */}
       <div 
         className="relative overflow-hidden px-3 flex items-center justify-center"
         style={{
-          maxHeight: 'calc(100vh - 120px)',
-          minHeight: '400px'
+          minHeight: '500px'
         }}
       >
         <div 
@@ -212,10 +279,41 @@ const UserAppGridTest = () => {
               </div>
             )}
           </div>
-      </div>
 
-      {/* Zone 3 : BottomNavigation en mode inline */}
-      <BottomNavigation variant="inline" />
+        {/* Boutons d'action flottants - Style Tinder */}
+        {filteredEvents.length > 0 && currentIndex < filteredEvents.length && (
+          <div className="absolute bottom-8 left-0 right-0 flex justify-center items-center gap-6 z-20">
+            {/* Bouton Dislike */}
+            <button
+              onClick={handleDislike}
+              className="w-16 h-16 rounded-full bg-background shadow-lg flex items-center justify-center text-red-500 hover:bg-red-50 active:scale-95 transition-all"
+              aria-label="Passer"
+            >
+              <X className="h-8 w-8" />
+            </button>
+
+            {/* Bouton Like */}
+            <button
+              onClick={() => handleLike(filteredEvents[currentIndex].id)}
+              className="w-20 h-20 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 shadow-xl flex items-center justify-center text-white hover:scale-105 active:scale-95 transition-all"
+              aria-label="J'aime"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+            </button>
+
+            {/* Bouton Participer */}
+            <button
+              onClick={() => handleParticipate(filteredEvents[currentIndex].id)}
+              className="w-16 h-16 rounded-full bg-background shadow-lg flex items-center justify-center text-green-500 hover:bg-green-50 active:scale-95 transition-all"
+              aria-label="Participer"
+            >
+              <Check className="h-8 w-8" />
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Drawer Filtres */}
       <Drawer open={isFilterDrawerOpen} onOpenChange={setIsFilterDrawerOpen}>
