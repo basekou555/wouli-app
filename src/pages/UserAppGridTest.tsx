@@ -87,15 +87,7 @@ const UserAppGridTest = () => {
   }
 
   return (
-    <div 
-      className="bg-background overflow-hidden"
-      style={{
-        display: 'grid',
-        gridTemplateRows: 'auto 1fr',
-        height: 'var(--app-height)',
-        paddingTop: 'var(--safe-top)'
-      }}
-    >
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Zone 1 : Header Compact */}
       <div className="bg-card px-4 py-2 border-b border-border flex items-center justify-between">
         {/* Gauche : Bouton Filtres avec catégorie active */}
@@ -180,113 +172,77 @@ const UserAppGridTest = () => {
       </div>
 
       {/* Zone 2 : Swipe Plein Écran */}
-      <div 
-        className="relative overflow-hidden px-3 flex items-center justify-center"
-        style={{
-          minHeight: '500px'
-        }}
-      >
-        <div 
-          className="relative w-full max-w-[400px]" 
-          style={{ 
-            height: '100%',
-            maxHeight: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-            {filteredEvents.length > 0 ? (
-              <>
-                {/* Current Card */}
-                {currentIndex < filteredEvents.length && (
-                  <div className="absolute inset-0 z-10 flex items-center">
-                    <div 
-                      className="w-full" 
-                      style={{ 
-                        maxHeight: 'calc(100vh - 140px)',
-                        overflow: 'hidden',
-                        display: 'flex',
-                        alignItems: 'center'
-                      }}
-                    >
-                    <WouliEventCard
-                      event={filteredEvents[currentIndex]}
-                      variant="swipe"
-                      enableSwipe={true}
-                      isLiked={likedEvents.includes(filteredEvents[currentIndex].id)}
-                      isParticipating={participatingEvents.includes(filteredEvents[currentIndex].id)}
-                      onLike={() => handleLike(filteredEvents[currentIndex].id)}
-                      onDislike={handleDislike}
-                      onSwipeLeft={handleDislike}
-                      onSwipeRight={() => handleLike(filteredEvents[currentIndex].id)}
-                      onParticipate={() => handleParticipate(filteredEvents[currentIndex].id)}
-                      onCardClick={() => handleCardClick(filteredEvents[currentIndex].id)}
-                      onShare={() => {
-                        if (navigator.share) {
-                          navigator.share({
-                            title: filteredEvents[currentIndex].title,
-                            text: `Découvre cet événement : ${filteredEvents[currentIndex].title}`,
-                            url: window.location.origin + `/events/${filteredEvents[currentIndex].id}`
-                          });
-                        }
-                      }}
-                      className="max-h-full"
-                    />
-                    </div>
-                  </div>
-                )}
-                
-                {/* Next Card Preview */}
-                {currentIndex + 1 < filteredEvents.length && (
-                  <div className="absolute inset-0 z-0 transform scale-95 opacity-50 pointer-events-none flex items-center">
-                    <div 
-                      className="w-full" 
-                      style={{ 
-                        maxHeight: 'calc(100vh - 140px)',
-                        overflow: 'hidden',
-                        display: 'flex',
-                        alignItems: 'center'
-                      }}
-                    >
-                    <WouliEventCard
-                      event={filteredEvents[currentIndex + 1]}
-                      variant="swipe"
-                      enableSwipe={false}
-                      isLiked={likedEvents.includes(filteredEvents[currentIndex + 1].id)}
-                      isParticipating={participatingEvents.includes(filteredEvents[currentIndex + 1].id)}
-                      onLike={() => {}}
-                      onSwipeLeft={() => {}}
-                      onSwipeRight={() => {}}
-                      onParticipate={() => {}}
-                      onCardClick={() => handleCardClick(filteredEvents[currentIndex + 1].id)}
-                      className="max-h-full"
-                    />
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="text-center p-8">
-                <p className="text-muted-foreground">Aucun événement disponible dans cette catégorie</p>
-                <Button 
-                  variant="outline" 
-                  onClick={() => handleCategoryChange('all')} 
-                  className="mt-4"
-                >
-                  Voir tous les événements
-                </Button>
+      <div className="flex-1 flex items-start justify-center px-3 pt-4 overflow-hidden">
+        {filteredEvents.length > 0 ? (
+          <div className="relative w-full max-w-[400px] mx-auto max-h-full flex items-start justify-center">
+            {/* Current Card */}
+            {currentIndex < filteredEvents.length && (
+              <div className="absolute inset-0 z-10">
+                <WouliEventCard
+                  event={filteredEvents[currentIndex]}
+                  variant="swipe"
+                  enableSwipe={true}
+                  isLiked={likedEvents.includes(filteredEvents[currentIndex].id)}
+                  isParticipating={participatingEvents.includes(filteredEvents[currentIndex].id)}
+                  onLike={() => handleLike(filteredEvents[currentIndex].id)}
+                  onDislike={handleDislike}
+                  onSwipeLeft={handleDislike}
+                  onSwipeRight={() => handleLike(filteredEvents[currentIndex].id)}
+                  onParticipate={() => handleParticipate(filteredEvents[currentIndex].id)}
+                  onCardClick={() => handleCardClick(filteredEvents[currentIndex].id)}
+                  onShare={() => {
+                    if (navigator.share) {
+                      navigator.share({
+                        title: filteredEvents[currentIndex].title,
+                        text: `Découvre cet événement : ${filteredEvents[currentIndex].title}`,
+                        url: window.location.origin + `/events/${filteredEvents[currentIndex].id}`
+                      });
+                    }
+                  }}
+                />
+              </div>
+            )}
+            
+            {/* Next Card Preview */}
+            {currentIndex + 1 < filteredEvents.length && (
+              <div className="absolute inset-0 z-0 transform scale-95 opacity-50 pointer-events-none">
+                <WouliEventCard
+                  event={filteredEvents[currentIndex + 1]}
+                  variant="swipe"
+                  enableSwipe={false}
+                  isLiked={likedEvents.includes(filteredEvents[currentIndex + 1].id)}
+                  isParticipating={participatingEvents.includes(filteredEvents[currentIndex + 1].id)}
+                  onLike={() => {}}
+                  onSwipeLeft={() => {}}
+                  onSwipeRight={() => {}}
+                  onParticipate={() => {}}
+                  onCardClick={() => handleCardClick(filteredEvents[currentIndex + 1].id)}
+                />
               </div>
             )}
           </div>
+        ) : (
+          <div className="text-center p-8">
+            <p className="text-muted-foreground">Aucun événement disponible dans cette catégorie</p>
+            <Button 
+              variant="outline" 
+              onClick={() => handleCategoryChange('all')} 
+              className="mt-4"
+            >
+              Voir tous les événements
+            </Button>
+          </div>
+        )}
+      </div>
 
-        {/* Boutons d'action flottants - Style Tinder */}
+      {/* Zone 3 : Boutons Flottants - Séparés de la zone swipe */}
+      <div className="flex-shrink-0 pb-8">
         {filteredEvents.length > 0 && currentIndex < filteredEvents.length && (
-          <div className="absolute bottom-8 left-0 right-0 flex justify-center items-center gap-6 z-20">
+          <div className="flex justify-center items-center gap-6 px-4">
             {/* Bouton Dislike */}
             <button
               onClick={handleDislike}
-              className="w-16 h-16 rounded-full bg-background shadow-lg flex items-center justify-center text-red-500 hover:bg-red-50 active:scale-95 transition-all"
+              className="w-16 h-16 rounded-full bg-background shadow-lg flex items-center justify-center text-red-500 hover:bg-accent active:scale-95 transition-all border border-border"
               aria-label="Passer"
             >
               <X className="h-8 w-8" />
@@ -306,7 +262,7 @@ const UserAppGridTest = () => {
             {/* Bouton Participer */}
             <button
               onClick={() => handleParticipate(filteredEvents[currentIndex].id)}
-              className="w-16 h-16 rounded-full bg-background shadow-lg flex items-center justify-center text-green-500 hover:bg-green-50 active:scale-95 transition-all"
+              className="w-16 h-16 rounded-full bg-background shadow-lg flex items-center justify-center text-green-500 hover:bg-accent active:scale-95 transition-all border border-border"
               aria-label="Participer"
             >
               <Check className="h-8 w-8" />
