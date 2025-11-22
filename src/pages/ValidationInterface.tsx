@@ -112,7 +112,16 @@ const ValidationInterface = () => {
       if (error) throw error;
       
       const newEvents = data || [];
-      setEvents(append ? [...events, ...newEvents] : newEvents);
+      
+      // Fusion intelligente : éviter les doublons
+      if (append) {
+        const existingIds = new Set(events.map(e => e.id));
+        const uniqueNewEvents = newEvents.filter(e => !existingIds.has(e.id));
+        setEvents([...events, ...uniqueNewEvents]);
+      } else {
+        setEvents(newEvents);
+      }
+      
       setHasMore(newEvents.length === EVENTS_PER_PAGE);
       
       // Enregistrer le total
@@ -162,9 +171,26 @@ const ValidationInterface = () => {
     setStatusChange({ eventIds, currentStatus, targetStatus });
   };
 
-  const onStatusChangeSuccess = () => {
-    fetchEvents();
+  const onStatusChangeSuccess = async () => {
+    // Recharger la première page
+    await fetchEvents(0, false);
     setSelectedIds(new Set());
+    
+    // Charger automatiquement plus d'événements si la page courante est vide/faible
+    setTimeout(async () => {
+      const visibleEvents = events.filter(e => 
+        e.status !== 'archived' && 
+        getEventStatus(e) !== 'archived' &&
+        (activeTab === 'all' || e.status === activeTab) &&
+        (filter === 'all' || e.category === filter)
+      );
+      
+      if (visibleEvents.length < 5 && hasMore) {
+        setLoadingMore(true);
+        await fetchEvents(1, true);
+        setLoadingMore(false);
+      }
+    }, 500);
   };
 
   // Utility functions
