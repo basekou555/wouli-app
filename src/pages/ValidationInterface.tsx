@@ -69,7 +69,6 @@ const ValidationInterface = () => {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [totalCount, setTotalCount] = useState<number | null>(null);
-  const [totalPendingCount, setTotalPendingCount] = useState<number | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const EVENTS_PER_PAGE = 10;
   const { toast } = useToast();
@@ -127,14 +126,6 @@ const ValidationInterface = () => {
       
       // Enregistrer le total
       if (count !== null) setTotalCount(count);
-      
-      // Récupérer le total d'événements pending
-      const { count: pendingCount } = await supabase
-        .from('events')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending');
-      
-      if (pendingCount !== null) setTotalPendingCount(pendingCount);
       
       if (!append) setPage(pageNum);
     } catch (error) {
@@ -552,9 +543,9 @@ const ValidationInterface = () => {
                         `Charger ${EVENTS_PER_PAGE} événements supplémentaires`
                       )}
                     </Button>
-                    {totalPendingCount !== null && (
+                    {totalCount !== null && (
                       <p className="text-xs text-muted-foreground">
-                        {events.filter(e => e.status === 'pending').length} / {totalPendingCount} événements pending chargés
+                        {events.length} / {totalCount} événements chargés
                       </p>
                     )}
                   </div>
