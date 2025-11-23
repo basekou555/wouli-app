@@ -7,9 +7,10 @@ import { WOULI_CATEGORIES as categories } from '../data/wouliCategories';
 import { useAllEvents } from '@/hooks/useAllEvents';
 import BottomNavigation from '../components/BottomNavigation';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
-import WouliEventCard from '@/components/cards/WouliEventCard';
+import EventCard from '@/components/EventCard';
 const UserApp = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [eventHistory, setEventHistory] = useState<number[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [likedEvents, setLikedEvents] = useState<string[]>([]);
   const [participatingEvents, setParticipatingEvents] = useState<string[]>([]);
@@ -56,6 +57,7 @@ const UserApp = () => {
 
   const nextCard = () => {
     if (currentIndex < filteredEvents.length - 1) {
+      setEventHistory([...eventHistory, currentIndex]);
       setCurrentIndex(currentIndex + 1);
     } else {
       toast({
@@ -63,6 +65,15 @@ const UserApp = () => {
         description: "Plus d'événements à découvrir pour le moment"
       });
       setCurrentIndex(0);
+      setEventHistory([]);
+    }
+  };
+
+  const handleBack = () => {
+    if (eventHistory.length > 0) {
+      const previousIndex = eventHistory[eventHistory.length - 1];
+      setCurrentIndex(previousIndex);
+      setEventHistory(eventHistory.slice(0, -1));
     }
   };
   const currentEvent = filteredEvents[currentIndex];
@@ -93,56 +104,35 @@ const UserApp = () => {
         </div>
       </div>
 
-      {/* Card Stack Container */}
-      <div className="flex-1 flex items-start justify-center px-3 pt-4 overflow-hidden">
+      {/* Event Card Container */}
+      <div className="flex-1 overflow-hidden">
         {filteredEvents.length > 0 ? (
-          <div className="relative w-full max-w-[400px] mx-auto max-h-full flex items-start justify-center">
-            {/* Current Card */}
-            {currentIndex < filteredEvents.length && (
-              <div className="absolute inset-0 z-10">
-                <WouliEventCard
-                  event={filteredEvents[currentIndex]}
-                  variant="swipe"
-                  enableSwipe={true}
-                  isLiked={likedEvents.includes(filteredEvents[currentIndex].id)}
-                  isParticipating={participatingEvents.includes(filteredEvents[currentIndex].id)}
-                  onLike={() => handleLike(filteredEvents[currentIndex].id)}
-                  onDislike={handleDislike}
-                  onSwipeLeft={handleDislike}
-                  onSwipeRight={() => handleLike(filteredEvents[currentIndex].id)}
-                  onParticipate={() => handleParticipate(filteredEvents[currentIndex].id)}
-                  onCardClick={() => handleCardClick(filteredEvents[currentIndex].id)}
-                  onShare={() => {
-                    if (navigator.share) {
-                      navigator.share({
-                        title: filteredEvents[currentIndex].title,
-                        text: `Découvre cet événement : ${filteredEvents[currentIndex].title}`,
-                        url: window.location.origin + `/events/${filteredEvents[currentIndex].id}`
-                      });
-                    }
-                  }}
-                />
-              </div>
-            )}
-            
-            {/* Next Card Preview */}
-            {currentIndex + 1 < filteredEvents.length && (
-              <div className="absolute inset-0 z-0 transform scale-95 opacity-50 pointer-events-none">
-                <WouliEventCard
-                  event={filteredEvents[currentIndex + 1]}
-                  variant="swipe"
-                  enableSwipe={false}
-                  isLiked={likedEvents.includes(filteredEvents[currentIndex + 1].id)}
-                  isParticipating={participatingEvents.includes(filteredEvents[currentIndex + 1].id)}
-                  onLike={() => {}}
-                  onSwipeLeft={() => {}}
-                  onSwipeRight={() => {}}
-                  onParticipate={() => {}}
-                  onCardClick={() => handleCardClick(filteredEvents[currentIndex + 1].id)}
-                />
-              </div>
-            )}
-          </div>
+          currentIndex < filteredEvents.length && (
+            <EventCard
+              event={filteredEvents[currentIndex]}
+              isFirstEvent={eventHistory.length === 0}
+              onBack={handleBack}
+              onDislike={handleDislike}
+              onLike={() => handleLike(filteredEvents[currentIndex].id)}
+              onParticipate={() => handleParticipate(filteredEvents[currentIndex].id)}
+              onShare={() => {
+                if (navigator.share) {
+                  navigator.share({
+                    title: filteredEvents[currentIndex].title,
+                    text: `Découvre cet événement : ${filteredEvents[currentIndex].title}`,
+                    url: window.location.origin + `/events/${filteredEvents[currentIndex].id}`
+                  });
+                }
+              }}
+              onFilterClick={() => {
+                // TODO: Ouvrir drawer filtres (Phase 3)
+                toast({
+                  title: "Filtres",
+                  description: "Drawer de filtres à venir (Phase 3)"
+                });
+              }}
+            />
+          )
         ) : (
           <div className="text-center p-8">
             <p className="text-muted-foreground">Aucun événement disponible dans cette catégorie</p>
