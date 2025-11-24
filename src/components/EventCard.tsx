@@ -54,26 +54,14 @@ const EventCard: React.FC<EventCardProps> = ({
       {/* ========== HEADER FIXED ========== */}
       <header className="fixed top-0 left-0 right-0 z-50 h-15 bg-card/95 backdrop-blur-md border-b border-border">
         <div className="flex items-center justify-between px-4 h-full">
-          {/* Gauche : Retour OU Menu */}
-          <div className="w-10">
-            {!isFirstEvent ? (
-              <button
-                onClick={onBack}
-                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-accent transition-colors"
-                aria-label="Retour"
-              >
-                <span className="text-xl">←</span>
-              </button>
-            ) : (
-              <button
-                onClick={onMenuClick}
-                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-accent transition-colors"
-                aria-label="Menu"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
-            )}
-          </div>
+          {/* Gauche : Menu (toujours visible) */}
+          <button
+            onClick={onMenuClick}
+            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-accent transition-colors"
+            aria-label="Menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
 
           {/* Centre : Logo */}
           <span className="font-bold text-lg tracking-wide">WOULI</span>
@@ -120,6 +108,18 @@ const EventCard: React.FC<EventCardProps> = ({
             onError={handleImageError}
             loading="lazy"
           />
+          
+          {/* Bouton Retour en Overlay (visible si pas premier event) */}
+          {!isFirstEvent && (
+            <button
+              onClick={onBack}
+              className="absolute top-4 left-4 w-10 h-10 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 transition-all z-10"
+              aria-label="Retour"
+            >
+              <span className="text-xl">←</span>
+            </button>
+          )}
+          
           {/* Gradient overlay subtil pour transition */}
           <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent" />
         </div>
