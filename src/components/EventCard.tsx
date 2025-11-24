@@ -90,7 +90,7 @@ const EventCard: React.FC<EventCardProps> = ({
       <div className="pt-15">
         {/* Titre + Lieu - Scrollable, juste sous header */}
         <div className="px-4 py-5 bg-card border-b border-border">
-          <h1 className="text-xl font-bold mb-2 text-foreground line-clamp-3">
+          <h1 className="text-xl font-bold mb-2 text-foreground line-clamp-3 text-left">
             {event.title}
           </h1>
           <p className="text-sm text-muted-foreground flex items-center gap-1">
