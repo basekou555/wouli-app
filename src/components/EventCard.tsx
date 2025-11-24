@@ -53,20 +53,32 @@ const EventCard: React.FC<EventCardProps> = ({
     >
       {/* ========== HEADER FIXED ========== */}
       <header className="fixed top-0 left-0 right-0 z-50 h-15 bg-card/95 backdrop-blur-md border-b border-border">
-        <div className="flex items-center justify-between px-4 h-full relative">
-          {/* Menu Hamburger - Gauche */}
-          <button
-            onClick={onMenuClick}
-            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-accent transition-colors"
-            aria-label="Menu"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
+        <div className="flex items-center justify-between px-4 h-full">
+          {/* Gauche : Retour OU Menu */}
+          <div className="w-10">
+            {!isFirstEvent ? (
+              <button
+                onClick={onBack}
+                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-accent transition-colors"
+                aria-label="Retour"
+              >
+                <span className="text-xl">←</span>
+              </button>
+            ) : (
+              <button
+                onClick={onMenuClick}
+                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-accent transition-colors"
+                aria-label="Menu"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+            )}
+          </div>
 
-          {/* Logo - Centre */}
+          {/* Centre : Logo */}
           <span className="font-bold text-lg tracking-wide">WOULI</span>
 
-          {/* Actions - Droite */}
+          {/* Droite : Recherche + Filtres */}
           <div className="flex items-center gap-2">
             <button
               onClick={onSearchClick}
@@ -83,17 +95,6 @@ const EventCard: React.FC<EventCardProps> = ({
               <span>Filtres</span>
             </button>
           </div>
-
-          {/* Bouton Retour - Position Absolue Gauche */}
-          {!isFirstEvent && (
-            <button
-              onClick={onBack}
-              className="absolute left-4 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-full bg-background border border-border hover:bg-accent transition-colors z-10"
-              aria-label="Retour"
-            >
-              <span className="text-lg">←</span>
-            </button>
-          )}
         </div>
       </header>
 
@@ -124,7 +125,7 @@ const EventCard: React.FC<EventCardProps> = ({
         </div>
 
         {/* Sections Infos - PLACEHOLDER pour Phase 4 */}
-        <div className="px-4 py-6 space-y-6 pb-32">
+        <div className="px-4 py-6 space-y-6 pb-40">
           <div className="text-center p-8 border border-dashed border-border rounded-lg">
             <p className="text-muted-foreground text-sm">
               📝 Sections détaillées à venir (Phase 4)
@@ -137,7 +138,7 @@ const EventCard: React.FC<EventCardProps> = ({
       </div>
 
       {/* ========== BOUTONS D'ACTION FIXED BOTTOM ========== */}
-      <div className="fixed bottom-6 left-0 right-0 px-4 z-40">
+      <div className="fixed bottom-20 left-0 right-0 px-4 z-40">
         <div className="flex gap-3 max-w-md mx-auto">
           {/* Bouton Dislike (X) */}
           <button

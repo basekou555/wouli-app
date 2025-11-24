@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Filter } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from 'react-router-dom';
-import { WOULI_CATEGORIES as categories } from '../data/wouliCategories';
 import { useAllEvents } from '@/hooks/useAllEvents';
-import BottomNavigation from '../components/BottomNavigation';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
 import EventCard from '@/components/EventCard';
 const UserApp = () => {
@@ -82,29 +79,7 @@ const UserApp = () => {
   }
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
-      {/* Header avec Filtres */}
-      <div className="bg-card p-4 flex-shrink-0">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-shrink-0">
-            <h1 className="text-2xl font-bold text-gradient">Wouli</h1>
-          </div>
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {categories.map(category => (
-              <Button 
-                key={category.id}
-                variant={selectedCategory === category.id ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleCategoryChange(category.id)}
-                className="whitespace-nowrap"
-              >
-                {category.icon} {category.name}
-              </Button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Event Card Container */}
+      {/* Event Card Container - Plein écran */}
       <div className="flex-1 overflow-hidden">
         {filteredEvents.length > 0 ? (
           currentIndex < filteredEvents.length && (
@@ -124,30 +99,28 @@ const UserApp = () => {
                   });
                 }
               }}
+              onMenuClick={() => {
+                toast({ title: "Menu", description: "À venir" });
+              }}
+              onSearchClick={() => {
+                navigate('/search');
+              }}
               onFilterClick={() => {
-                // TODO: Ouvrir drawer filtres (Phase 3)
-                toast({
-                  title: "Filtres",
-                  description: "Drawer de filtres à venir (Phase 3)"
-                });
+                toast({ title: "Filtres", description: "Drawer à venir (Phase 3)" });
               }}
             />
           )
         ) : (
-          <div className="text-center p-8">
-            <p className="text-muted-foreground">Aucun événement disponible dans cette catégorie</p>
-            <Button 
-              variant="outline" 
-              onClick={() => handleCategoryChange('all')} 
-              className="mt-4"
-            >
-              Voir tous les événements
-            </Button>
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center p-8">
+              <p className="text-muted-foreground mb-4">Aucun événement disponible</p>
+              <Button onClick={() => setSelectedCategory('all')}>
+                Voir tous les événements
+              </Button>
+            </div>
           </div>
         )}
       </div>
-
-      <BottomNavigation />
     </div>
   );
 };
