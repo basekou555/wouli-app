@@ -90,10 +90,10 @@ const EventCard: React.FC<EventCardProps> = ({
       <div className="pt-15">
         {/* Titre + Lieu - Scrollable, juste sous header */}
         <div className="px-4 py-3 bg-card border-b border-border">
-          <h1 className="text-xl font-bold mb-1 text-foreground line-clamp-2">
+          <h1 className="text-xl font-bold mb-1 text-foreground">
             {event.title}
           </h1>
-          <p className="text-sm text-muted-foreground flex items-center gap-1 line-clamp-1">
+          <p className="text-sm text-muted-foreground flex items-center gap-1">
             <span>📍</span>
             <span>{event.location}</span>
           </p>
