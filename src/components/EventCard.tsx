@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { UnifiedEvent } from '@/types/unified';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { X, Heart, Share2, Check, Menu, Search, Filter } from 'lucide-react';
 import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
+import { getSocialProofText, getPriceInfo } from '@/utils/eventCardHelpers';
 
 interface EventCardProps {
   event: UnifiedEvent;
@@ -32,6 +31,26 @@ const EventCard: React.FC<EventCardProps> = ({
 }) => {
   const [scrollY, setScrollY] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Helper : Format date court français (ex: "Sam 23 nov")
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', { 
+      weekday: 'short', 
+      day: 'numeric', 
+      month: 'short' 
+    });
+  };
+
+  // Helper : Format heure (ex: "19h00")
+  const formatTime = (dateString: string, time?: string) => {
+    if (time) return time;
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('fr-FR', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
 
   // Tracking du scroll pour animations futures (Phase 5)
   useEffect(() => {
@@ -124,16 +143,112 @@ const EventCard: React.FC<EventCardProps> = ({
           <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent" />
         </div>
 
-        {/* Sections Infos - PLACEHOLDER pour Phase 4 */}
-        <div className="px-4 py-6 space-y-6 pb-40">
-          <div className="text-center p-8 border border-dashed border-border rounded-lg">
-            <p className="text-muted-foreground text-sm">
-              📝 Sections détaillées à venir (Phase 4)
-            </p>
-            <p className="text-xs text-muted-foreground mt-2">
-              Date, Participants, Description, Établissement, Map
-            </p>
+        {/* ========== SECTION 1 : Date/Heure/Lieu/Distance ========== */}
+        <div className="px-4 py-6 bg-card border-b border-border">
+          <div className="grid grid-cols-2 gap-4">
+            {/* Date */}
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">📅</span>
+              <span className="text-sm font-medium">{formatDate(event.date)}</span>
+            </div>
+            
+            {/* Heure */}
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">⏰</span>
+              <span className="text-sm font-medium">{formatTime(event.date, event.time)}</span>
+            </div>
+            
+            {/* Lieu */}
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">📍</span>
+              <span className="text-sm font-medium truncate">{event.venue || event.location}</span>
+            </div>
+            
+            {/* Distance */}
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">🚶</span>
+              {/* TODO: Implémenter géolocalisation + calcul distance */}
+              <span className="text-sm text-muted-foreground">À calculer</span>
+            </div>
           </div>
+        </div>
+
+        {/* ========== SECTION 2 : Prix ========== */}
+        {event.price_text && (
+          <div className="px-4 py-3 bg-card border-b border-border">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">💰</span>
+              <span className="text-sm font-semibold text-primary">
+                {getPriceInfo(event.price_text).display}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* ========== SECTION 3 : Participants ========== */}
+        <div className="px-4 py-6 bg-card border-b border-border">
+          {/* Avatars Amis */}
+          {event.friendsParticipating && event.friendsParticipating.length > 0 && (
+            <div className="flex -space-x-2 mb-3">
+              {event.friendsParticipating.slice(0, 3).map((friend) => (
+                friend.avatar ? (
+                  <img
+                    key={friend.id}
+                    src={friend.avatar}
+                    alt={friend.name}
+                    className="w-10 h-10 rounded-full border-2 border-card object-cover"
+                  />
+                ) : (
+                  <div
+                    key={friend.id}
+                    className="w-10 h-10 rounded-full border-2 border-card bg-primary/20 flex items-center justify-center text-sm font-medium text-primary"
+                  >
+                    {friend.name.charAt(0).toUpperCase()}
+                  </div>
+                )
+              ))}
+            </div>
+          )}
+          
+          {/* Compteur */}
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">👥</span>
+            <span className="text-sm font-medium">
+              {getSocialProofText(event.friendsParticipating || [], event.totalParticipants || 0)}
+            </span>
+          </div>
+        </div>
+
+        {/* ========== SECTION 4 : Description ========== */}
+        <div className="px-4 py-6 bg-card pb-40">
+          {/* Tags */}
+          <div className="mb-4 flex flex-wrap gap-2">
+            {event.tags && event.tags.length > 0 ? (
+              event.tags.map((tag, index) => (
+                <span
+                  key={index}
+                  className="inline-block px-3 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full"
+                >
+                  {tag}
+                </span>
+              ))
+            ) : (
+              /* TODO: Générer tags depuis description ou champ dédié */
+              <span className="inline-block px-3 py-1 bg-muted text-muted-foreground text-xs rounded-full">
+                🔑 Tags à venir
+              </span>
+            )}
+          </div>
+          
+          {/* Titre */}
+          <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            📝 <span>Description</span>
+          </h3>
+          
+          {/* Texte */}
+          <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+            {event.description || "Aucune description disponible"}
+          </p>
         </div>
       </div>
 
