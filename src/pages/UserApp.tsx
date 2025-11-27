@@ -73,6 +73,35 @@ const UserApp = () => {
       setEventHistory(eventHistory.slice(0, -1));
     }
   };
+
+  const handleEstablishmentClick = () => {
+    const event = filteredEvents[currentIndex];
+    toast({
+      title: event?.venue || event?.location || "Établissement",
+      description: "Page établissement à venir"
+    });
+  };
+
+  const handleMapClick = () => {
+    const event = filteredEvents[currentIndex];
+    if (!event?.address) {
+      toast({
+        title: "Adresse non disponible",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const encodedAddress = encodeURIComponent(event.address);
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    
+    if (isIOS) {
+      window.open(`maps://maps.apple.com/?q=${encodedAddress}`, '_blank');
+    } else {
+      window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank');
+    }
+  };
+
   const currentEvent = filteredEvents[currentIndex];
   if (loading) {
     return <PageSkeleton />;
@@ -108,6 +137,8 @@ const UserApp = () => {
               onFilterClick={() => {
                 toast({ title: "Filtres", description: "Drawer à venir (Phase 3)" });
               }}
+              onEstablishmentClick={handleEstablishmentClick}
+              onMapClick={handleMapClick}
             />
           )
         ) : (

@@ -27,6 +27,10 @@ export interface UnifiedEvent extends BaseEvent {
   friendsParticipating?: Friend[];
   totalParticipants?: number;
   
+  // Établissement
+  venue_logo?: string;
+  venue_id?: string;
+  
   // Business metrics
   conversion_rate?: number;
 }

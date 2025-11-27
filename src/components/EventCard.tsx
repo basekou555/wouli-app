@@ -15,7 +15,17 @@ interface EventCardProps {
   onMenuClick?: () => void;
   onSearchClick?: () => void;
   onFilterClick?: () => void;
+  onEstablishmentClick?: () => void;
+  onMapClick?: () => void;
 }
+
+// Helper : URL image statique OpenStreetMap
+const getStaticMapUrl = (lat: number, lon: number) => {
+  return `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lon}&zoom=15&size=600x300&markers=${lat},${lon},red-pushpin`;
+};
+
+// Coordonnées Lyon par défaut
+const getLyonCoordinates = () => ({ lat: 45.7640, lon: 4.8357 });
 
 const EventCard: React.FC<EventCardProps> = ({
   event,
@@ -27,7 +37,9 @@ const EventCard: React.FC<EventCardProps> = ({
   onShare,
   onMenuClick,
   onSearchClick,
-  onFilterClick
+  onFilterClick,
+  onEstablishmentClick,
+  onMapClick
 }) => {
   const [scrollY, setScrollY] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -220,7 +232,7 @@ const EventCard: React.FC<EventCardProps> = ({
         </div>
 
         {/* ========== SECTION 4 : Description ========== */}
-        <div className="px-4 py-6 bg-card pb-40">
+        <div className="px-4 py-6 bg-card border-b border-border">
           {/* Tags */}
           <div className="mb-4 flex flex-wrap gap-2">
             {event.tags && event.tags.length > 0 ? (
@@ -233,7 +245,6 @@ const EventCard: React.FC<EventCardProps> = ({
                 </span>
               ))
             ) : (
-              /* TODO: Générer tags depuis description ou champ dédié */
               <span className="inline-block px-3 py-1 bg-muted text-muted-foreground text-xs rounded-full">
                 🔑 Tags à venir
               </span>
@@ -249,6 +260,83 @@ const EventCard: React.FC<EventCardProps> = ({
           <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
             {event.description || "Aucune description disponible"}
           </p>
+        </div>
+
+        {/* ========== SECTION 5 : Établissement ========== */}
+        <div className="px-4 py-6 bg-card border-b border-border">
+          <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            🏢 <span>Organisateur</span>
+          </h3>
+          
+          <button
+            onClick={onEstablishmentClick}
+            className="w-full flex items-center gap-4 p-4 bg-background rounded-lg hover:bg-accent transition-colors"
+          >
+            {/* Logo établissement */}
+            <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+              {event.venue_logo ? (
+                <img
+                  src={event.venue_logo}
+                  alt={event.venue || event.location}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-2xl">
+                  🏢
+                </div>
+              )}
+            </div>
+            
+            {/* Infos établissement */}
+            <div className="flex-1 text-left">
+              <p className="font-semibold text-base">
+                {event.venue || event.location}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Voir l'établissement →
+              </p>
+            </div>
+          </button>
+        </div>
+
+        {/* ========== SECTION 6 : Map ========== */}
+        <div className="px-4 py-6 bg-card pb-40">
+          <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            📍 <span>Localisation</span>
+          </h3>
+          
+          {/* Map Container */}
+          <button
+            onClick={onMapClick}
+            className="w-full h-[300px] rounded-lg overflow-hidden bg-muted relative group"
+          >
+            {event.address ? (
+              <img
+                src={getStaticMapUrl(getLyonCoordinates().lat, getLyonCoordinates().lon)}
+                alt={`Carte de ${event.location}`}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground">
+                <span className="text-4xl mb-2">📍</span>
+                <span className="text-sm">Adresse non disponible</span>
+              </div>
+            )}
+            
+            {/* Overlay au hover */}
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white font-semibold text-sm bg-black/50 px-4 py-2 rounded-full">
+                Ouvrir dans Maps
+              </span>
+            </div>
+          </button>
+          
+          {/* Adresse texte */}
+          {event.address && (
+            <p className="mt-3 text-sm text-muted-foreground text-center">
+              📍 {event.address}
+            </p>
+          )}
         </div>
       </div>
 
