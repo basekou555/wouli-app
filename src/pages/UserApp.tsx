@@ -24,10 +24,27 @@ const UserApp = () => {
 
   // Filter events based on selected category
   const filteredEvents = selectedCategory === 'all' ? allEvents : allEvents.filter(event => event.category === selectedCategory);
+  
   const handleCategoryChange = (categoryId: string) => {
     setSelectedCategory(categoryId);
     setCurrentIndex(0);
   };
+
+  const nextCard = () => {
+    if (currentIndex < filteredEvents.length - 1) {
+      setEventHistory([...eventHistory, currentIndex]);
+      const nextIndex = currentIndex + 1;
+      setCurrentIndex(nextIndex);
+      
+      // Incrémenter les vues de l'event suivant
+      const nextEvent = filteredEvents[nextIndex];
+      if (nextEvent) {
+        handleIncrementViews(nextEvent.id);
+      }
+    }
+    // Ne plus reset automatiquement - l'écran de fin gère ça
+  };
+
   const handleLike = async (eventId: string) => {
     if (!likedEvents.includes(eventId)) {
       setLikedEvents([...likedEvents, eventId]);
@@ -45,24 +62,38 @@ const UserApp = () => {
   };
 
   const handleDislike = () => {
+    toast({
+      title: "Événement ignoré 👋",
+      description: "On passe au suivant !",
+      duration: 1500,
+    });
     nextCard();
   };
 
-  const handleCardClick = (eventId: string) => {
-    navigate(`/events/${eventId}`);
-  };
+  const handleShare = async () => {
+    const event = filteredEvents[currentIndex];
+    if (!event) return;
+    
+    const shareData = {
+      title: `${event.title} - Wouli`,
+      text: `Découvre cet événement : ${event.title}`,
+      url: `${window.location.origin}/events/${event.id}`,
+    };
 
-  const nextCard = () => {
-    if (currentIndex < filteredEvents.length - 1) {
-      setEventHistory([...eventHistory, currentIndex]);
-      setCurrentIndex(currentIndex + 1);
-    } else {
-      toast({
-        title: "C'est tout !",
-        description: "Plus d'événements à découvrir pour le moment"
-      });
-      setCurrentIndex(0);
-      setEventHistory([]);
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        toast({ title: "Événement partagé ! 🎉", duration: 1500 });
+      } else {
+        await navigator.clipboard.writeText(shareData.url);
+        toast({
+          title: "Lien copié ! 📋",
+          description: "Le lien a été copié dans le presse-papier",
+          duration: 2000,
+        });
+      }
+    } catch (error) {
+      console.log('Share cancelled');
     }
   };
 
@@ -72,6 +103,11 @@ const UserApp = () => {
       setCurrentIndex(previousIndex);
       setEventHistory(eventHistory.slice(0, -1));
     }
+  };
+
+  const handleResetList = () => {
+    setCurrentIndex(0);
+    setEventHistory([]);
   };
 
   const handleEstablishmentClick = () => {
@@ -111,7 +147,7 @@ const UserApp = () => {
       {/* Event Card Container - Plein écran */}
       <div className="flex-1 overflow-hidden">
         {filteredEvents.length > 0 ? (
-          currentIndex < filteredEvents.length && (
+          currentIndex < filteredEvents.length ? (
             <EventCard
               event={filteredEvents[currentIndex]}
               isFirstEvent={eventHistory.length === 0}
@@ -119,15 +155,7 @@ const UserApp = () => {
               onDislike={handleDislike}
               onLike={() => handleLike(filteredEvents[currentIndex].id)}
               onParticipate={() => handleParticipate(filteredEvents[currentIndex].id)}
-              onShare={() => {
-                if (navigator.share) {
-                  navigator.share({
-                    title: filteredEvents[currentIndex].title,
-                    text: `Découvre cet événement : ${filteredEvents[currentIndex].title}`,
-                    url: window.location.origin + `/events/${filteredEvents[currentIndex].id}`
-                  });
-                }
-              }}
+              onShare={handleShare}
               onMenuClick={() => {
                 toast({ title: "Menu", description: "À venir" });
               }}
@@ -140,6 +168,20 @@ const UserApp = () => {
               onEstablishmentClick={handleEstablishmentClick}
               onMapClick={handleMapClick}
             />
+          ) : (
+            // Écran fin de liste
+            <div className="flex-1 flex items-center justify-center h-full p-8">
+              <div className="text-center space-y-4">
+                <span className="text-6xl">🎉</span>
+                <p className="text-xl font-semibold">C'est tout pour aujourd'hui !</p>
+                <p className="text-muted-foreground">
+                  Plus d'événements à découvrir. Reviens demain !
+                </p>
+                <Button onClick={handleResetList} variant="outline">
+                  Revoir depuis le début
+                </Button>
+              </div>
+            </div>
           )
         ) : (
           <div className="flex items-center justify-center h-full">
