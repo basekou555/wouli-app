@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from 'react-router-dom';
@@ -6,6 +6,8 @@ import { useAllEvents } from '@/hooks/useAllEvents';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
 import EventCard from '@/components/EventCard';
 import { motion } from 'framer-motion';
+import { MenuDrawer } from '@/components/MenuDrawer';
+import { FiltersDrawer } from '@/components/FiltersDrawer';
 
 const UserApp = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -13,6 +15,14 @@ const UserApp = () => {
   const [participatingEvents, setParticipatingEvents] = useState<Set<string>>(new Set());
   const [viewedEventIds, setViewedEventIds] = useState<Set<string>>(new Set());
   const [currentScrollIndex, setCurrentScrollIndex] = useState(0);
+  
+  // Drawer states
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  
+  // Filter states
+  const [selectedPrice, setSelectedPrice] = useState('all');
+  const [selectedTime, setSelectedTime] = useState('all');
   
   const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -26,10 +36,66 @@ const UserApp = () => {
     incrementViews: handleIncrementViews
   } = useAllEvents();
 
-  // Filter events based on selected category
-  const filteredEvents = selectedCategory === 'all' 
-    ? allEvents 
-    : allEvents.filter(event => event.category === selectedCategory);
+  // Filter events based on all criteria
+  const filteredEvents = useMemo(() => {
+    let events = allEvents;
+
+    // Filter by category
+    if (selectedCategory !== 'all') {
+      events = events.filter(e => e.category === selectedCategory);
+    }
+
+    // Filter by price
+    if (selectedPrice !== 'all') {
+      events = events.filter(e => {
+        const priceText = e.price_text || '0';
+        const price = parseFloat(priceText.replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+        const isFree = price === 0 || priceText.toLowerCase().includes('gratuit');
+        
+        switch (selectedPrice) {
+          case 'free':
+            return isFree;
+          case 'cheap':
+            return !isFree && price < 15;
+          case 'medium':
+            return price >= 15 && price <= 30;
+          case 'expensive':
+            return price > 30;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Filter by time
+    if (selectedTime !== 'all') {
+      const now = new Date();
+      events = events.filter(e => {
+        const eventDate = new Date(e.date);
+        switch (selectedTime) {
+          case 'now':
+            // Events in the next 2 hours
+            const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+            return eventDate >= now && eventDate <= twoHoursFromNow;
+          case 'tonight':
+            // Events today
+            return eventDate.toDateString() === now.toDateString();
+          case 'tomorrow':
+            const tomorrow = new Date(now);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            return eventDate.toDateString() === tomorrow.toDateString();
+          case 'weekend':
+            const dayOfWeek = eventDate.getDay();
+            // Friday, Saturday, Sunday
+            return dayOfWeek === 5 || dayOfWeek === 6 || dayOfWeek === 0;
+          default:
+            return true;
+        }
+      });
+    }
+
+    return events;
+  }, [allEvents, selectedCategory, selectedPrice, selectedTime]);
 
   // Scroll programmatique vers un event
   const scrollToEvent = useCallback((targetIndex: number) => {
@@ -96,7 +162,19 @@ const UserApp = () => {
   const handleCategoryChange = (categoryId: string) => {
     setSelectedCategory(categoryId);
     setCurrentScrollIndex(0);
-    scrollToEvent(0);
+    if (containerRef.current) {
+      containerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleResetFilters = () => {
+    setSelectedCategory('all');
+    setSelectedPrice('all');
+    setSelectedTime('all');
+    setCurrentScrollIndex(0);
+    if (containerRef.current) {
+      containerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const handleDislike = useCallback((eventId: string, currentIndex: number) => {
@@ -215,6 +293,9 @@ const UserApp = () => {
     }
   }, [filteredEvents, toast]);
 
+  // Check if filters are active (for UI feedback)
+  const hasActiveFilters = selectedCategory !== 'all' || selectedPrice !== 'all' || selectedTime !== 'all';
+
   if (loading) {
     return <PageSkeleton />;
   }
@@ -242,15 +323,9 @@ const UserApp = () => {
                   onLike={() => handleLike(event.id, index)}
                   onParticipate={() => handleParticipate(event.id, index)}
                   onShare={() => handleShare(event.id)}
-                  onMenuClick={() => {
-                    toast({ title: "Menu", description: "À venir" });
-                  }}
-                  onSearchClick={() => {
-                    navigate('/search');
-                  }}
-                  onFilterClick={() => {
-                    toast({ title: "Filtres", description: "Drawer à venir (Phase 3)" });
-                  }}
+                  onMenuClick={() => setIsMenuOpen(true)}
+                  onSearchClick={() => navigate('/search')}
+                  onFilterClick={() => setIsFiltersOpen(true)}
                   onEstablishmentClick={() => handleEstablishmentClick(event.id)}
                   onMapClick={() => handleMapClick(event.id)}
                 />
@@ -268,30 +343,72 @@ const UserApp = () => {
                 <span className="text-6xl">🎉</span>
                 <h2 className="text-3xl font-bold">C'est tout pour aujourd'hui !</h2>
                 <p className="text-white/80 max-w-xs mx-auto">
-                  Plus d'événements à découvrir. Reviens demain pour de nouvelles sorties !
+                  {hasActiveFilters 
+                    ? "Essaie d'élargir tes filtres pour voir plus d'événements !"
+                    : "Plus d'événements à découvrir. Reviens demain pour de nouvelles sorties !"}
                 </p>
                 
-                <Button
-                  onClick={() => scrollToEvent(0)}
-                  variant="secondary"
-                  className="mt-6 px-6 py-3 bg-white text-purple-600 rounded-full font-semibold hover:scale-105 transition-transform"
-                >
-                  ← Revoir depuis le début
-                </Button>
+                <div className="flex flex-col gap-3">
+                  {hasActiveFilters && (
+                    <Button
+                      onClick={handleResetFilters}
+                      variant="secondary"
+                      className="px-6 py-3 bg-white/20 text-white rounded-full font-semibold hover:bg-white/30 transition-colors"
+                    >
+                      Réinitialiser les filtres
+                    </Button>
+                  )}
+                  <Button
+                    onClick={() => scrollToEvent(0)}
+                    variant="secondary"
+                    className="px-6 py-3 bg-white text-purple-600 rounded-full font-semibold hover:scale-105 transition-transform"
+                  >
+                    ← Revoir depuis le début
+                  </Button>
+                </div>
               </motion.div>
             </div>
           </>
         ) : (
           <div className="h-screen flex items-center justify-center">
-            <div className="text-center p-8">
-              <p className="text-muted-foreground mb-4">Aucun événement disponible</p>
-              <Button onClick={() => handleCategoryChange('all')}>
-                Voir tous les événements
-              </Button>
+            <div className="text-center p-8 space-y-4">
+              <p className="text-muted-foreground mb-4">
+                {hasActiveFilters 
+                  ? "Aucun événement ne correspond à tes filtres"
+                  : "Aucun événement disponible"}
+              </p>
+              {hasActiveFilters ? (
+                <Button onClick={handleResetFilters}>
+                  Réinitialiser les filtres
+                </Button>
+              ) : (
+                <Button onClick={() => handleCategoryChange('all')}>
+                  Voir tous les événements
+                </Button>
+              )}
             </div>
           </div>
         )}
       </div>
+
+      {/* Menu Drawer */}
+      <MenuDrawer
+        isOpen={isMenuOpen}
+        onClose={() => setIsMenuOpen(false)}
+      />
+
+      {/* Filters Drawer */}
+      <FiltersDrawer
+        isOpen={isFiltersOpen}
+        onClose={() => setIsFiltersOpen(false)}
+        selectedCategory={selectedCategory}
+        onCategoryChange={handleCategoryChange}
+        selectedPrice={selectedPrice}
+        onPriceChange={setSelectedPrice}
+        selectedTime={selectedTime}
+        onTimeChange={setSelectedTime}
+        onReset={handleResetFilters}
+      />
     </div>
   );
 };
