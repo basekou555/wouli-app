@@ -43,12 +43,12 @@ const ParticipateButton: React.FC<{ onClick: () => void }> = ({ onClick }) => {
   };
 
   return (
-    <motion.button
-      whileTap={{ scale: 0.9 }}
-      onClick={handleClick}
-      className="flex-[2] h-14 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold transition-all shadow-lg flex items-center justify-center gap-2 relative overflow-hidden"
-      aria-label="Participer"
-    >
+      <motion.button
+        whileTap={{ scale: 0.9 }}
+        onClick={handleClick}
+        className="flex-[2] h-11 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold transition-all shadow-lg flex items-center justify-center gap-2 relative overflow-hidden"
+        aria-label="Participer"
+      >
       {/* Animation success */}
       {isAnimating && (
         <>
@@ -165,26 +165,25 @@ const EventCard: React.FC<EventCardProps> = ({
           />
         </div>
 
-        {/* Titre + Lieu - compact */}
-        <div className="flex-shrink-0 px-4 py-2 bg-card border-b border-border">
-          <h1 className="text-lg font-bold text-foreground line-clamp-1">
+        {/* Section infos fusionnée - Design Premium */}
+        <div className="flex-shrink-0 px-4 py-3 bg-card border-b border-border">
+          {/* Titre sur 2 lignes */}
+          <h1 className="text-xl font-bold text-foreground line-clamp-2 leading-tight mb-1">
             {event.title}
           </h1>
-          <p className="text-sm text-muted-foreground flex items-center gap-1">
+          {/* Lieu */}
+          <p className="text-sm text-muted-foreground mb-3">
             📍 {event.venue || event.location}
           </p>
-        </div>
-
-        {/* Infos essentielles - compact en ligne */}
-        <div className="flex-shrink-0 px-4 py-2 bg-card border-b border-border">
-          <div className="flex justify-between items-center text-sm">
-            <span className="flex items-center gap-1">
+          {/* Chips colorés premium */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="px-3 py-1.5 bg-primary/10 text-primary text-xs font-semibold rounded-full">
               📅 {formatEventDateTime(event.date, event.time)}
             </span>
-            <span className="font-semibold text-primary">
+            <span className="px-3 py-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold rounded-full">
               {getPriceInfo(event.price_text).display}
             </span>
-            <span className="flex items-center gap-1">
+            <span className="px-3 py-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-semibold rounded-full">
               👥 {event.totalParticipants || event.participants || 0}
             </span>
           </div>
@@ -236,15 +235,15 @@ const EventCard: React.FC<EventCardProps> = ({
         className="flex-shrink-0 px-4 py-3 bg-card border-t border-border"
         style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
       >
-        <div className="flex gap-3 max-w-md mx-auto">
+        <div className="flex gap-2 max-w-md mx-auto">
           {/* Dislike */}
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={onDislike}
-            className="flex-1 h-14 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
+            className="flex-1 h-11 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
             aria-label="Passer"
           >
-            <X className="w-6 h-6 text-muted-foreground" />
+            <X className="w-5 h-5 text-muted-foreground" />
           </motion.button>
 
           {/* Participer */}
@@ -254,19 +253,19 @@ const EventCard: React.FC<EventCardProps> = ({
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={onLike}
-            className="flex-1 h-14 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
+            className="flex-1 h-11 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
             aria-label="J'aime"
           >
-            <Heart className="w-6 h-6 text-pink-500" />
+            <Heart className="w-5 h-5 text-pink-500" />
           </motion.button>
 
           {/* Partager */}
           <button
             onClick={onShare}
-            className="flex-1 h-14 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
+            className="flex-1 h-11 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
             aria-label="Partager"
           >
-            <Share2 className="w-6 h-6 text-muted-foreground" />
+            <Share2 className="w-5 h-5 text-muted-foreground" />
           </button>
         </div>
       </div>
