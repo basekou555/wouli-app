@@ -131,11 +131,30 @@ const EventCard: React.FC<EventCardProps> = ({
   }, []);
 
   return (
-    <div className="h-screen w-full relative overflow-hidden bg-background flex flex-col">
+    <div className="h-screen w-full relative overflow-hidden bg-neutral-900">
+      {/* Image plein écran en background - DOIT être en premier */}
+      <div className="absolute inset-0">
+        {!imageLoaded && (
+          <div className="w-full h-full bg-neutral-800 animate-pulse" />
+        )}
+        <img
+          src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/400/600?random=event"}
+          alt={event.title}
+          className={cn(
+            "w-full h-full object-cover transition-opacity duration-300",
+            imageLoaded ? "opacity-100" : "opacity-0"
+          )}
+          onLoad={() => setImageLoaded(true)}
+          onError={handleImageError}
+          loading="eager"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80" />
+      </div>
+
       {/* Header fixe minimaliste transparent */}
       <header 
-        className="fixed top-0 left-0 right-0 z-50 h-16 px-4 flex items-center justify-between bg-gradient-to-b from-black/50 to-transparent"
-        style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
+        className="fixed top-0 left-0 right-0 z-50 h-16 px-4 flex items-center justify-between"
+        style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))' }}
       >
         {!isFirstEvent ? (
           <motion.button
@@ -174,25 +193,6 @@ const EventCard: React.FC<EventCardProps> = ({
           Filtres
         </button>
       </header>
-
-      {/* Image plein écran en background */}
-      <div className="absolute inset-0 z-0">
-        {!imageLoaded && (
-          <div className="w-full h-full bg-neutral-900 animate-pulse" />
-        )}
-        <img
-          src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/400/600?random=event"}
-          alt={event.title}
-          className={cn(
-            "w-full h-full object-cover transition-opacity duration-300",
-            imageLoaded ? "opacity-100" : "opacity-0"
-          )}
-          onLoad={() => setImageLoaded(true)}
-          onError={handleImageError}
-          loading="lazy"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/30 to-black/80" />
-      </div>
 
       {/* Contenu par-dessus */}
       <div className="relative z-10 flex-1 flex flex-col justify-end pb-32 px-4">
