@@ -52,7 +52,7 @@ const EventCard: React.FC<EventCardProps> = ({
       className="h-screen overflow-y-auto bg-background relative"
     >
       {/* ========== HEADER FIXED ========== */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-15 bg-card/95 backdrop-blur-md border-b border-border">
+      <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-card/95 backdrop-blur-md border-b border-border">
         <div className="flex items-center justify-between px-4 h-full">
           {/* Gauche : Menu (toujours visible) */}
           <button
@@ -87,7 +87,7 @@ const EventCard: React.FC<EventCardProps> = ({
       </header>
 
       {/* ========== CONTENT SCROLLABLE ========== */}
-      <div className="pt-15">
+      <div className="pt-14">
         {/* Titre + Lieu - Scrollable, juste sous header */}
         <div className="px-4 py-5 bg-card border-b border-border">
           <h1 className="text-xl font-bold mb-2 text-foreground line-clamp-3 text-left">
