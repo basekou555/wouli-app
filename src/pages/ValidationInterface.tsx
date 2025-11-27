@@ -13,7 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
-import AdminProfileChecker from '@/components/AdminProfileChecker';
+// AdminProfileChecker removed - using user_roles table for admin checks
 import { WOULI_CATEGORIES, getCategoryById } from '@/data/wouliCategories';
 import EventEditModal from '@/components/admin/EventEditModal';
 import EventModerationHistory from '@/components/admin/EventModerationHistory';
@@ -349,7 +349,7 @@ const ValidationInterface = () => {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <AdminProfileChecker />
+        {/* Admin role check handled by AdminRoute wrapper */}
 
         {/* Onglets par statut */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
