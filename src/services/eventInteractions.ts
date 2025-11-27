@@ -82,44 +82,18 @@ export const eventInteractions = {
     }
   },
 
-  // Incrémenter les vues
+  // Incrémenter les vues via RPC
   async incrementViews(eventId: string): Promise<boolean> {
     try {
-      // Vérifier d'abord dans events
-      const { data: eventData } = await supabase
-        .from('events')
-        .select('views')
-        .eq('id', eventId)
-        .single();
-
-      if (eventData) {
-        const { error } = await supabase
-          .from('events')
-          .update({ views: (eventData.views || 0) + 1 })
-          .eq('id', eventId);
-        
-        if (error) throw error;
-        return true;
+      const { error } = await supabase.rpc('increment_event_views', { 
+        p_event_id: eventId 
+      });
+      
+      if (error) {
+        console.error('Erreur RPC increment_event_views:', error);
+        return false;
       }
-
-      // Sinon essayer dans business_events
-      const { data: businessEventData } = await supabase
-        .from('business_events')
-        .select('views')
-        .eq('id', eventId)
-        .single();
-
-      if (businessEventData) {
-        const { error } = await supabase
-          .from('business_events')
-          .update({ views: (businessEventData.views || 0) + 1 })
-          .eq('id', eventId);
-        
-        if (error) throw error;
-        return true;
-      }
-
-      return false;
+      return true;
     } catch (error) {
       console.error('Erreur lors de l\'incrémentation des vues:', error);
       return false;

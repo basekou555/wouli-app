@@ -647,7 +647,10 @@ export type Database = {
           events_participated: number
         }[]
       }
-      increment_event_views: { Args: { event_id: number }; Returns: undefined }
+      increment_event_views: {
+        Args: { p_event_id: string }
+        Returns: undefined
+      }
       is_admin_user: { Args: never; Returns: boolean }
       is_business_user: { Args: never; Returns: boolean }
       propose_event_public: {
