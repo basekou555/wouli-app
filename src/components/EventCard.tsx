@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { UnifiedEvent } from '@/types/unified';
-import { Menu, Filter } from 'lucide-react';
+import { Menu, Filter, X, Heart, Share2, Check } from 'lucide-react';
 import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
 import { getSocialProofText, getPriceInfo, formatEventDateTime } from '@/utils/eventCardHelpers';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -44,63 +44,46 @@ const ParticipateButton: React.FC<{ onClick: () => void }> = ({ onClick }) => {
 
   return (
     <motion.button
-      whileTap={{ scale: 0.85 }}
+      whileTap={{ scale: 0.9 }}
       onClick={handleClick}
-      className="aspect-square rounded-full bg-gradient-to-br from-purple-500 to-pink-500 hover:shadow-lg hover:shadow-purple-500/50 transition-all flex items-center justify-center text-3xl font-bold relative overflow-hidden"
+      className="flex-[2] h-14 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold transition-all shadow-lg flex items-center justify-center gap-2 relative overflow-hidden"
       aria-label="Participer"
     >
       {/* Animation success */}
       {isAnimating && (
         <>
-          {/* Onde de succès */}
           <motion.div
             initial={{ scale: 0, opacity: 1 }}
             animate={{ scale: 3, opacity: 0 }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
-            className="absolute inset-0 bg-white rounded-full"
+            className="absolute inset-0 bg-white rounded-xl"
           />
-          
-          {/* Confetti (4 particules) */}
           {[...Array(4)].map((_, i) => (
             <motion.div
               key={i}
-              initial={{ 
-                scale: 0, 
-                x: 0, 
-                y: 0,
-                opacity: 1 
-              }}
+              initial={{ scale: 0, x: 0, y: 0, opacity: 1 }}
               animate={{ 
                 scale: [0, 1, 0],
-                x: Math.cos(i * Math.PI / 2) * 50,
-                y: Math.sin(i * Math.PI / 2) * 50,
+                x: Math.cos(i * Math.PI / 2) * 40,
+                y: Math.sin(i * Math.PI / 2) * 40,
                 opacity: [1, 1, 0]
               }}
-              transition={{ 
-                duration: 0.6,
-                ease: 'easeOut'
-              }}
+              transition={{ duration: 0.6, ease: 'easeOut' }}
               className="absolute w-2 h-2 bg-yellow-400 rounded-full"
-              style={{
-                top: '50%',
-                left: '50%',
-              }}
+              style={{ top: '50%', left: '50%' }}
             />
           ))}
         </>
       )}
       
-      {/* Icône */}
-      <motion.span
-        animate={isAnimating ? { 
-          scale: [1, 1.3, 1],
-          rotate: [0, 15, -15, 0]
-        } : {}}
+      <motion.div
+        animate={isAnimating ? { scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] } : {}}
         transition={{ duration: 0.4 }}
-        className="text-white"
+        className="flex items-center gap-2"
       >
-        ✓
-      </motion.span>
+        <Check className="w-5 h-5" />
+        <span>Participer</span>
+      </motion.div>
     </motion.button>
   );
 };
@@ -120,195 +103,195 @@ const EventCard: React.FC<EventCardProps> = ({
 }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [showSwipeHint, setShowSwipeHint] = useState(true);
-
-  // Cacher l'indicateur "Swipe up" après 3 secondes
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowSwipeHint(false);
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, []);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div className="h-screen w-full relative overflow-hidden bg-neutral-900">
-      {/* Image plein écran en background - DOIT être en premier */}
-      <div className="absolute inset-0">
-        {!imageLoaded && (
-          <div className="w-full h-full bg-neutral-800 animate-pulse" />
-        )}
-        <img
-          src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/400/600?random=event"}
-          alt={event.title}
-          className={cn(
-            "w-full h-full object-cover transition-opacity duration-300",
-            imageLoaded ? "opacity-100" : "opacity-0"
-          )}
-          onLoad={() => setImageLoaded(true)}
-          onError={handleImageError}
-          loading="eager"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80" />
-      </div>
-
-      {/* Header fixe minimaliste transparent */}
+    <div className="h-screen w-full bg-background flex flex-col">
+      {/* Header fixe */}
       <header 
-        className="fixed top-0 left-0 right-0 z-50 h-16 px-4 flex items-center justify-between"
-        style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))' }}
+        className="flex-shrink-0 h-14 px-4 flex items-center justify-between bg-card border-b border-border"
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         {!isFirstEvent ? (
           <motion.button
-            whileTap={{ scale: 0.9, y: -5 }}
+            whileTap={{ scale: 0.9 }}
             onClick={onBack}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors backdrop-blur-sm"
+            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-accent transition-colors"
             aria-label="Retour"
           >
-            <motion.span 
-              className="text-white text-xl drop-shadow-lg"
-              animate={{ y: [0, -3, 0] }}
-              transition={{ repeat: Infinity, duration: 1 }}
-            >
-              ↑
-            </motion.span>
+            <span className="text-xl">↑</span>
           </motion.button>
         ) : (
           <button
             onClick={onMenuClick}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors backdrop-blur-sm"
+            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-accent transition-colors"
             aria-label="Menu"
           >
-            <Menu className="w-5 h-5 text-white drop-shadow-lg" />
+            <Menu className="w-5 h-5" />
           </button>
         )}
         
-        <span className="font-bold text-lg tracking-wider text-white drop-shadow-lg">
-          WOULI
-        </span>
+        <span className="font-bold text-lg tracking-wide">WOULI</span>
         
         <button
           onClick={onFilterClick}
-          className="px-3 py-1.5 bg-white/90 backdrop-blur-sm rounded-full text-sm font-medium text-gray-900 hover:bg-white transition-colors flex items-center gap-1"
+          className="px-3 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors flex items-center gap-1"
         >
-          <Filter className="w-3 h-3" />
+          <Filter className="w-4 h-4" />
           Filtres
         </button>
       </header>
 
-      {/* Contenu par-dessus */}
-      <div className="relative z-10 flex-1 flex flex-col justify-end pb-32 px-4">
+      {/* Contenu scrollable */}
+      <div 
+        ref={containerRef}
+        className="flex-1 overflow-y-auto scrollbar-hide"
+      >
+        {/* Image - Container dédié */}
+        <div className="relative w-full" style={{ height: '45vh', minHeight: '280px' }}>
+          {!imageLoaded && (
+            <div className="absolute inset-0 bg-muted animate-pulse" />
+          )}
+          <img
+            src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/400/600?random=event"}
+            alt={event.title}
+            className={cn(
+              "w-full h-full object-cover transition-opacity duration-300",
+              imageLoaded ? "opacity-100" : "opacity-0"
+            )}
+            onLoad={() => setImageLoaded(true)}
+            onError={handleImageError}
+            loading="eager"
+          />
+        </div>
+
         {/* Titre + Lieu */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mb-4"
-        >
-          <h1 className="text-2xl sm:text-3xl font-bold text-white drop-shadow-lg mb-2 line-clamp-2">
+        <div className="px-4 py-4 bg-card border-b border-border">
+          <h1 className="text-xl font-bold mb-2 text-foreground line-clamp-2">
             {event.title}
           </h1>
-          <p className="text-white/90 text-sm flex items-center gap-1">
+          <p className="text-sm text-muted-foreground flex items-center gap-1">
             📍 {event.venue || event.location}
           </p>
-        </motion.div>
+        </div>
 
-        {/* Infos essentielles (Date/Prix/Participants) */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="space-y-2 bg-black/40 backdrop-blur-md rounded-2xl p-4 mb-4"
-        >
-          {/* Date + Heure */}
-          <div className="flex items-center gap-2 text-white">
-            <span className="text-lg">📅</span>
-            <span className="text-sm font-medium">
-              {formatEventDateTime(event.date, event.time)}
-            </span>
+        {/* Infos essentielles */}
+        <div className="px-4 py-4 bg-card border-b border-border">
+          <div className="grid grid-cols-2 gap-3">
+            {/* Date */}
+            <div className="flex items-center gap-2">
+              <span className="text-xl">📅</span>
+              <span className="text-sm font-medium">
+                {formatEventDateTime(event.date, event.time)}
+              </span>
+            </div>
+            
+            {/* Prix */}
+            <div className="flex items-center gap-2">
+              <span className="text-xl">💰</span>
+              <span className="text-sm font-semibold text-primary">
+                {getPriceInfo(event.price_text).display}
+              </span>
+            </div>
+            
+            {/* Lieu */}
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🏢</span>
+              <span className="text-sm font-medium truncate">
+                {event.venue || event.location?.split(',')[0]}
+              </span>
+            </div>
+            
+            {/* Participants */}
+            <div className="flex items-center gap-2">
+              <span className="text-xl">👥</span>
+              <span className="text-sm font-medium">
+                {event.totalParticipants || event.participants || 0} inscrits
+              </span>
+            </div>
           </div>
+        </div>
 
-          {/* Prix */}
-          <div className="flex items-center gap-2 text-white">
-            <span className="text-lg">💰</span>
-            <span className="text-sm font-semibold text-yellow-400">
-              {getPriceInfo(event.price_text).display}
-            </span>
+        {/* Social Proof */}
+        {(event.friendsParticipating && event.friendsParticipating.length > 0) && (
+          <div className="px-4 py-3 bg-card border-b border-border">
+            <div className="flex items-center gap-3">
+              <div className="flex -space-x-2">
+                {event.friendsParticipating.slice(0, 3).map((friend) => (
+                  friend.avatar ? (
+                    <img
+                      key={friend.id}
+                      src={friend.avatar}
+                      alt={friend.name}
+                      className="w-8 h-8 rounded-full border-2 border-card object-cover"
+                    />
+                  ) : (
+                    <div
+                      key={friend.id}
+                      className="w-8 h-8 rounded-full border-2 border-card bg-primary/20 flex items-center justify-center text-xs font-medium text-primary"
+                    >
+                      {friend.name.charAt(0).toUpperCase()}
+                    </div>
+                  )
+                ))}
+              </div>
+              <span className="text-sm text-muted-foreground">
+                {getSocialProofText(event.friendsParticipating, event.totalParticipants || 0)}
+              </span>
+            </div>
           </div>
+        )}
 
-          {/* Participants */}
-          <div className="flex items-center gap-2 text-white">
-            <span className="text-lg">👥</span>
-            <span className="text-sm font-medium">
-              {getSocialProofText(event.friendsParticipating || [], event.totalParticipants || 0)}
-            </span>
-          </div>
-        </motion.div>
+        {/* Bouton voir plus */}
+        <div className="px-4 py-3 bg-card border-b border-border">
+          <button
+            onClick={() => setIsDetailsOpen(true)}
+            className="w-full py-3 bg-accent hover:bg-accent/80 rounded-lg text-sm font-medium transition-colors"
+          >
+            Voir plus de détails →
+          </button>
+        </div>
 
-        {/* Bouton Voir plus de détails */}
-        <motion.button
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          onClick={() => setIsDetailsOpen(true)}
-          className="w-full py-3 bg-white/10 backdrop-blur-md rounded-full text-white text-sm font-medium hover:bg-white/20 transition-colors"
-        >
-          Voir plus de détails →
-        </motion.button>
-
-        {/* Indicateur Swipe up animé */}
-        <AnimatePresence>
-          {showSwipeHint && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1, y: [0, -10, 0] }}
-              exit={{ opacity: 0 }}
-              transition={{ 
-                opacity: { duration: 0.3 },
-                y: { repeat: Infinity, duration: 1.5 }
-              }}
-              className="text-center text-white/60 text-xs mt-4"
-            >
-              ↑ Swipe pour voir plus ↑
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Spacer pour les boutons */}
+        <div className="h-24" />
       </div>
 
-      {/* Boutons bottom */}
+      {/* Boutons d'action - Fixed bottom */}
       <div 
-        className="fixed bottom-0 left-0 right-0 z-50"
-        style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
+        className="flex-shrink-0 px-4 py-3 bg-card border-t border-border"
+        style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
       >
-        <div className="grid grid-cols-4 gap-3 px-4 pb-4 max-w-md mx-auto">
-          {/* Bouton Dislike */}
+        <div className="flex gap-3 max-w-md mx-auto">
+          {/* Dislike */}
           <motion.button
-            whileTap={{ scale: 0.85 }}
+            whileTap={{ scale: 0.9 }}
             onClick={onDislike}
-            className="aspect-square rounded-full bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-colors flex items-center justify-center text-2xl"
+            className="flex-1 h-14 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
             aria-label="Passer"
           >
-            ❌
+            <X className="w-6 h-6 text-muted-foreground" />
           </motion.button>
 
-          {/* Bouton Participer - ANIMATION SPÉCIALE */}
+          {/* Participer */}
           <ParticipateButton onClick={onParticipate} />
 
-          {/* Bouton Like */}
+          {/* Like */}
           <motion.button
-            whileTap={{ scale: 0.85 }}
+            whileTap={{ scale: 0.9 }}
             onClick={onLike}
-            className="aspect-square rounded-full bg-white/10 backdrop-blur-md border border-white/20 hover:bg-red-500/30 transition-colors flex items-center justify-center text-2xl"
+            className="flex-1 h-14 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
             aria-label="J'aime"
           >
-            ❤️
+            <Heart className="w-6 h-6 text-pink-500" />
           </motion.button>
 
-          {/* Bouton Partager - PAS D'ANIMATION spéciale */}
+          {/* Partager */}
           <button
             onClick={onShare}
-            className="aspect-square rounded-full bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 transition-colors flex items-center justify-center text-xl"
+            className="flex-1 h-14 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
             aria-label="Partager"
           >
-            ↗️
+            <Share2 className="w-6 h-6 text-muted-foreground" />
           </button>
         </div>
       </div>
@@ -317,7 +300,6 @@ const EventCard: React.FC<EventCardProps> = ({
       <AnimatePresence>
         {isDetailsOpen && (
           <>
-            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -326,7 +308,6 @@ const EventCard: React.FC<EventCardProps> = ({
               className="fixed inset-0 bg-black/60 z-40"
             />
             
-            {/* Drawer */}
             <motion.div
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
@@ -334,19 +315,16 @@ const EventCard: React.FC<EventCardProps> = ({
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
               className="fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl max-h-[80vh] overflow-y-auto"
             >
-              {/* Handle de fermeture */}
               <div className="sticky top-0 bg-background py-4 px-4 border-b flex justify-between items-center">
                 <h2 className="text-lg font-semibold">Détails de l'événement</h2>
                 <button
                   onClick={() => setIsDetailsOpen(false)}
                   className="p-2 hover:bg-accent rounded-full"
-                  aria-label="Fermer"
                 >
                   ✕
                 </button>
               </div>
               
-              {/* Contenu drawer */}
               <div className="p-4 space-y-6 pb-safe">
                 {/* Description */}
                 <div>
@@ -377,14 +355,11 @@ const EventCard: React.FC<EventCardProps> = ({
 
                 {/* Établissement */}
                 <div>
-                  <h3 className="text-base font-semibold mb-2 flex items-center gap-2">
-                    🏢 Organisateur
-                  </h3>
+                  <h3 className="text-base font-semibold mb-2">🏢 Organisateur</h3>
                   <button
                     onClick={onEstablishmentClick}
                     className="w-full flex items-center gap-4 p-4 bg-accent rounded-lg hover:bg-accent/80 transition-colors"
                   >
-                    {/* Logo établissement */}
                     <div className="w-14 h-14 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                       {event.venue_logo ? (
                         <img
@@ -398,27 +373,19 @@ const EventCard: React.FC<EventCardProps> = ({
                         </div>
                       )}
                     </div>
-                    
-                    {/* Infos établissement */}
                     <div className="flex-1 text-left">
-                      <p className="font-semibold text-base">
-                        {event.venue || event.location}
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Voir l'établissement →
-                      </p>
+                      <p className="font-semibold">{event.venue || event.location}</p>
+                      <p className="text-sm text-muted-foreground">Voir l'établissement →</p>
                     </div>
                   </button>
                 </div>
 
                 {/* Map */}
                 <div>
-                  <h3 className="text-base font-semibold mb-2 flex items-center gap-2">
-                    📍 Localisation
-                  </h3>
+                  <h3 className="text-base font-semibold mb-2">📍 Localisation</h3>
                   <button
                     onClick={onMapClick}
-                    className="w-full h-[200px] rounded-lg overflow-hidden bg-muted relative group"
+                    className="w-full h-[180px] rounded-lg overflow-hidden bg-muted relative group"
                   >
                     {event.address ? (
                       <img
@@ -428,23 +395,19 @@ const EventCard: React.FC<EventCardProps> = ({
                       />
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground">
-                        <span className="text-4xl mb-2">📍</span>
+                        <span className="text-3xl mb-2">📍</span>
                         <span className="text-sm">Adresse non disponible</span>
                       </div>
                     )}
-                    
-                    {/* Overlay au hover */}
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                      <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white font-semibold text-sm bg-black/50 px-4 py-2 rounded-full">
+                      <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white font-medium text-sm bg-black/50 px-4 py-2 rounded-full">
                         Ouvrir dans Maps
                       </span>
                     </div>
                   </button>
-                  
-                  {/* Adresse texte */}
                   {event.address && (
-                    <p className="mt-3 text-sm text-muted-foreground text-center">
-                      📍 {event.address}
+                    <p className="mt-2 text-sm text-muted-foreground text-center">
+                      {event.address}
                     </p>
                   )}
                 </div>
