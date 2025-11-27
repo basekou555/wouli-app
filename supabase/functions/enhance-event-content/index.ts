@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,6 +14,36 @@ serve(async (req) => {
   }
 
   try {
+    // 🔐 Authentication check
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('Missing authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Authorization required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Verify the user is authenticated
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      console.error('Auth error:', authError?.message || 'No user found');
+      return new Response(
+        JSON.stringify({ error: 'Invalid or expired token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`Authenticated user: ${user.id}`);
+
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (!anthropicApiKey) {
       throw new Error('Anthropic API key not configured');
@@ -49,22 +80,11 @@ STYLE WOULI :
 - Phrases courtes et impactantes
 - Focus sur l'expérience utilisateur
 
-EXEMPLES DE TRANSFORMATION :
-
-AVANT : "soirée dj set vendredi 21h chez dupont super ambiance garantie #party #lyon"
-APRÈS : 
-Titre: "DJ Set • Ambiance Garantie"
-Description: "Soirée électro dans l'ambiance feutrée de chez Dupont. 
-
-Vendredi à partir de 21h, laisse-toi porter par les beats et découvre une sélection musicale soignée.
-
-L'équipe te promet une ambiance de folie !"
-
 FORMAT DE RÉPONSE : JSON uniquement
 {
   "title": "Titre restructuré et attractif",
-  "description": "Description réécrite avec structure claire, paragraphes aérés et informations hiérarchisées",
-  "time": "HH:MM" // optionnel, seulement si détecté dans le texte original
+  "description": "Description réécrite avec structure claire",
+  "time": "HH:MM" // optionnel, seulement si détecté
 }`;
 
     const userMessage = `CONTENU À RÉÉCRIRE :
@@ -73,11 +93,9 @@ FORMAT DE RÉPONSE : JSON uniquement
 📝 TITRE ACTUEL : ${title}
 📄 DESCRIPTION ACTUELLE : ${description || 'Aucune description fournie'}
 
-MISSION : Réécris complètement ce contenu en appliquant les règles Wouli. 
-Transforme ce contenu brut en description événementielle attractive et bien structurée.
-Focus sur la RÉÉCRITURE, pas juste le formatage !`;
+MISSION : Réécris complètement ce contenu en appliquant les règles Wouli.`;
 
-    console.log('Calling Anthropic API...');
+    console.log('Calling Anthropic API for user:', user.id);
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -127,7 +145,7 @@ Focus sur la RÉÉCRITURE, pas juste le formatage !`;
       delete enhancedContent.time;
     }
 
-    console.log('Enhanced content:', enhancedContent);
+    console.log('Enhanced content generated for user:', user.id);
 
     return new Response(JSON.stringify(enhancedContent), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -448,6 +448,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       active_events: {
@@ -647,10 +668,18 @@ export type Database = {
           events_participated: number
         }[]
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       increment_event_views: {
         Args: { p_event_id: string }
         Returns: undefined
       }
+      is_admin: { Args: never; Returns: boolean }
       is_admin_user: { Args: never; Returns: boolean }
       is_business_user: { Args: never; Returns: boolean }
       propose_event_public: {
@@ -670,6 +699,7 @@ export type Database = {
       reject_pending_event: { Args: { p_event_id: string }; Returns: undefined }
     }
     Enums: {
+      app_role: "admin" | "moderator" | "user"
       event_category: "a-boire" | "a-manger" | "soirees" | "activites"
       event_creator_type: "user" | "business" | "admin"
       participant_status: "going" | "interested"
@@ -801,6 +831,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "moderator", "user"],
       event_category: ["a-boire", "a-manger", "soirees", "activites"],
       event_creator_type: ["user", "business", "admin"],
       participant_status: ["going", "interested"],
