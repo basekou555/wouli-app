@@ -142,13 +142,13 @@ const EventCard: React.FC<EventCardProps> = ({
         </button>
       </header>
 
-      {/* Contenu scrollable */}
+      {/* Contenu sans scroll - flexbox */}
       <div 
         ref={containerRef}
-        className="flex-1 overflow-y-auto scrollbar-hide"
+        className="flex-1 flex flex-col overflow-hidden min-h-0"
       >
-        {/* Image - Container dédié */}
-        <div className="relative w-full" style={{ height: '45vh', minHeight: '280px' }}>
+        {/* Image - prend l'espace flexible restant */}
+        <div className="relative flex-1 min-h-0">
           {!imageLoaded && (
             <div className="absolute inset-0 bg-muted animate-pulse" />
           )}
@@ -165,9 +165,9 @@ const EventCard: React.FC<EventCardProps> = ({
           />
         </div>
 
-        {/* Titre + Lieu */}
-        <div className="px-4 py-4 bg-card border-b border-border">
-          <h1 className="text-xl font-bold mb-2 text-foreground line-clamp-2">
+        {/* Titre + Lieu - compact */}
+        <div className="flex-shrink-0 px-4 py-2 bg-card border-b border-border">
+          <h1 className="text-lg font-bold text-foreground line-clamp-1">
             {event.title}
           </h1>
           <p className="text-sm text-muted-foreground flex items-center gap-1">
@@ -175,47 +175,25 @@ const EventCard: React.FC<EventCardProps> = ({
           </p>
         </div>
 
-        {/* Infos essentielles */}
-        <div className="px-4 py-4 bg-card border-b border-border">
-          <div className="grid grid-cols-2 gap-3">
-            {/* Date */}
-            <div className="flex items-center gap-2">
-              <span className="text-xl">📅</span>
-              <span className="text-sm font-medium">
-                {formatEventDateTime(event.date, event.time)}
-              </span>
-            </div>
-            
-            {/* Prix */}
-            <div className="flex items-center gap-2">
-              <span className="text-xl">💰</span>
-              <span className="text-sm font-semibold text-primary">
-                {getPriceInfo(event.price_text).display}
-              </span>
-            </div>
-            
-            {/* Lieu */}
-            <div className="flex items-center gap-2">
-              <span className="text-xl">🏢</span>
-              <span className="text-sm font-medium truncate">
-                {event.venue || event.location?.split(',')[0]}
-              </span>
-            </div>
-            
-            {/* Participants */}
-            <div className="flex items-center gap-2">
-              <span className="text-xl">👥</span>
-              <span className="text-sm font-medium">
-                {event.totalParticipants || event.participants || 0} inscrits
-              </span>
-            </div>
+        {/* Infos essentielles - compact en ligne */}
+        <div className="flex-shrink-0 px-4 py-2 bg-card border-b border-border">
+          <div className="flex justify-between items-center text-sm">
+            <span className="flex items-center gap-1">
+              📅 {formatEventDateTime(event.date, event.time)}
+            </span>
+            <span className="font-semibold text-primary">
+              {getPriceInfo(event.price_text).display}
+            </span>
+            <span className="flex items-center gap-1">
+              👥 {event.totalParticipants || event.participants || 0}
+            </span>
           </div>
         </div>
 
-        {/* Social Proof */}
+        {/* Social Proof - compact */}
         {(event.friendsParticipating && event.friendsParticipating.length > 0) && (
-          <div className="px-4 py-3 bg-card border-b border-border">
-            <div className="flex items-center gap-3">
+          <div className="flex-shrink-0 px-4 py-2 bg-card border-b border-border">
+            <div className="flex items-center gap-2">
               <div className="flex -space-x-2">
                 {event.friendsParticipating.slice(0, 3).map((friend) => (
                   friend.avatar ? (
@@ -223,37 +201,34 @@ const EventCard: React.FC<EventCardProps> = ({
                       key={friend.id}
                       src={friend.avatar}
                       alt={friend.name}
-                      className="w-8 h-8 rounded-full border-2 border-card object-cover"
+                      className="w-6 h-6 rounded-full border-2 border-card object-cover"
                     />
                   ) : (
                     <div
                       key={friend.id}
-                      className="w-8 h-8 rounded-full border-2 border-card bg-primary/20 flex items-center justify-center text-xs font-medium text-primary"
+                      className="w-6 h-6 rounded-full border-2 border-card bg-primary/20 flex items-center justify-center text-xs font-medium text-primary"
                     >
                       {friend.name.charAt(0).toUpperCase()}
                     </div>
                   )
                 ))}
               </div>
-              <span className="text-sm text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 {getSocialProofText(event.friendsParticipating, event.totalParticipants || 0)}
               </span>
             </div>
           </div>
         )}
 
-        {/* Bouton voir plus */}
-        <div className="px-4 py-3 bg-card border-b border-border">
+        {/* Bouton voir plus - compact */}
+        <div className="flex-shrink-0 px-4 py-2 bg-card border-b border-border">
           <button
             onClick={() => setIsDetailsOpen(true)}
-            className="w-full py-3 bg-accent hover:bg-accent/80 rounded-lg text-sm font-medium transition-colors"
+            className="w-full py-2 bg-accent hover:bg-accent/80 rounded-lg text-sm font-medium transition-colors"
           >
             Voir plus de détails →
           </button>
         </div>
-
-        {/* Spacer pour les boutons */}
-        <div className="h-24" />
       </div>
 
       {/* Boutons d'action - Fixed bottom */}
