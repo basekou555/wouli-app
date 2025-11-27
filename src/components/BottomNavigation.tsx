@@ -28,8 +28,8 @@ const BottomNavigation = ({ variant = 'fixed' }: BottomNavigationProps) => {
     {
       icon: User,
       label: 'Profil',
-      path: '/profil',
-      isActive: location.pathname === '/profil'
+      path: '/profile',
+      isActive: location.pathname === '/profile'
     }
   ];
 

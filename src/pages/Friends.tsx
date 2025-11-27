@@ -1,6 +1,6 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AppLayout from '@/components/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,11 +8,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Search, UserPlus, Check, X, Users, Clock, Send, MapPin } from 'lucide-react';
+import { Search, UserPlus, Check, X, Users, Clock, Send, MapPin } from 'lucide-react';
 import { useFriendships, useUserSearch } from '@/hooks/useFriendships';
 import { useAuth } from '@/contexts/AuthContext';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
 import { useDebounce } from '@/hooks/useDebounce';
+import BottomNavigation from '@/components/BottomNavigation';
+import PageHeader from '@/components/PageHeader';
 
 const Friends = () => {
   const navigate = useNavigate();
@@ -38,7 +40,6 @@ const Friends = () => {
     clearSearch
   } = useUserSearch();
 
-  // Debounce pour la recherche
   const debouncedSearch = useDebounce((query: string) => {
     if (query.trim().length >= 2) {
       searchUsers(query);
@@ -52,9 +53,7 @@ const Friends = () => {
     debouncedSearch(query);
   };
 
-  // Filtrer les amis localement
   const filteredFriends = acceptedFriends.filter(friendship => {
-    // Le friend_profile contient toujours le profil de l'ami (géré côté service)
     const friend = friendship.friend_profile;
     return friend?.username?.toLowerCase().includes(localSearchQuery.toLowerCase()) || false;
   });
@@ -64,27 +63,14 @@ const Friends = () => {
   }
 
   return (
-    <AppLayout>
-      <div className="container max-w-4xl mx-auto px-4 py-6 space-y-6">
-        {/* Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={() => navigate(-1)}
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div>
-                <h1 className="text-2xl font-bold">Mes amis</h1>
-                <p className="text-muted-foreground">
-                  Gérez vos amis et demandes d'amitié
-                </p>
-              </div>
-            </div>
-          </div>
-
+    <div className="min-h-screen bg-background pb-20">
+      <PageHeader 
+        title="Mes amis" 
+        subtitle="Gérez vos amis et demandes d'amitié"
+        showBack
+      />
+      
+      <div className="px-4 py-6 max-w-2xl mx-auto space-y-6">
         {/* Barre de recherche */}
         <Card>
           <CardContent className="p-4">
@@ -98,7 +84,6 @@ const Friends = () => {
               />
             </div>
 
-            {/* Résultats de recherche */}
             {localSearchQuery.length >= 2 && (
               <div className="mt-4">
                 <h3 className="text-sm font-medium text-muted-foreground mb-3">
@@ -208,7 +193,6 @@ const Friends = () => {
                 ) : (
                   <div className="space-y-3">
                      {filteredFriends.map((friendship) => {
-                       // Le friend_profile contient toujours le profil de l'ami
                        const friend = friendship.friend_profile;
                        return (
                          <div key={friendship.id} className="flex items-center justify-between p-3 rounded-lg border">
@@ -378,7 +362,9 @@ const Friends = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </AppLayout>
+      
+      <BottomNavigation />
+    </div>
   );
 };
 

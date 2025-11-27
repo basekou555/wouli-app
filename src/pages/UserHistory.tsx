@@ -1,12 +1,12 @@
 
 import React from 'react';
-import AppLayout from '../components/AppLayout';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, MapPin, Users, Heart, X, Trash2, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import BottomNavigation from '../components/BottomNavigation';
+import PageHeader from '../components/PageHeader';
 import { useUserHistory } from '../hooks/useUserHistory';
 import { PageSkeleton } from '../components/LoadingSkeleton';
 import { UserMemories } from '../components/memories/UserMemories';
@@ -51,7 +51,7 @@ const UserHistory = () => {
       </div>
       <CardContent className="p-4">
         <h3 className="font-semibold text-lg mb-2">{event.title}</h3>
-        <div className="space-y-2 text-sm text-gray-600">
+        <div className="space-y-2 text-sm text-muted-foreground">
           <div className="flex items-center">
             <Calendar className="h-4 w-4 mr-2" />
             {formatDate(event.date)}
@@ -82,86 +82,86 @@ const UserHistory = () => {
   if (loading) return <PageSkeleton />;
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      <AppLayout>
-        <div className="py-6 space-y-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Mes Événements</h1>
-            <p className="text-gray-500">Gérez vos favoris, participations et souvenirs</p>
-          </div>
+    <div className="min-h-screen bg-background pb-20">
+      <PageHeader 
+        title="Mes Événements" 
+        subtitle="Gérez vos favoris, participations et souvenirs"
+        showBack
+      />
+      
+      <div className="px-4 py-6 max-w-2xl mx-auto space-y-6">
+        <Tabs defaultValue="liked" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="liked" className="flex items-center">
+              <Heart className="h-4 w-4 mr-2" />
+              Favoris ({likedEvents.length})
+            </TabsTrigger>
+            <TabsTrigger value="participating" className="flex items-center">
+              <Calendar className="h-4 w-4 mr-2" />
+              Participations ({participatingEvents.length})
+            </TabsTrigger>
+            <TabsTrigger value="memories" className="flex items-center">
+              <Star className="h-4 w-4 mr-2" />
+              Memories
+            </TabsTrigger>
+          </TabsList>
 
-          <Tabs defaultValue="liked" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="liked" className="flex items-center">
-                <Heart className="h-4 w-4 mr-2" />
-                Favoris ({likedEvents.length})
-              </TabsTrigger>
-              <TabsTrigger value="participating" className="flex items-center">
-                <Calendar className="h-4 w-4 mr-2" />
-                Participations ({participatingEvents.length})
-              </TabsTrigger>
-              <TabsTrigger value="memories" className="flex items-center">
-                <Star className="h-4 w-4 mr-2" />
-                Memories
-              </TabsTrigger>
-            </TabsList>
+          <TabsContent value="liked" className="mt-6">
+            {likedEvents.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {likedEvents.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onRemove={removeLikedEvent}
+                    removeText="Retirer des favoris"
+                    removeIcon={<X className="h-4 w-4" />}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Heart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium text-foreground">Aucun favori</h3>
+                <p className="text-muted-foreground mt-2">Les événements que vous aimez apparaîtront ici</p>
+                <Link to="/app">
+                  <Button className="mt-4">Découvrir des événements</Button>
+                </Link>
+              </div>
+            )}
+          </TabsContent>
 
-            <TabsContent value="liked" className="mt-6">
-              {likedEvents.length > 0 ? (
-                <div className="grid gap-4 md:grid-cols-2">
-                  {likedEvents.map((event) => (
-                    <EventCard
-                      key={event.id}
-                      event={event}
-                      onRemove={removeLikedEvent}
-                      removeText="Retirer des favoris"
-                      removeIcon={<X className="h-4 w-4" />}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <Heart className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900">Aucun favori</h3>
-                  <p className="text-gray-500 mt-2">Les événements que vous aimez apparaîtront ici</p>
-                  <Link to="/app">
-                    <Button className="mt-4">Découvrir des événements</Button>
-                  </Link>
-                </div>
-              )}
-            </TabsContent>
+          <TabsContent value="participating" className="mt-6">
+            {participatingEvents.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {participatingEvents.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onRemove={removeParticipation}
+                    removeText="Annuler participation"
+                    removeIcon={<Trash2 className="h-4 w-4" />}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium text-foreground">Aucune participation</h3>
+                <p className="text-muted-foreground mt-2">Les événements auxquels vous participez apparaîtront ici</p>
+                <Link to="/app">
+                  <Button className="mt-4">Rejoindre des événements</Button>
+                </Link>
+              </div>
+            )}
+          </TabsContent>
 
-            <TabsContent value="participating" className="mt-6">
-              {participatingEvents.length > 0 ? (
-                <div className="grid gap-4 md:grid-cols-2">
-                  {participatingEvents.map((event) => (
-                    <EventCard
-                      key={event.id}
-                      event={event}
-                      onRemove={removeParticipation}
-                      removeText="Annuler participation"
-                      removeIcon={<Trash2 className="h-4 w-4" />}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900">Aucune participation</h3>
-                  <p className="text-gray-500 mt-2">Les événements auxquels vous participez apparaîtront ici</p>
-                  <Link to="/app">
-                    <Button className="mt-4">Rejoindre des événements</Button>
-                  </Link>
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="memories" className="mt-6">
-              <UserMemories />
-            </TabsContent>
-          </Tabs>
-        </div>
-      </AppLayout>
+          <TabsContent value="memories" className="mt-6">
+            <UserMemories />
+          </TabsContent>
+        </Tabs>
+      </div>
+      
       <BottomNavigation />
     </div>
   );
