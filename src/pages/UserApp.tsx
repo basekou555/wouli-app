@@ -301,7 +301,7 @@ const UserApp = () => {
   }
 
   return (
-    <div className="h-mobile-screen bg-background overflow-hidden">
+    <div className="h-screen bg-background overflow-hidden">
       {/* Container avec Scroll Snap TikTok-style */}
       <div 
         ref={containerRef}
@@ -312,7 +312,7 @@ const UserApp = () => {
             {filteredEvents.map((event, index) => (
               <div 
                 key={event.id}
-                className="h-mobile-screen snap-start snap-always"
+                className="h-screen snap-start snap-always"
                 data-index={index}
               >
                 <EventCard
@@ -333,7 +333,7 @@ const UserApp = () => {
             ))}
             
             {/* Écran de fin */}
-            <div className="h-mobile-screen snap-start snap-always flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 p-8">
+            <div className="h-screen snap-start snap-always flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 p-8">
               <motion.div 
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -370,7 +370,7 @@ const UserApp = () => {
             </div>
           </>
         ) : (
-          <div className="h-mobile-screen flex items-center justify-center">
+          <div className="h-screen flex items-center justify-center">
             <div className="text-center p-8 space-y-4">
               <p className="text-muted-foreground mb-4">
                 {hasActiveFilters 
