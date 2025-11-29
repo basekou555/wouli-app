@@ -8,6 +8,7 @@ import EventCard from '@/components/EventCard';
 import { motion } from 'framer-motion';
 import { MenuDrawer } from '@/components/MenuDrawer';
 import { FiltersDrawer } from '@/components/FiltersDrawer';
+import { InstallPrompt } from '@/components/InstallPrompt';
 
 const UserApp = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -158,6 +159,43 @@ const UserApp = () => {
       handleIncrementViews(filteredEvents[0].id);
     }
   }, [filteredEvents, viewedEventIds, handleIncrementViews]);
+
+  // Hook pour forcer la barre URL à se cacher malgré le snap scroll
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    let scrollEndTimeout: ReturnType<typeof setTimeout>;
+    
+    const triggerHideNavBar = () => {
+      // Micro-scroll pour déclencher le comportement "hide navbar"
+      const currentScroll = container.scrollTop;
+      
+      // Scroll de 1px vers le bas puis revenir
+      container.scrollBy({ top: 1, behavior: 'auto' });
+      
+      setTimeout(() => {
+        // Revenir à la position exacte (imperceptible pour l'user)
+        container.scrollTo({ top: currentScroll, behavior: 'auto' });
+      }, 50);
+    };
+
+    const handleScrollEnd = () => {
+      clearTimeout(scrollEndTimeout);
+      
+      // Après que le snap se soit stabilisé (200ms), déclencher le hide
+      scrollEndTimeout = setTimeout(() => {
+        triggerHideNavBar();
+      }, 200);
+    };
+
+    container.addEventListener('scroll', handleScrollEnd, { passive: true });
+
+    return () => {
+      container.removeEventListener('scroll', handleScrollEnd);
+      clearTimeout(scrollEndTimeout);
+    };
+  }, []);
   
   const handleCategoryChange = (categoryId: string) => {
     setSelectedCategory(categoryId);
@@ -409,6 +447,9 @@ const UserApp = () => {
         onTimeChange={setSelectedTime}
         onReset={handleResetFilters}
       />
+
+      {/* PWA Install Prompt */}
+      <InstallPrompt />
     </div>
   );
 };
