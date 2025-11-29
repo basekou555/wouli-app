@@ -106,7 +106,7 @@ const EventCard: React.FC<EventCardProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div className="h-screen w-full bg-background flex flex-col">
+    <div className="h-mobile-screen w-full bg-background flex flex-col">
       {/* Header fixe */}
       <header 
         className="flex-shrink-0 h-14 px-4 flex items-center justify-between bg-card border-b border-border"
@@ -233,7 +233,7 @@ const EventCard: React.FC<EventCardProps> = ({
       {/* Boutons d'action - Fixed bottom */}
       <div 
         className="flex-shrink-0 px-4 py-3 bg-card border-t border-border"
-        style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+        style={{ paddingBottom: 'max(2.5rem, calc(2.5rem + env(safe-area-inset-bottom)))' }}
       >
         <div className="flex gap-2 max-w-md mx-auto">
           {/* Dislike */}

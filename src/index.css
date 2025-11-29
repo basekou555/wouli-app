@@ -237,3 +237,32 @@
     padding-top: env(safe-area-inset-top);
   }
 }
+
+/* ============================================
+   FIX MOBILE VIEWPORT - Barres de Navigation
+   ============================================ */
+
+/* Classe pour hauteur mobile qui s'adapte aux barres navigateur */
+.h-mobile-screen {
+  /* Fallback pour vieux navigateurs */
+  height: 100vh;
+  
+  /* Dynamic Viewport Height - nouveau standard */
+  height: 100dvh;
+  
+  /* Fallback spécifique Safari iOS */
+  height: -webkit-fill-available;
+}
+
+/* Fix Safari iOS - Empêche le bounce scroll */
+html, body {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fix spécifique Safari iOS pour 100vh */
+@supports (-webkit-touch-callout: none) {
+  .h-mobile-screen {
+    height: -webkit-fill-available;
+  }
+}
