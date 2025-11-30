@@ -8,6 +8,7 @@ import EventCard from "@/components/EventCard";
 import { motion } from "framer-motion";
 import { MenuDrawer } from "@/components/MenuDrawer";
 import { FiltersDrawer } from "@/components/FiltersDrawer";
+import { cn } from "@/lib/utils";
 
 const UserApp = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -15,6 +16,7 @@ const UserApp = () => {
   const [participatingEvents, setParticipatingEvents] = useState<Set<string>>(new Set());
   const [viewedEventIds, setViewedEventIds] = useState<Set<string>>(new Set());
   const [currentScrollIndex, setCurrentScrollIndex] = useState(0);
+  const [snapEnabled, setSnapEnabled] = useState(false); // Désactivé au début pour cacher la barre URL
 
   // Drawer states
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -162,60 +164,31 @@ const UserApp = () => {
     }
   }, [filteredEvents, viewedEventIds, handleIncrementViews]);
 
-  // Force browser to hide URL bar after snap scroll stabilizes (mobile)
+  // Activer le snap après le premier scroll (pour permettre à la barre URL de se cacher d'abord)
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) return;
+    if (!container || snapEnabled) return; // Ne rien faire si snap déjà activé
 
-    let hideBarTimeout: ReturnType<typeof setTimeout>;
-    let scrollEndTimer: ReturnType<typeof setTimeout>;
-    let isScrolling = false;
+    let scrollTimeout: ReturnType<typeof setTimeout>;
 
-    const triggerHideUrlBar = () => {
-      if (!container || isScrolling) return;
+    const handleFirstScroll = () => {
+      clearTimeout(scrollTimeout);
 
-      const currentScrollTop = container.scrollTop;
-
-      // Micro-scroll: 10px down then immediately back
-      // This tricks the browser into hiding the URL bar
-      container.scrollTo({
-        top: currentScrollTop + 10,
-        behavior: "auto",
-      });
-
-      // Immediately return to exact position
-      requestAnimationFrame(() => {
-        container.scrollTo({
-          top: currentScrollTop,
-          behavior: "auto",
-        });
-      });
+      // Attendre que le scroll se stabilise (200ms)
+      scrollTimeout = setTimeout(() => {
+        // Activer le snap pour les scrolls suivants
+        setSnapEnabled(true);
+        console.log('✅ Snap activé après premier scroll');
+      }, 200);
     };
 
-    const handleScroll = () => {
-      isScrolling = true;
-      clearTimeout(hideBarTimeout);
-      clearTimeout(scrollEndTimer);
-
-      // Detect scroll end with debounce
-      scrollEndTimer = setTimeout(() => {
-        isScrolling = false;
-
-        // Wait 200ms after scroll stabilizes, then trigger micro-scroll
-        hideBarTimeout = setTimeout(() => {
-          triggerHideUrlBar();
-        }, 200);
-      }, 150);
-    };
-
-    container.addEventListener("scroll", handleScroll, { passive: true });
+    container.addEventListener('scroll', handleFirstScroll, { passive: true });
 
     return () => {
-      container.removeEventListener("scroll", handleScroll);
-      clearTimeout(hideBarTimeout);
-      clearTimeout(scrollEndTimer);
+      container.removeEventListener('scroll', handleFirstScroll);
+      clearTimeout(scrollTimeout);
     };
-  }, []);
+  }, [snapEnabled]);
 
   const handleCategoryChange = (categoryId: string) => {
     setSelectedCategory(categoryId);
@@ -378,8 +351,14 @@ const UserApp = () => {
 
   return (
     <div className="h-screen bg-background overflow-hidden">
-      {/* Container avec Scroll Snap TikTok-style */}
-      <div ref={containerRef} className="h-full overflow-y-scroll snap-y-mandatory scroll-smooth scrollbar-hide">
+      {/* Container avec Scroll Snap TikTok-style - Snap désactivé au début pour cacher la barre URL */}
+      <div 
+        ref={containerRef} 
+        className={cn(
+          "h-full overflow-y-scroll scroll-smooth scrollbar-hide",
+          snapEnabled && "snap-y snap-mandatory"
+        )}
+      >
         {filteredEvents.length > 0 ? (
           <>
             {filteredEvents.map((event, index) => (
