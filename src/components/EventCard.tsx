@@ -1,11 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { UnifiedEvent } from '@/types/unified';
 import { Menu, Filter, X, Heart, Share2, Check } from 'lucide-react';
 import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
 import { getSocialProofText, getPriceInfo, formatEventDateTime } from '@/utils/eventCardHelpers';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { useIsPWA } from '@/hooks/useIsPWA';
 
 interface EventCardProps {
   event: UnifiedEvent;
@@ -105,7 +104,6 @@ const EventCard: React.FC<EventCardProps> = ({
   const [imageLoaded, setImageLoaded] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const isPWA = useIsPWA();
 
   return (
     <div className="h-screen w-full bg-background flex flex-col">
@@ -144,16 +142,13 @@ const EventCard: React.FC<EventCardProps> = ({
         </button>
       </header>
 
-      {/* Contenu avec scroll si nécessaire */}
+      {/* Contenu sans scroll - flexbox */}
       <div 
         ref={containerRef}
-        className="flex-1 flex flex-col overflow-y-auto min-h-0 justify-start"
+        className="flex-1 flex flex-col overflow-hidden min-h-0"
       >
-        {/* Image - hauteur adaptative PWA vs Navigateur */}
-        <div className={cn(
-          "relative min-h-0 flex-shrink-0",
-          isPWA ? "h-[70vh]" : "h-[55vh]"
-        )}>
+        {/* Image - prend l'espace flexible restant */}
+        <div className="relative flex-1 min-h-0">
           {!imageLoaded && (
             <div className="absolute inset-0 bg-muted animate-pulse" />
           )}
