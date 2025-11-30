@@ -393,7 +393,7 @@ const UserApp = () => {
       </div>
 
       {/* Install Prompt PWA */}
-      <InstallPrompt />
+      <InstallPrompt pageId="swipe" delay={3000} />
 
       {/* Menu Drawer */}
       <MenuDrawer
