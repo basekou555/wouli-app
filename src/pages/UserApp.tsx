@@ -173,10 +173,10 @@ const UserApp = () => {
       
       const currentScrollTop = container.scrollTop;
       
-      // Micro-scroll: 1px down then immediately back
+      // Micro-scroll: 3px down then immediately back
       // This tricks the browser into hiding the URL bar
       container.scrollTo({
-        top: currentScrollTop + 1,
+        top: currentScrollTop + 3,
         behavior: 'auto'
       });
       
