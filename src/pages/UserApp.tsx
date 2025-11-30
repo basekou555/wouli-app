@@ -8,6 +8,7 @@ import EventCard from '@/components/EventCard';
 import { motion } from 'framer-motion';
 import { MenuDrawer } from '@/components/MenuDrawer';
 import { FiltersDrawer } from '@/components/FiltersDrawer';
+import { InstallPrompt } from '@/components/InstallPrompt';
 
 const UserApp = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -390,6 +391,9 @@ const UserApp = () => {
           </div>
         )}
       </div>
+
+      {/* Install Prompt PWA */}
+      <InstallPrompt />
 
       {/* Menu Drawer */}
       <MenuDrawer
