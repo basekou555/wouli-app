@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowRight, Users, Building, MapPin, Sparkles, MousePointer2 } from "lucide-react";
 import SwipePreview from "@/components/SwipePreview";
+import { InstallPrompt } from "@/components/InstallPrompt";
 const Home = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-neutral-100">
@@ -174,6 +175,9 @@ const Home = () => {
           </div>
         </div>
       </div>
+
+      {/* Install Prompt PWA */}
+      <InstallPrompt pageId="home" delay={5000} />
     </div>
   );
 };

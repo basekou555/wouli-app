@@ -8,36 +8,55 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-export const InstallPrompt = () => {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+interface InstallPromptProps {
+  /** Identifiant unique pour cette instance (permet plusieurs prompts sur différentes pages) */
+  pageId?: string;
+  /** Délai avant affichage en ms (défaut: 3000) */
+  delay?: number;
+}
+
+// Variable globale pour stocker le deferredPrompt (partagé entre instances)
+let globalDeferredPrompt: BeforeInstallPromptEvent | null = null;
+
+export const InstallPrompt = ({ pageId = 'default', delay = 3000 }: InstallPromptProps) => {
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(globalDeferredPrompt);
   const [showPrompt, setShowPrompt] = useState(false);
+
+  const dismissKey = `install-dismissed-${pageId}`;
 
   useEffect(() => {
     // Vérifier si déjà installé
     const isInstalled = window.matchMedia('(display-mode: standalone)').matches;
     if (isInstalled) return;
 
-    // Vérifier si dismissed récemment
-    const dismissed = localStorage.getItem('install-dismissed');
+    // Vérifier si dismissed récemment sur cette page
+    const dismissed = localStorage.getItem(dismissKey);
     if (dismissed) {
-      const sevenDays = 7 * 24 * 60 * 60 * 1000;
-      if (Date.now() - parseInt(dismissed) < sevenDays) {
+      const threeDays = 3 * 24 * 60 * 60 * 1000; // 3 jours par page
+      if (Date.now() - parseInt(dismissed) < threeDays) {
         return;
       }
+    }
+
+    // Si on a déjà le prompt global, l'utiliser
+    if (globalDeferredPrompt) {
+      setDeferredPrompt(globalDeferredPrompt);
+      setTimeout(() => setShowPrompt(true), delay);
+      return;
     }
 
     // Capturer l'événement d'installation
     const handler = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      globalDeferredPrompt = e as BeforeInstallPromptEvent;
+      setDeferredPrompt(globalDeferredPrompt);
       
-      // Afficher après 3 secondes
-      setTimeout(() => setShowPrompt(true), 3000);
+      setTimeout(() => setShowPrompt(true), delay);
     };
 
     window.addEventListener('beforeinstallprompt', handler);
     return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, []);
+  }, [dismissKey, delay]);
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
@@ -47,6 +66,7 @@ export const InstallPrompt = () => {
 
     if (outcome === 'accepted') {
       console.log('✅ PWA installée');
+      globalDeferredPrompt = null;
     }
 
     setDeferredPrompt(null);
@@ -55,7 +75,7 @@ export const InstallPrompt = () => {
 
   const handleDismiss = () => {
     setShowPrompt(false);
-    localStorage.setItem('install-dismissed', Date.now().toString());
+    localStorage.setItem(dismissKey, Date.now().toString());
   };
 
   return (
@@ -67,7 +87,7 @@ export const InstallPrompt = () => {
           exit={{ y: 100, opacity: 0 }}
           className="fixed bottom-20 left-4 right-4 z-[60] max-w-md mx-auto"
         >
-          <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl p-4 shadow-2xl">
+          <div className="bg-gradient-to-br from-orange-500 to-pink-500 rounded-2xl p-4 shadow-2xl">
             <button
               onClick={handleDismiss}
               className="absolute top-2 right-2 p-1 hover:bg-white/20 rounded-full transition-colors"
@@ -89,7 +109,7 @@ export const InstallPrompt = () => {
 
             <Button
               onClick={handleInstall}
-              className="w-full bg-white text-purple-600 hover:bg-white/90 font-semibold"
+              className="w-full bg-white text-orange-600 hover:bg-white/90 font-semibold"
             >
               <Download className="w-4 h-4 mr-2" />
               Ajouter à l'écran d'accueil
