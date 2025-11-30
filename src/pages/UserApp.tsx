@@ -158,6 +158,61 @@ const UserApp = () => {
       handleIncrementViews(filteredEvents[0].id);
     }
   }, [filteredEvents, viewedEventIds, handleIncrementViews]);
+
+  // Force browser to hide URL bar after snap scroll stabilizes (mobile)
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    
+    let hideBarTimeout: ReturnType<typeof setTimeout>;
+    let scrollEndTimer: ReturnType<typeof setTimeout>;
+    let isScrolling = false;
+    
+    const triggerHideUrlBar = () => {
+      if (!container || isScrolling) return;
+      
+      const currentScrollTop = container.scrollTop;
+      
+      // Micro-scroll: 1px down then immediately back
+      // This tricks the browser into hiding the URL bar
+      container.scrollTo({
+        top: currentScrollTop + 1,
+        behavior: 'auto'
+      });
+      
+      // Immediately return to exact position
+      requestAnimationFrame(() => {
+        container.scrollTo({
+          top: currentScrollTop,
+          behavior: 'auto'
+        });
+      });
+    };
+    
+    const handleScroll = () => {
+      isScrolling = true;
+      clearTimeout(hideBarTimeout);
+      clearTimeout(scrollEndTimer);
+      
+      // Detect scroll end with debounce
+      scrollEndTimer = setTimeout(() => {
+        isScrolling = false;
+        
+        // Wait 200ms after scroll stabilizes, then trigger micro-scroll
+        hideBarTimeout = setTimeout(() => {
+          triggerHideUrlBar();
+        }, 200);
+      }, 150);
+    };
+    
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      clearTimeout(hideBarTimeout);
+      clearTimeout(scrollEndTimer);
+    };
+  }, []);
   
   const handleCategoryChange = (categoryId: string) => {
     setSelectedCategory(categoryId);
