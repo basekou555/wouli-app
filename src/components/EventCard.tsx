@@ -5,6 +5,7 @@ import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
 import { getSocialProofText, getPriceInfo, formatEventDateTime } from '@/utils/eventCardHelpers';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useIsPWA } from '@/hooks/useIsPWA';
 
 interface EventCardProps {
   event: UnifiedEvent;
@@ -104,9 +105,13 @@ const EventCard: React.FC<EventCardProps> = ({
   const [imageLoaded, setImageLoaded] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isPWA = useIsPWA();
 
   return (
-    <div className="h-screen w-full bg-background flex flex-col">
+    <div className={cn(
+      "w-full bg-background flex flex-col",
+      isPWA ? "h-screen" : "h-[calc(100vh-56px)]"
+    )}>
       {/* Header fixe */}
       <header 
         className="flex-shrink-0 h-14 px-4 flex items-center justify-between bg-card border-b border-border"
@@ -233,7 +238,11 @@ const EventCard: React.FC<EventCardProps> = ({
       {/* Boutons d'action - Fixed bottom */}
       <div 
         className="flex-shrink-0 px-4 py-3 bg-card border-t border-border"
-        style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+        style={{ 
+          paddingBottom: isPWA 
+            ? 'calc(0.75rem + env(safe-area-inset-bottom))' 
+            : 'calc(1.5rem + env(safe-area-inset-bottom))'
+        }}
       >
         <div className="flex gap-2 max-w-md mx-auto">
           {/* Dislike */}
