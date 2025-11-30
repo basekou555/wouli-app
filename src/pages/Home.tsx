@@ -177,7 +177,7 @@ const Home = () => {
       </div>
 
       {/* Install Prompt PWA */}
-      <InstallPrompt pageId="home" delay={5000} />
+      <InstallPrompt pageId="home" delay={1500} />
     </div>
   );
 };
