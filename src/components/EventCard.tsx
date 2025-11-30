@@ -147,12 +147,12 @@ const EventCard: React.FC<EventCardProps> = ({
       {/* Contenu avec scroll si nécessaire */}
       <div 
         ref={containerRef}
-        className="flex-1 flex flex-col overflow-y-auto min-h-0"
+        className="flex-1 flex flex-col overflow-y-auto min-h-0 justify-start"
       >
         {/* Image - hauteur adaptative PWA vs Navigateur */}
         <div className={cn(
           "relative min-h-0 flex-shrink-0",
-          isPWA ? "h-[75vh]" : "h-[60vh]"
+          isPWA ? "h-[70vh]" : "h-[55vh]"
         )}>
           {!imageLoaded && (
             <div className="absolute inset-0 bg-muted animate-pulse" />
