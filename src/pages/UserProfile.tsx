@@ -1,21 +1,32 @@
-
-import React, { useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, MapPin, Users, Heart, Star, Edit3, TrendingUp, Activity, Award } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Menu, Settings, MapPin, Calendar, Heart, Camera, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useUserProfile } from '../hooks/useUserProfile';
-import { PageSkeleton } from '../components/LoadingSkeleton';
-import BottomNavigation from '../components/BottomNavigation';
-import PageHeader from '../components/PageHeader';
+import { useUserProfile } from '@/hooks/useUserProfile';
+import { useUserHistory } from '@/hooks/useUserHistory';
+import { PageSkeleton } from '@/components/LoadingSkeleton';
+import MenuDrawer from '@/components/MenuDrawer';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { UnifiedEvent } from '@/types/unified';
 
 const UserProfile = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { profile, userStats, recentActivities, loading } = useUserProfile();
+  const { profile, loading: profileLoading } = useUserProfile();
+  const { 
+    likedEvents, 
+    participatingEvents, 
+    loading: historyLoading,
+    removeLikedEvent,
+    removeParticipation
+  } = useUserHistory();
+  
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -23,253 +34,274 @@ const UserProfile = () => {
     }
   }, [user, navigate]);
 
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'participation':
-        return <Calendar className="h-4 w-4 text-green-600" />;
-      case 'like':
-        return <Heart className="h-4 w-4 text-red-500" />;
-      default:
-        return <Activity className="h-4 w-4 text-blue-500" />;
-    }
-  };
-
-  const getActivityText = (activity: any) => {
-    switch (activity.type) {
-      case 'participation':
-        return `Tu as participé à "${activity.event}"`;
-      case 'like':
-        return `Tu as aimé "${activity.event}"`;
-      default:
-        return `Activité sur "${activity.event}"`;
-    }
-  };
-
-  const favoriteCategories = [
-    { name: 'Concerts', count: 8, icon: '🎵' },
-    { name: 'Restaurants', count: 6, icon: '🍽️' },
-    { name: 'Bars', count: 4, icon: '🍺' },
-    { name: 'Sport', count: 2, icon: '⚽' }
-  ];
+  const loading = profileLoading || historyLoading;
 
   if (loading || !user) {
     return <PageSkeleton />;
   }
 
+  const memoriesCount = 0; // TODO: Implement memories count
+
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <PageHeader 
-        title="Mon Profil"
-        rightContent={
-          <Link to="/user-settings">
-            <Button variant="ghost" size="sm">
-              <Edit3 className="h-4 w-4 mr-2" />
-              Modifier
-            </Button>
-          </Link>
-        }
-      />
-      
-      <div className="px-4 py-6 max-w-2xl mx-auto space-y-6">
-        {/* Header profil */}
-        <div className="bg-card rounded-lg p-6 shadow-sm border border-border">
-          <div className="flex items-center space-x-4">
-            <div className="h-16 w-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-xl font-bold">
-              {profile?.username?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U'}
-            </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-bold text-foreground">
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header style App */}
+      <header className="flex-shrink-0 h-14 px-4 flex items-center justify-between bg-card border-b border-border">
+        <button
+          onClick={() => setIsMenuOpen(true)}
+          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-accent transition-colors"
+          aria-label="Menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+        
+        <span className="font-bold text-lg tracking-wide">WOULI</span>
+        
+        <button
+          onClick={() => navigate('/user-settings')}
+          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-accent transition-colors"
+          aria-label="Paramètres"
+        >
+          <Settings className="w-5 h-5" />
+        </button>
+      </header>
+
+      {/* Section Profil avec Gradient */}
+      <div className="bg-gradient-to-br from-purple-500 to-pink-500 px-4 py-6">
+        <div className="max-w-md mx-auto">
+          {/* Avatar + Username */}
+          <div className="flex items-center gap-4 mb-6">
+            <Avatar className="w-20 h-20 border-4 border-white shadow-lg">
+              <AvatarImage src={profile?.avatar_url || undefined} />
+              <AvatarFallback className="bg-white text-purple-600 text-2xl font-bold">
+                {profile?.username?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
+              </AvatarFallback>
+            </Avatar>
+            
+            <div className="flex-1 text-white">
+              <h1 className="text-2xl font-bold">
                 {profile?.username || user.email?.split('@')[0] || 'Utilisateur'}
-              </h2>
-              <p className="text-muted-foreground text-sm">Membre depuis {new Date(user.created_at).toLocaleDateString('fr-FR', {
-                month: 'long',
-                year: 'numeric'
-              })}</p>
-              <Badge variant="secondary" className="mt-1">
-                <MapPin className="h-3 w-3 mr-1" />
+              </h1>
+              <p className="text-white/80 text-sm flex items-center gap-1">
+                <MapPin className="w-3 h-3" />
                 {profile?.city || 'Lyon, France'}
-              </Badge>
+              </p>
+              {profile?.bio && (
+                <p className="text-white/90 text-sm mt-1 line-clamp-2">{profile.bio}</p>
+              )}
             </div>
           </div>
-          <div className="flex gap-2 mt-4">
-            <Link to="/friends" className="flex-1">
-              <Button variant="outline" size="sm" className="w-full">
-                <Users className="h-4 w-4 mr-2" />
-                Mes amis
-              </Button>
-            </Link>
-            <Link to="/history" className="flex-1">
-              <Button variant="outline" size="sm" className="w-full">
-                <Heart className="h-4 w-4 mr-2" />
-                Mes événements
-              </Button>
-            </Link>
+          
+          {/* Stats Row */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-white">{likedEvents.length}</p>
+              <p className="text-xs text-white/80">Favoris</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-white">{participatingEvents.length}</p>
+              <p className="text-xs text-white/80">Participations</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-white">{memoriesCount}</p>
+              <p className="text-xs text-white/80">Souvenirs</p>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Statistiques */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="flex items-center justify-center mb-2">
-                <Calendar className="h-5 w-5 text-blue-500" />
-              </div>
-              <div className="text-2xl font-bold text-foreground">{userStats.eventsParticipated}</div>
-              <p className="text-sm text-muted-foreground">Événements</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="flex items-center justify-center mb-2">
-                <Heart className="h-5 w-5 text-red-500" />
-              </div>
-              <div className="text-2xl font-bold text-foreground">{userStats.eventsLiked}</div>
-              <p className="text-sm text-muted-foreground">Favoris</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="flex items-center justify-center mb-2">
-                <Users className="h-5 w-5 text-green-500" />
-              </div>
-              <div className="text-2xl font-bold text-foreground">{userStats.eventsCreated}</div>
-              <p className="text-sm text-muted-foreground">Créés</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="flex items-center justify-center mb-2">
-                <TrendingUp className="h-5 w-5 text-purple-500" />
-              </div>
-              <div className="text-2xl font-bold text-foreground">{userStats.weeklyActivity}</div>
-              <p className="text-sm text-muted-foreground">Cette semaine</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Tabs defaultValue="activity" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="activity" className="flex items-center">
-              <Activity className="h-4 w-4 mr-2" />
-              Activité
+      {/* Tabs */}
+      <Tabs defaultValue="favorites" className="w-full flex-1 flex flex-col">
+        {/* Tabs navigation - sticky */}
+        <div className="sticky top-14 z-30 bg-background px-4 py-3 border-b border-border">
+          <TabsList className="w-full max-w-md mx-auto grid grid-cols-3 bg-accent rounded-full p-1">
+            <TabsTrigger 
+              value="favorites" 
+              className="rounded-full text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white"
+            >
+              ❤️ Favoris
             </TabsTrigger>
-            <TabsTrigger value="preferences" className="flex items-center">
-              <Star className="h-4 w-4 mr-2" />
-              Préférences
+            <TabsTrigger 
+              value="participations" 
+              className="rounded-full text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white"
+            >
+              ✓ Participations
             </TabsTrigger>
-            <TabsTrigger value="achievements" className="flex items-center">
-              <Award className="h-4 w-4 mr-2" />
-              Badges
+            <TabsTrigger 
+              value="memories" 
+              className="rounded-full text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white"
+            >
+              📸 Souvenirs
             </TabsTrigger>
           </TabsList>
+        </div>
+        
+        {/* Content */}
+        <TabsContent value="favorites" className="flex-1 mt-0">
+          <EventsList 
+            events={likedEvents} 
+            onRemove={removeLikedEvent} 
+            emptyIcon={<Heart className="w-6 h-6 text-muted-foreground" />} 
+            emptyText="Aucun favori" 
+          />
+        </TabsContent>
+        
+        <TabsContent value="participations" className="flex-1 mt-0">
+          <EventsList 
+            events={participatingEvents} 
+            onRemove={removeParticipation} 
+            emptyIcon={<Calendar className="w-6 h-6 text-muted-foreground" />} 
+            emptyText="Aucune participation" 
+          />
+        </TabsContent>
+        
+        <TabsContent value="memories" className="flex-1 mt-0">
+          <MemoriesGrid />
+        </TabsContent>
+      </Tabs>
 
-          <TabsContent value="activity" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Activité récente</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {recentActivities.length > 0 ? (
-                    recentActivities.map(activity => (
-                      <div key={activity.id} className="flex items-center space-x-3 p-3 bg-muted/50 rounded-lg">
-                        {getActivityIcon(activity.type)}
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-foreground">
-                            {getActivityText(activity)}
-                          </p>
-                          <div className="flex items-center text-xs text-muted-foreground mt-1">
-                            <MapPin className="h-3 w-3 mr-1" />
-                            {activity.venue} • {new Date(activity.date).toLocaleDateString('fr-FR')}
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>Aucune activité récente</p>
-                      <p className="text-sm">Découvrez des événements pour voir votre activité ici !</p>
-                    </div>
-                  )}
-                </div>
-                <div className="mt-4 text-center">
-                  <Link to="/history">
-                    <Button variant="outline" size="sm">
-                      Voir l'historique complet
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+      {/* Menu Drawer */}
+      <MenuDrawer isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
+    </div>
+  );
+};
 
-          <TabsContent value="preferences" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Catégories préférées</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {favoriteCategories.map((category, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <span className="text-lg">{category.icon}</span>
-                        <span className="font-medium text-foreground">{category.name}</span>
-                      </div>
-                      <Badge variant="secondary">{category.count} événements</Badge>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4 p-4 bg-primary/10 rounded-lg">
-                  <p className="text-sm text-primary">
-                    💡 Nous personnalisons vos recommandations selon vos préférences !
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+// Composant EventsList
+interface EventsListProps {
+  events: UnifiedEvent[];
+  onRemove: (eventId: string) => void;
+  emptyIcon: React.ReactNode;
+  emptyText: string;
+}
 
-          <TabsContent value="achievements" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Vos badges</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col items-center p-4 bg-yellow-50 dark:bg-yellow-950/30 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                    <Award className="h-8 w-8 text-yellow-600 mb-2" />
-                    <span className="font-medium text-yellow-800 dark:text-yellow-200">Explorateur</span>
-                    <span className="text-xs text-yellow-600 dark:text-yellow-400">10+ événements</span>
-                  </div>
-                  <div className="flex flex-col items-center p-4 bg-purple-50 dark:bg-purple-950/30 rounded-lg border border-purple-200 dark:border-purple-800">
-                    <Star className="h-8 w-8 text-purple-600 mb-2" />
-                    <span className="font-medium text-purple-800 dark:text-purple-200">Sociable</span>
-                    <span className="text-xs text-purple-600 dark:text-purple-400">25+ rencontres</span>
-                  </div>
-                  <div className="flex flex-col items-center p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
-                    <Heart className="h-8 w-8 text-green-600 mb-2" />
-                    <span className="font-medium text-green-800 dark:text-green-200">Passionné</span>
-                    <span className="text-xs text-green-600 dark:text-green-400">20+ favoris</span>
-                  </div>
-                  <div className="flex flex-col items-center p-4 bg-muted/50 rounded-lg border border-border opacity-60">
-                    <TrendingUp className="h-8 w-8 text-muted-foreground mb-2" />
-                    <span className="font-medium text-muted-foreground">Influenceur</span>
-                    <span className="text-xs text-muted-foreground">50+ événements</span>
-                  </div>
-                </div>
-                <div className="mt-4 p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    🏆 Participez à plus d'événements pour débloquer de nouveaux badges !
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-      
-      <BottomNavigation />
+const EventsList: React.FC<EventsListProps> = ({ events, onRemove, emptyIcon, emptyText }) => {
+  const navigate = useNavigate();
+
+  const formatDate = (date: string) => {
+    try {
+      return format(new Date(date), 'd MMM yyyy', { locale: fr });
+    } catch {
+      return date;
+    }
+  };
+
+  if (events.length === 0) {
+    return (
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center py-16 px-4"
+      >
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+          {emptyIcon}
+        </div>
+        <p className="text-muted-foreground mb-4">{emptyText}</p>
+        <Button 
+          onClick={() => navigate('/app')}
+          className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full"
+        >
+          Découvrir des événements
+        </Button>
+      </motion.div>
+    );
+  }
+
+  return (
+    <div className="space-y-3 px-4 py-4">
+      {events.map(event => (
+        <motion.div
+          key={event.id}
+          whileTap={{ scale: 0.98 }}
+          className="bg-card rounded-xl overflow-hidden border border-border flex gap-3 cursor-pointer"
+          onClick={() => navigate(`/event/${event.id}`)}
+        >
+          {/* Thumbnail */}
+          <img 
+            src={event.image_url || '/placeholder.svg'} 
+            alt={event.title}
+            className="w-24 h-24 object-cover flex-shrink-0"
+          />
+          
+          {/* Infos */}
+          <div className="flex-1 py-3 pr-2 min-w-0">
+            <h3 className="font-semibold text-sm line-clamp-2 text-foreground mb-1">
+              {event.title}
+            </h3>
+            <p className="text-xs text-muted-foreground flex items-center gap-1 mb-1">
+              <Calendar className="w-3 h-3 flex-shrink-0" />
+              {formatDate(event.date)}
+            </p>
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <MapPin className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{event.location || event.venue}</span>
+            </p>
+          </div>
+          
+          {/* Bouton supprimer */}
+          <Button 
+            variant="ghost" 
+            size="icon"
+            className="self-center mr-2 text-muted-foreground hover:text-destructive flex-shrink-0"
+            onClick={(e) => { 
+              e.stopPropagation(); 
+              onRemove(event.id); 
+            }}
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </motion.div>
+      ))}
+    </div>
+  );
+};
+
+// Composant MemoriesGrid (placeholder pour le moment)
+const MemoriesGrid: React.FC = () => {
+  const navigate = useNavigate();
+  
+  // TODO: Implémenter la récupération des souvenirs (événements passés avec photos)
+  const memories: any[] = [];
+
+  if (memories.length === 0) {
+    return (
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center py-16 px-4"
+      >
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+          <Camera className="w-6 h-6 text-muted-foreground" />
+        </div>
+        <p className="text-muted-foreground mb-2">Aucun souvenir</p>
+        <p className="text-xs text-muted-foreground mb-4">
+          Vos événements passés apparaîtront ici
+        </p>
+        <Button 
+          onClick={() => navigate('/app')}
+          className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full"
+        >
+          Découvrir des événements
+        </Button>
+      </motion.div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-3 gap-1 px-4 py-4">
+      {memories.map((event) => (
+        <motion.div 
+          key={event.id}
+          whileTap={{ scale: 0.95 }}
+          className="aspect-square relative cursor-pointer overflow-hidden rounded-lg"
+          onClick={() => navigate(`/event/${event.id}`)}
+        >
+          <img 
+            src={event.image_url || '/placeholder.svg'} 
+            alt={event.title}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/20 hover:bg-black/40 transition-colors" />
+        </motion.div>
+      ))}
     </div>
   );
 };
