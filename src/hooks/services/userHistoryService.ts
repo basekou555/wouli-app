@@ -4,53 +4,67 @@ import { supabase } from '@/integrations/supabase/client';
 export const fetchLikedEvents = async (userId: string) => {
   console.log('📋 Récupération des événements likés...');
   
-  const [userEventLikes, businessEventLikes] = await Promise.all([
-    // Likes sur événements users
-    supabase
-      .from('event_likes')
-      .select(`
-        event_id,
-        events (*)
-      `)
-      .eq('user_id', userId),
-    
-    // Likes sur événements business
-    supabase
-      .from('event_likes')
-      .select(`
-        event_id,
-        business_events (*)
-      `)
-      .eq('user_id', userId)
+  // 1. Récupérer les event_ids likés
+  const { data: likeIds, error: likesError } = await supabase
+    .from('event_likes')
+    .select('event_id')
+    .eq('user_id', userId);
+
+  if (likesError) {
+    console.error('❌ Erreur récupération likes:', likesError);
+    return { events: [], businessEvents: [], error: likesError };
+  }
+
+  const eventIds = likeIds?.map(l => l.event_id) || [];
+  
+  if (eventIds.length === 0) {
+    return { events: [], businessEvents: [], error: null };
+  }
+
+  // 2. Récupérer les événements correspondants (sans jointure)
+  const [eventsResult, businessEventsResult] = await Promise.all([
+    supabase.from('events').select('*').in('id', eventIds),
+    supabase.from('business_events').select('*').in('id', eventIds)
   ]);
 
-  return { userEventLikes, businessEventLikes };
+  return {
+    events: eventsResult.data || [],
+    businessEvents: businessEventsResult.data || [],
+    error: eventsResult.error || businessEventsResult.error
+  };
 };
 
 export const fetchParticipatingEvents = async (userId: string) => {
   console.log('📋 Récupération des événements de participation...');
   
-  const [userEventParticipations, businessEventParticipations] = await Promise.all([
-    // Participations sur événements users
-    supabase
-      .from('event_participants')
-      .select(`
-        event_id,
-        events (*)
-      `)
-      .eq('user_id', userId),
-    
-    // Participations sur événements business
-    supabase
-      .from('event_participants')
-      .select(`
-        event_id,
-        business_events (*)
-      `)
-      .eq('user_id', userId)
+  // 1. Récupérer les event_ids de participation
+  const { data: participationIds, error: participationsError } = await supabase
+    .from('event_participants')
+    .select('event_id')
+    .eq('user_id', userId);
+
+  if (participationsError) {
+    console.error('❌ Erreur récupération participations:', participationsError);
+    return { events: [], businessEvents: [], error: participationsError };
+  }
+
+  const eventIds = participationIds?.map(p => p.event_id) || [];
+  
+  if (eventIds.length === 0) {
+    return { events: [], businessEvents: [], error: null };
+  }
+
+  // 2. Récupérer les événements correspondants (sans jointure)
+  const [eventsResult, businessEventsResult] = await Promise.all([
+    supabase.from('events').select('*').in('id', eventIds),
+    supabase.from('business_events').select('*').in('id', eventIds)
   ]);
 
-  return { userEventParticipations, businessEventParticipations };
+  return {
+    events: eventsResult.data || [],
+    businessEvents: businessEventsResult.data || [],
+    error: eventsResult.error || businessEventsResult.error
+  };
 };
 
 export const removeLike = async (eventId: string, userId: string) => {
