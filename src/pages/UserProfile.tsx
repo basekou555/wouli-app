@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Menu, Settings, MapPin, Calendar, Heart, Camera, X } from 'lucide-react';
+import { Menu, Settings, MapPin, Calendar, Heart, Camera, X, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useUserHistory } from '@/hooks/useUserHistory';
+import { useFriendships } from '@/hooks/useFriendships';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
 import MenuDrawer from '@/components/MenuDrawer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -25,6 +26,11 @@ const UserProfile = () => {
     removeLikedEvent,
     removeParticipation
   } = useUserHistory();
+  const { 
+    acceptedFriends, 
+    pendingCount, 
+    loading: friendsLoading 
+  } = useFriendships();
   
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -34,7 +40,7 @@ const UserProfile = () => {
     }
   }, [user, navigate]);
 
-  const loading = profileLoading || historyLoading;
+  const loading = profileLoading || historyLoading || friendsLoading;
 
   if (loading || !user) {
     return <PageSkeleton />;
@@ -92,7 +98,7 @@ const UserProfile = () => {
           </div>
           
           {/* Stats Row */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-2">
             <div className="text-center">
               <p className="text-2xl font-bold text-white">{likedEvents.length}</p>
               <p className="text-xs text-white/80">Favoris</p>
@@ -100,6 +106,18 @@ const UserProfile = () => {
             <div className="text-center">
               <p className="text-2xl font-bold text-white">{participatingEvents.length}</p>
               <p className="text-xs text-white/80">Participations</p>
+            </div>
+            <div 
+              className="text-center cursor-pointer relative" 
+              onClick={() => navigate('/friends')}
+            >
+              <p className="text-2xl font-bold text-white">{acceptedFriends.length}</p>
+              <p className="text-xs text-white/80">Amis</p>
+              {pendingCount > 0 && (
+                <span className="absolute -top-1 right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                  {pendingCount}
+                </span>
+              )}
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-white">{memoriesCount}</p>

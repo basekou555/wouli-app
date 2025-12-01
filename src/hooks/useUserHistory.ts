@@ -53,67 +53,41 @@ export const useUserHistory = () => {
       ]);
 
       // Vérifier les erreurs
-      if (likesResult.userEventLikes.error) {
-        console.error('❌ Erreur lors de la récupération des likes users:', likesResult.userEventLikes.error);
-        throw likesResult.userEventLikes.error;
+      if (likesResult.error) {
+        console.error('❌ Erreur lors de la récupération des likes:', likesResult.error);
+        throw likesResult.error;
       }
 
-      if (likesResult.businessEventLikes.error) {
-        console.error('❌ Erreur lors de la récupération des likes business:', likesResult.businessEventLikes.error);
-        throw likesResult.businessEventLikes.error;
-      }
-
-      if (participationsResult.userEventParticipations.error) {
-        console.error('❌ Erreur lors de la récupération des participations users:', participationsResult.userEventParticipations.error);
-        throw participationsResult.userEventParticipations.error;
-      }
-
-      if (participationsResult.businessEventParticipations.error) {
-        console.error('❌ Erreur lors de la récupération des participations business:', participationsResult.businessEventParticipations.error);
-        throw participationsResult.businessEventParticipations.error;
+      if (participationsResult.error) {
+        console.error('❌ Erreur lors de la récupération des participations:', participationsResult.error);
+        throw participationsResult.error;
       }
 
       // Construire la liste des événements likés
       const likedEvents: UnifiedEvent[] = [];
       
       // Ajouter les événements users likés
-      likesResult.userEventLikes.data
-        ?.filter(item => item.events)
-        .forEach(item => {
-          if (item.events) {
-            likedEvents.push(mapUserEventToUnified(item.events));
-          }
-        });
+      likesResult.events.forEach(event => {
+        likedEvents.push(mapUserEventToUnified(event));
+      });
       
       // Ajouter les événements business likés
-      likesResult.businessEventLikes.data
-        ?.filter(item => item.business_events)
-        .forEach(item => {
-          if (item.business_events) {
-            likedEvents.push(mapBusinessEventToUnified(item.business_events));
-          }
-        });
+      likesResult.businessEvents.forEach(event => {
+        likedEvents.push(mapBusinessEventToUnified(event));
+      });
 
       // Construire la liste des événements de participation
       const participatingEvents: UnifiedEvent[] = [];
       
       // Ajouter les événements users de participation
-      participationsResult.userEventParticipations.data
-        ?.filter(item => item.events)
-        .forEach(item => {
-          if (item.events) {
-            participatingEvents.push(mapUserEventToUnified(item.events));
-          }
-        });
+      participationsResult.events.forEach(event => {
+        participatingEvents.push(mapUserEventToUnified(event));
+      });
       
       // Ajouter les événements business de participation
-      participationsResult.businessEventParticipations.data
-        ?.filter(item => item.business_events)
-        .forEach(item => {
-          if (item.business_events) {
-            participatingEvents.push(mapBusinessEventToUnified(item.business_events));
-          }
-        });
+      participationsResult.businessEvents.forEach(event => {
+        participatingEvents.push(mapBusinessEventToUnified(event));
+      });
 
       console.log('📊 Historique récupéré - Likés:', likedEvents.length, 'Participants:', participatingEvents.length);
 
