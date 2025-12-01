@@ -3,15 +3,19 @@ import React, { useState } from 'react';
 import { useAllEvents } from '@/hooks/useAllEvents';
 import { useSearchFilters } from '@/hooks/useSearchFilters';
 import { useEventInteractions } from '@/hooks/useEventInteractions';
-import BottomNavigation from '@/components/BottomNavigation';
-import PageHeader from '@/components/PageHeader';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
-import SearchHeader from '@/components/search/SearchHeader';
-import SearchFilters from '@/components/search/SearchFilters';
 import SearchResults from '@/components/search/SearchResults';
+import MenuDrawer from '@/components/MenuDrawer';
+import FiltersDrawer from '@/components/FiltersDrawer';
+import { Input } from '@/components/ui/input';
+import { Menu, Search as SearchIcon, SlidersHorizontal } from 'lucide-react';
 
 const Search = () => {
-  const [showFilters, setShowFilters] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [selectedPrice, setSelectedPrice] = useState('all');
+  const [selectedTime, setSelectedTime] = useState('all');
+
   const { events: allEvents, loading } = useAllEvents();
   
   const {
@@ -32,37 +36,60 @@ const Search = () => {
     handleParticipate
   } = useEventInteractions(allEvents);
 
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category === 'all' ? null : category);
+  };
+
+  const handleResetFilters = () => {
+    clearFilters();
+    setSelectedPrice('all');
+    setSelectedTime('all');
+  };
+
   if (loading) {
     return <PageSkeleton />;
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <PageHeader 
-        title="Rechercher" 
-        subtitle="Trouvez des événements près de chez vous"
-      />
-      
-      <div className="px-4 py-4 max-w-2xl mx-auto">
-        <SearchHeader
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          showFilters={showFilters}
-          onToggleFilters={() => setShowFilters(!showFilters)}
-        />
-
-        {showFilters && (
-          <div className="bg-card rounded-lg shadow-sm border border-border p-4 mt-4">
-            <SearchFilters
-              selectedCategory={selectedCategory}
-              onCategorySelect={setSelectedCategory}
-              selectedDate={selectedDate}
-              onDateSelect={setSelectedDate}
-              onClearFilters={clearFilters}
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header style App avec recherche */}
+      <header className="flex-shrink-0 bg-card border-b border-border sticky top-0 z-40">
+        {/* Ligne 1 : Menu + WOULI + Filtres */}
+        <div className="h-14 px-4 flex items-center justify-between">
+          <button 
+            onClick={() => setIsMenuOpen(true)}
+            className="p-2 -ml-2 hover:bg-accent rounded-full transition-colors"
+          >
+            <Menu className="w-5 h-5 text-foreground" />
+          </button>
+          
+          <span className="font-bold text-lg tracking-wide text-foreground">WOULI</span>
+          
+          <button
+            onClick={() => setIsFiltersOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            Filtres
+          </button>
+        </div>
+        
+        {/* Ligne 2 : Barre de recherche */}
+        <div className="px-4 pb-3">
+          <div className="relative">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Rechercher un événement..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 rounded-full bg-accent/50 border-border"
             />
           </div>
-        )}
+        </div>
+      </header>
 
+      {/* Résultats scrollables */}
+      <div className="flex-1 overflow-y-auto">
         <SearchResults
           events={filteredEvents}
           searchTerm={searchTerm}
@@ -72,11 +99,24 @@ const Search = () => {
           participatingEvents={participatingEvents}
           onLike={handleLike}
           onParticipate={handleParticipate}
-          onClearFilters={clearFilters}
+          onClearFilters={handleResetFilters}
         />
       </div>
 
-      <BottomNavigation />
+      {/* Drawers */}
+      <MenuDrawer isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
+      
+      <FiltersDrawer
+        isOpen={isFiltersOpen}
+        onClose={() => setIsFiltersOpen(false)}
+        selectedCategory={selectedCategory || 'all'}
+        onCategoryChange={handleCategoryChange}
+        selectedPrice={selectedPrice}
+        onPriceChange={setSelectedPrice}
+        selectedTime={selectedTime}
+        onTimeChange={setSelectedTime}
+        onReset={handleResetFilters}
+      />
     </div>
   );
 };
