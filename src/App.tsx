@@ -10,8 +10,6 @@ import { useRatingModal } from "@/hooks/useRatingModal";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import UserApp from "./pages/UserApp";
-import Profile from "./pages/Profile";
-import EventDetails from "./pages/EventDetails";
 import EventPreview from "./pages/EventPreview";
 import Search from "./pages/Search";
 import UserProfile from "./pages/UserProfile";
@@ -21,7 +19,7 @@ import BusinessDashboard from "./pages/BusinessDashboard";
 import BusinessEvents from "./pages/BusinessEvents";
 import BusinessEventDetails from "./pages/BusinessEventDetails";
 import BusinessEventEdit from "./pages/BusinessEventEdit";
-import ProfileSettings from "./pages/ProfileSettings";
+import BusinessProfileSettings from "./pages/BusinessProfileSettings";
 import UserProfileSettings from "./pages/UserProfileSettings";
 import BusinessSignup from "./pages/BusinessSignup";
 import Friends from "./pages/Friends";
@@ -69,19 +67,11 @@ function AppContent() {
                 } />
                 <Route path="/profile" element={
                   <ProtectedRoute>
-                    <Profile />
+                    <UserProfile />
                   </ProtectedRoute>
                 } />
-                <Route path="/profil" element={
-                  <ProtectedRoute>
-                    <Profile />
-                  </ProtectedRoute>
-                } />
-                <Route path="/event/:id" element={
-                  <ProtectedRoute>
-                    <EventDetails />
-                  </ProtectedRoute>
-                } />
+                <Route path="/profil" element={<Navigate to="/profile" replace />} />
+                <Route path="/event/:id" element={<Navigate to="/events/:id" replace />} />
                 <Route path="/events/:id" element={
                   <ProtectedRoute>
                     <EventPreview />
@@ -105,7 +95,7 @@ function AppContent() {
                 } />
                 <Route path="/profile-settings" element={
                   <ProtectedRoute>
-                    <ProfileSettings />
+                    <BusinessProfileSettings />
                   </ProtectedRoute>
                 } />
                 <Route path="/user-settings" element={

@@ -66,7 +66,7 @@ const UserHistory = () => {
           </div>
         </div>
         <div className="flex justify-between mt-4">
-          <Link to={`/event/${event.id}`}>
+          <Link to={`/events/${event.id}`}>
             <Button variant="outline" size="sm">
               Voir détails
             </Button>

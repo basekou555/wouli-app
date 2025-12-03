@@ -230,7 +230,7 @@ const EventsList: React.FC<EventsListProps> = ({ events, onRemove, emptyIcon, em
           key={event.id}
           whileTap={{ scale: 0.98 }}
           className="bg-card rounded-xl overflow-hidden border border-border flex gap-3 cursor-pointer"
-          onClick={() => navigate(`/event/${event.id}`)}
+          onClick={() => navigate(`/events/${event.id}`)}
         >
           {/* Thumbnail */}
           <img 
@@ -310,7 +310,7 @@ const MemoriesGrid: React.FC = () => {
           key={event.id}
           whileTap={{ scale: 0.95 }}
           className="aspect-square relative cursor-pointer overflow-hidden rounded-lg"
-          onClick={() => navigate(`/event/${event.id}`)}
+          onClick={() => navigate(`/events/${event.id}`)}
         >
           <img 
             src={event.image_url || '/placeholder.svg'} 
