@@ -10,11 +10,9 @@ import { useRatingModal } from "@/hooks/useRatingModal";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import UserApp from "./pages/UserApp";
-import UserAppGridTest from "./pages/UserAppGridTest";
 import Profile from "./pages/Profile";
 import EventDetails from "./pages/EventDetails";
 import EventPreview from "./pages/EventPreview";
-import Explore from "./pages/Explore";
 import Search from "./pages/Search";
 import UserProfile from "./pages/UserProfile";
 import UserHistory from "./pages/UserHistory";
@@ -67,11 +65,6 @@ function AppContent() {
                 <Route path="/app" element={
                   <ProtectedRoute>
                     <UserApp />
-                  </ProtectedRoute>
-                } />
-                <Route path="/app-grid-test" element={
-                  <ProtectedRoute>
-                    <UserAppGridTest />
                   </ProtectedRoute>
                 } />
                 <Route path="/profile" element={
