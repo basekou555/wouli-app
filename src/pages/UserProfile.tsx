@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Menu, Settings, MapPin, Calendar, Heart, Camera, X, Users } from 'lucide-react';
+import { Menu, Settings, MapPin, Calendar, Heart, Camera, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useUserHistory } from '@/hooks/useUserHistory';
