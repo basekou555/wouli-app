@@ -15,8 +15,8 @@ const AppNavbar = () => {
     href: '/app',
     icon: Home
   }, {
-    name: 'Recherche',
-    href: '/search',
+    name: 'Explorer',
+    href: '/explore',
     icon: Search
   }, {
     name: 'Profil',

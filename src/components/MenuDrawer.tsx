@@ -112,7 +112,7 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({ isOpen, onClose }) => {
               )}
 
               <button
-                onClick={() => handleNavigation('/search')}
+                onClick={() => handleNavigation('/explore')}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-accent transition-colors text-left"
               >
                 <Search className="w-5 h-5 text-muted-foreground" />

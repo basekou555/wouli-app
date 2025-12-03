@@ -25,7 +25,7 @@ const EventActionsSection: React.FC<EventActionsSectionProps> = ({
     if (window.history.length > 1) {
       navigate(-1);
     } else {
-      navigate('/search');
+      navigate('/explore');
     }
   };
 

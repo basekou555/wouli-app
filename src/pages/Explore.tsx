@@ -10,7 +10,7 @@ import FiltersDrawer from '@/components/FiltersDrawer';
 import { Input } from '@/components/ui/input';
 import { Menu, Search as SearchIcon, SlidersHorizontal } from 'lucide-react';
 
-const Search = () => {
+const Explore = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [selectedPrice, setSelectedPrice] = useState('all');
@@ -121,4 +121,4 @@ const Search = () => {
   );
 };
 
-export default Search;
+export default Explore;
