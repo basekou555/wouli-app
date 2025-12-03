@@ -11,7 +11,7 @@ import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import UserApp from "./pages/UserApp";
 import EventPreview from "./pages/EventPreview";
-import Search from "./pages/Search";
+import Explore from "./pages/Explore";
 import UserProfile from "./pages/UserProfile";
 import UserHistory from "./pages/UserHistory";
 import NotFound from "./pages/NotFound";
@@ -77,12 +77,12 @@ function AppContent() {
                     <EventPreview />
                   </ProtectedRoute>
                 } />
-                <Route path="/explore" element={<Navigate to="/search" replace />} />
-                <Route path="/search" element={
+                <Route path="/explore" element={
                   <ProtectedRoute>
-                    <Search />
+                    <Explore />
                   </ProtectedRoute>
                 } />
+                <Route path="/search" element={<Navigate to="/explore" replace />} />
                 <Route path="/user/:id" element={
                   <ProtectedRoute>
                     <UserProfileView />

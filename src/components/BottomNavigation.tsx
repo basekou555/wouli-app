@@ -21,9 +21,9 @@ const BottomNavigation = ({ variant = 'fixed' }: BottomNavigationProps) => {
     },
     {
       icon: Search,
-      label: 'Rechercher',
-      path: '/search',
-      isActive: location.pathname === '/search'
+      label: 'Explorer',
+      path: '/explore',
+      isActive: location.pathname === '/explore'
     },
     {
       icon: User,

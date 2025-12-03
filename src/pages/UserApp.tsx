@@ -325,7 +325,7 @@ const UserApp = () => {
                   onParticipate={() => handleParticipate(event.id, index)}
                   onShare={() => handleShare(event.id)}
                   onMenuClick={() => setIsMenuOpen(true)}
-                  onSearchClick={() => navigate('/search')}
+                  onSearchClick={() => navigate('/explore')}
                   onFilterClick={() => setIsFiltersOpen(true)}
                   onEstablishmentClick={() => handleEstablishmentClick(event.id)}
                   onMapClick={() => handleMapClick(event.id)}
