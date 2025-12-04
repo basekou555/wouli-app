@@ -48,7 +48,28 @@ export type Database = {
             foreignKeyName: "admin_events_import_event_id_fkey"
             columns: ["event_id"]
             isOneToOne: true
+            referencedRelation: "business_all_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_events_import_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "business_smart_benchmark"
+            referencedColumns: ["my_event_id"]
+          },
+          {
+            foreignKeyName: "admin_events_import_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_events_import_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "public_events"
             referencedColumns: ["id"]
           },
         ]
@@ -118,6 +139,74 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      business_details: {
+        Row: {
+          ambiance_generale: string[] | null
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string | null
+          establishment_type: string[] | null
+          id: string
+          instagram_handle: string | null
+          onboarding_completed: boolean | null
+          opening_hours: Json | null
+          primary_music_styles: string[] | null
+          subscription_tier: string | null
+          updated_at: string | null
+          venue_category: string | null
+          venue_name: string
+          venue_specialties: string[] | null
+          venue_subcategory: string[] | null
+          verified: boolean | null
+        }
+        Insert: {
+          ambiance_generale?: string[] | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          establishment_type?: string[] | null
+          id: string
+          instagram_handle?: string | null
+          onboarding_completed?: boolean | null
+          opening_hours?: Json | null
+          primary_music_styles?: string[] | null
+          subscription_tier?: string | null
+          updated_at?: string | null
+          venue_category?: string | null
+          venue_name: string
+          venue_specialties?: string[] | null
+          venue_subcategory?: string[] | null
+          verified?: boolean | null
+        }
+        Update: {
+          ambiance_generale?: string[] | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          establishment_type?: string[] | null
+          id?: string
+          instagram_handle?: string | null
+          onboarding_completed?: boolean | null
+          opening_hours?: Json | null
+          primary_music_styles?: string[] | null
+          subscription_tier?: string | null
+          updated_at?: string | null
+          venue_category?: string | null
+          venue_name?: string
+          venue_specialties?: string[] | null
+          venue_subcategory?: string[] | null
+          verified?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_details_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       business_events: {
         Row: {
@@ -268,10 +357,13 @@ export type Database = {
       }
       events: {
         Row: {
+          activity_type: string | null
           actual_participants: number | null
           address: string | null
+          ambiance: string | null
           archived_at: string | null
           category: Database["public"]["Enums"]["event_category"]
+          claimed: boolean | null
           created_at: string | null
           created_by: string
           created_by_type: Database["public"]["Enums"]["event_creator_type"]
@@ -279,31 +371,42 @@ export type Database = {
           description: string | null
           end_date: string | null
           end_time: string | null
+          event_format: string | null
           external_url: string | null
           id: string
           image_url: string | null
           likes: number | null
           location: string
           max_participants: number | null
+          music_style: string | null
           no_show_count: number | null
           participants: number | null
           price: number | null
           scraped_at: string | null
           search_appearances: number | null
+          social_intensity: string | null
           status: string | null
           submitter_email: string | null
           tags: string[] | null
+          target_audience: string[] | null
+          time: string | null
           title: string
           updated_at: string | null
           validated_at: string | null
           validated_by: string | null
+          venue_category: string | null
+          venue_id: string | null
+          venue_instagram: string | null
           views: number | null
         }
         Insert: {
+          activity_type?: string | null
           actual_participants?: number | null
           address?: string | null
+          ambiance?: string | null
           archived_at?: string | null
           category: Database["public"]["Enums"]["event_category"]
+          claimed?: boolean | null
           created_at?: string | null
           created_by: string
           created_by_type?: Database["public"]["Enums"]["event_creator_type"]
@@ -311,31 +414,42 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           end_time?: string | null
+          event_format?: string | null
           external_url?: string | null
           id?: string
           image_url?: string | null
           likes?: number | null
           location: string
           max_participants?: number | null
+          music_style?: string | null
           no_show_count?: number | null
           participants?: number | null
           price?: number | null
           scraped_at?: string | null
           search_appearances?: number | null
+          social_intensity?: string | null
           status?: string | null
           submitter_email?: string | null
           tags?: string[] | null
+          target_audience?: string[] | null
+          time?: string | null
           title: string
           updated_at?: string | null
           validated_at?: string | null
           validated_by?: string | null
+          venue_category?: string | null
+          venue_id?: string | null
+          venue_instagram?: string | null
           views?: number | null
         }
         Update: {
+          activity_type?: string | null
           actual_participants?: number | null
           address?: string | null
+          ambiance?: string | null
           archived_at?: string | null
           category?: Database["public"]["Enums"]["event_category"]
+          claimed?: boolean | null
           created_at?: string | null
           created_by?: string
           created_by_type?: Database["public"]["Enums"]["event_creator_type"]
@@ -343,30 +457,45 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           end_time?: string | null
+          event_format?: string | null
           external_url?: string | null
           id?: string
           image_url?: string | null
           likes?: number | null
           location?: string
           max_participants?: number | null
+          music_style?: string | null
           no_show_count?: number | null
           participants?: number | null
           price?: number | null
           scraped_at?: string | null
           search_appearances?: number | null
+          social_intensity?: string | null
           status?: string | null
           submitter_email?: string | null
           tags?: string[] | null
+          target_audience?: string[] | null
+          time?: string | null
           title?: string
           updated_at?: string | null
           validated_at?: string | null
           validated_by?: string | null
+          venue_category?: string | null
+          venue_id?: string | null
+          venue_instagram?: string | null
           views?: number | null
         }
         Relationships: [
           {
             foreignKeyName: "events_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_venue_id_fkey"
+            columns: ["venue_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -468,6 +597,38 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      venue_instagram_mapping: {
+        Row: {
+          created_at: string | null
+          id: string
+          instagram_handle: string
+          venue_id: string | null
+          venue_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          instagram_handle: string
+          venue_id?: string | null
+          venue_name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          instagram_handle?: string
+          venue_id?: string | null
+          venue_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_instagram_mapping_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -572,65 +733,184 @@ export type Database = {
           },
         ]
       }
-      public_events: {
+      business_all_events: {
         Row: {
-          ambiance_photo_url: string | null
-          capacity: number | null
-          category: string | null
-          custom_venue: string | null
+          activity_type: string | null
+          address: string | null
+          ambiance: string | null
+          archived_at: string | null
+          category: Database["public"]["Enums"]["event_category"] | null
+          claimed: boolean | null
+          created_at: string | null
           date: string | null
           description: string | null
-          event_type: string | null
+          event_format: string | null
+          external_url: string | null
           id: string | null
           image_url: string | null
-          is_recurring: boolean | null
           likes: number | null
+          location: string | null
+          music_style: string | null
+          owner_id: string | null
           participants: number | null
-          price: string | null
+          price: number | null
+          social_intensity: string | null
+          source: string | null
+          status: string | null
+          target_audience: string[] | null
           time: string | null
           title: string | null
-          venue: string | null
-          venue_photo_url: string | null
+          updated_at: string | null
+          venue_category: string | null
+          venue_id: string | null
+          venue_instagram: string | null
           views: number | null
         }
         Insert: {
-          ambiance_photo_url?: string | null
-          capacity?: number | null
-          category?: string | null
-          custom_venue?: string | null
+          activity_type?: string | null
+          address?: string | null
+          ambiance?: string | null
+          archived_at?: string | null
+          category?: Database["public"]["Enums"]["event_category"] | null
+          claimed?: boolean | null
+          created_at?: string | null
           date?: string | null
           description?: string | null
-          event_type?: string | null
+          event_format?: string | null
+          external_url?: string | null
           id?: string | null
           image_url?: string | null
-          is_recurring?: boolean | null
           likes?: number | null
+          location?: string | null
+          music_style?: string | null
+          owner_id?: never
           participants?: number | null
-          price?: string | null
+          price?: number | null
+          social_intensity?: string | null
+          source?: never
+          status?: string | null
+          target_audience?: string[] | null
           time?: string | null
           title?: string | null
-          venue?: string | null
-          venue_photo_url?: string | null
+          updated_at?: string | null
+          venue_category?: string | null
+          venue_id?: string | null
+          venue_instagram?: string | null
           views?: number | null
         }
         Update: {
-          ambiance_photo_url?: string | null
-          capacity?: number | null
-          category?: string | null
-          custom_venue?: string | null
+          activity_type?: string | null
+          address?: string | null
+          ambiance?: string | null
+          archived_at?: string | null
+          category?: Database["public"]["Enums"]["event_category"] | null
+          claimed?: boolean | null
+          created_at?: string | null
           date?: string | null
           description?: string | null
-          event_type?: string | null
+          event_format?: string | null
+          external_url?: string | null
           id?: string | null
           image_url?: string | null
-          is_recurring?: boolean | null
           likes?: number | null
+          location?: string | null
+          music_style?: string | null
+          owner_id?: never
           participants?: number | null
-          price?: string | null
+          price?: number | null
+          social_intensity?: string | null
+          source?: never
+          status?: string | null
+          target_audience?: string[] | null
           time?: string | null
           title?: string | null
-          venue?: string | null
-          venue_photo_url?: string | null
+          updated_at?: string | null
+          venue_category?: string | null
+          venue_id?: string | null
+          venue_instagram?: string | null
+          views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_smart_benchmark: {
+        Row: {
+          comparable_count: number | null
+          market_avg_likes: number | null
+          market_avg_participants: number | null
+          market_avg_views: number | null
+          my_event_id: string | null
+          my_event_title: string | null
+          my_venue_id: string | null
+          performance_vs_market: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_venue_id_fkey"
+            columns: ["my_venue_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      public_events: {
+        Row: {
+          category: Database["public"]["Enums"]["event_category"] | null
+          created_at: string | null
+          date: string | null
+          description: string | null
+          external_url: string | null
+          id: string | null
+          image_url: string | null
+          likes: number | null
+          location: string | null
+          participants: number | null
+          price: number | null
+          source: Database["public"]["Enums"]["event_creator_type"] | null
+          time: string | null
+          title: string | null
+          views: number | null
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["event_category"] | null
+          created_at?: string | null
+          date?: string | null
+          description?: string | null
+          external_url?: string | null
+          id?: string | null
+          image_url?: string | null
+          likes?: number | null
+          location?: string | null
+          participants?: number | null
+          price?: number | null
+          source?: Database["public"]["Enums"]["event_creator_type"] | null
+          time?: string | null
+          title?: string | null
+          views?: number | null
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["event_category"] | null
+          created_at?: string | null
+          date?: string | null
+          description?: string | null
+          external_url?: string | null
+          id?: string | null
+          image_url?: string | null
+          likes?: number | null
+          location?: string | null
+          participants?: number | null
+          price?: number | null
+          source?: Database["public"]["Enums"]["event_creator_type"] | null
+          time?: string | null
+          title?: string | null
           views?: number | null
         }
         Relationships: []
@@ -642,6 +922,17 @@ export type Database = {
         Returns: undefined
       }
       archive_past_events: { Args: never; Returns: undefined }
+      calculate_event_similarity: {
+        Args: { event_id_1: string; event_id_2: string }
+        Returns: number
+      }
+      claim_venue_events: {
+        Args: { p_instagram_handle: string; p_venue_id: string }
+        Returns: {
+          claimed_count: number
+          event_ids: string[]
+        }[]
+      }
       get_public_business_info: {
         Args: never
         Returns: {
