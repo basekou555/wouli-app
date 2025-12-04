@@ -4,13 +4,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useBusinessMetrics } from '@/hooks/useBusinessMetrics';
 import { useBusinessEvents } from '@/hooks/useBusinessEvents';
-import { useClaimEvents } from '@/hooks/useClaimEvents';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
-  Eye, 
-  Users, 
-  TrendingUp, 
   Calendar,
   AlertTriangle,
   CheckCircle,
@@ -18,9 +14,7 @@ import {
   ArrowRight,
   Plus,
   BarChart3,
-  Activity,
-  PartyPopper,
-  Sparkles
+  Activity
 } from 'lucide-react';
 import { hybridAnalyticsService } from '@/services/hybridAnalyticsService';
 import HealthScore from './analytics/HealthScore';
@@ -82,20 +76,12 @@ const AlertCard: React.FC<{ alert: Alert; index: number }> = ({ alert, index }) 
 
 export function BusinessDashboardHome() {
   const { metrics, loading: metricsLoading } = useBusinessMetrics();
-  const { events, loading: eventsLoading, refetch } = useBusinessEvents();
-  const { claimedCount, isClaimingComplete, isFirstLogin } = useClaimEvents();
+  const { events, loading: eventsLoading } = useBusinessEvents();
   const navigate = useNavigate();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [alertsLoading, setAlertsLoading] = useState(true);
 
   const loading = metricsLoading || eventsLoading || alertsLoading;
-
-  // Rafraîchir les events après transfert réussi
-  useEffect(() => {
-    if (isClaimingComplete && claimedCount > 0) {
-      refetch();
-    }
-  }, [isClaimingComplete, claimedCount, refetch]);
 
   // Générer les vraies alertes basées sur les événements actuels
   useEffect(() => {
@@ -252,81 +238,6 @@ export function BusinessDashboardHome() {
           </Button>
         </div>
       </div>
-
-      {/* Animation de transfert - Premier login uniquement */}
-      <AnimatePresence>
-        {isClaimingComplete && claimedCount > 0 && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: -20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: -20 }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="relative overflow-hidden"
-          >
-            <Card className="bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 border-0 shadow-2xl">
-              <CardContent className="p-6 text-white">
-                <div className="flex items-center gap-4">
-                  <motion.div
-                    animate={{ 
-                      scale: [1, 1.2, 1],
-                      rotate: [0, 10, -10, 0]
-                    }}
-                    transition={{ 
-                      repeat: 3,
-                      duration: 0.5
-                    }}
-                  >
-                    <PartyPopper className="h-12 w-12" />
-                  </motion.div>
-                  
-                  <div className="flex-1">
-                    <h2 className="text-2xl font-bold flex items-center gap-2">
-                      🎉 {claimedCount} événement{claimedCount > 1 ? 's' : ''} récupéré{claimedCount > 1 ? 's' : ''} !
-                      <Sparkles className="h-6 w-6 animate-pulse" />
-                    </h2>
-                    <p className="text-white/90 mt-1">
-                      Vos événements scrapés ont été automatiquement transférés sur votre compte.
-                    </p>
-                  </div>
-                </div>
-                
-                <motion.div 
-                  className="h-1 bg-white/30 rounded-full mt-4 overflow-hidden"
-                  initial={{ width: 0 }}
-                  animate={{ width: '100%' }}
-                  transition={{ delay: 0.5, duration: 1 }}
-                >
-                  <motion.div
-                    className="h-full bg-white rounded-full"
-                    initial={{ width: 0 }}
-                    animate={{ width: '100%' }}
-                    transition={{ delay: 0.5, duration: 1.5 }}
-                  />
-                </motion.div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Message de bienvenue premier login (sans transfert) */}
-      {isFirstLogin && claimedCount === 0 && isClaimingComplete && (
-        <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20 animate-fade-in">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <Sparkles className="h-8 w-8 text-primary" />
-              <div>
-                <h2 className="text-xl font-semibold text-foreground">
-                  Bienvenue sur votre dashboard ! 👋
-                </h2>
-                <p className="text-muted-foreground mt-1">
-                  Créez votre premier événement pour commencer à attirer des participants.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Première ligne - Score de performance et détails */}
       <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
