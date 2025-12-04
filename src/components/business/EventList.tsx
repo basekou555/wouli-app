@@ -2,7 +2,8 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, MapPin, Eye, Heart, ExternalLink, Trash2, Tag, Clock, Edit } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Calendar, MapPin, Eye, Heart, ExternalLink, Trash2, Tag, Clock, Edit, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { BusinessEvent } from '@/types/events';
 import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
@@ -20,9 +21,10 @@ interface EventListProps {
   events: BusinessEvent[];
   onDeleteEvent: (id: string) => void;
   onEditEvent: (event: BusinessEvent) => void;
+  onDuplicateEvent?: (event: BusinessEvent) => void;
 }
 
-const EventList = ({ config, events, onDeleteEvent, onEditEvent }: EventListProps) => {
+const EventList = ({ config, events, onDeleteEvent, onEditEvent, onDuplicateEvent }: EventListProps) => {
   const navigate = useNavigate();
 
   const handleDeleteEvent = (id: string) => {
@@ -30,7 +32,6 @@ const EventList = ({ config, events, onDeleteEvent, onEditEvent }: EventListProp
   };
 
   const handleViewDetails = (event: BusinessEvent) => {
-    // Navigate to event details with event data
     navigate(`/business/event/${event.id}`, { state: { event } });
   };
 
@@ -46,12 +47,12 @@ const EventList = ({ config, events, onDeleteEvent, onEditEvent }: EventListProp
       <CardContent>
         <div className="space-y-4 max-h-96 overflow-y-auto">
           {events.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">
+            <p className="text-muted-foreground text-center py-8">
               Aucun événement créé pour le moment
             </p>
           ) : (
             events.map((event) => (
-              <Card key={event.id} className="border border-gray-200 hover:shadow-md transition-shadow">
+              <Card key={event.id} className="border border-border hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
                   <div className="flex gap-4">
                     {event.image_url && (
@@ -66,38 +67,70 @@ const EventList = ({ config, events, onDeleteEvent, onEditEvent }: EventListProp
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-start mb-2">
                         <h3 className="font-semibold text-lg truncate">{event.title}</h3>
-                        <div className="flex gap-1 ml-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onEditEvent(event)}
-                            className="text-blue-600 hover:bg-blue-50"
-                            title="Modifier"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleViewDetails(event)}
-                            className="text-green-600 hover:bg-green-50"
-                            title="Voir les détails"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteEvent(event.id)}
-                            className="text-red-500 hover:bg-red-50"
-                            title="Supprimer"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <TooltipProvider>
+                          <div className="flex gap-1 ml-2">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => onEditEvent(event)}
+                                  className="text-blue-600 hover:bg-blue-50"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Modifier</TooltipContent>
+                            </Tooltip>
+                            
+                            {onDuplicateEvent && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => onDuplicateEvent(event)}
+                                    className="text-purple-600 hover:bg-purple-50"
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Dupliquer</TooltipContent>
+                              </Tooltip>
+                            )}
+                            
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleViewDetails(event)}
+                                  className="text-green-600 hover:bg-green-50"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Voir les détails</TooltipContent>
+                            </Tooltip>
+                            
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDeleteEvent(event.id)}
+                                  className="text-red-500 hover:bg-red-50"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Supprimer</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TooltipProvider>
                       </div>
                       
-                      <div className="space-y-1 text-sm text-gray-600">
+                      <div className="space-y-1 text-sm text-muted-foreground">
                         <div className="flex items-center">
                           <Calendar className="h-4 w-4 mr-2" />
                           {new Date(event.date).toLocaleDateString('fr-FR')}
