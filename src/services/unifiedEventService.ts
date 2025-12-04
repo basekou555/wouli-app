@@ -244,6 +244,7 @@ export const createBusinessEvent = async (
       title: eventData.title,
       description: eventData.description,
       date: `${eventData.date}T${eventData.time || '00:00'}:00`,
+      end_date: eventData.end_date ? `${eventData.end_date}T23:59:59` : null,
       location: eventData.venue || eventData.custom_venue || 'Lieu à définir',
       category: eventData.category,
       price: eventData.price ? parseFloat(eventData.price.replace('€', '')) : null,
