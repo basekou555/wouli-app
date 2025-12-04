@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { BusinessLayout } from '@/components/business/BusinessLayout';
 import EventList from '@/components/business/EventList';
+import EventFilters, { DateFilter, StatusFilter, SortOption } from '@/components/business/EventFilters';
 import EventCreationForm from '@/components/business/EventCreationForm';
 import EventDraftsList from '@/components/business/EventDraftsList';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { useBusinessEvents } from '@/hooks/useBusinessEvents';
 import { useBusinessConfig } from '@/hooks/useBusinessConfig';
 import { useEventDrafts, EventDraft } from '@/hooks/useEventDrafts';
@@ -23,9 +23,17 @@ export default function BusinessEvents() {
   const location = useLocation();
   const { toast } = useToast();
 
+  // Filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+  const [venueFilter, setVenueFilter] = useState('all');
+  const [activityFilter, setActivityFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [sortBy, setSortBy] = useState<SortOption>('date-desc');
+
   const { drafts, saveDraft, deleteDraft } = useEventDrafts();
 
-  // Ouvrir le formulaire automatiquement si on arrive avec le state
+  // Open form automatically if arriving with state
   useEffect(() => {
     if (location.state?.openCreateForm) {
       setShowCreateForm(true);
@@ -41,11 +49,102 @@ export default function BusinessEvents() {
     updateEvent,
     deleteEvent
   } = useBusinessEvents();
+  
   const {
     config,
     loading: configLoading,
     error: configError
   } = useBusinessConfig();
+
+  // Filter and sort events
+  const filteredEvents = useMemo(() => {
+    let result = [...events];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(e => 
+        e.title.toLowerCase().includes(query) ||
+        e.venue?.toLowerCase().includes(query) ||
+        e.custom_venue?.toLowerCase().includes(query)
+      );
+    }
+
+    // Date filter
+    if (dateFilter !== 'all') {
+      result = result.filter(e => {
+        const eventDate = new Date(e.date);
+        eventDate.setHours(0, 0, 0, 0);
+        
+        if (dateFilter === 'today') {
+          return eventDate.getTime() === today.getTime();
+        }
+        if (dateFilter === 'week') {
+          const weekEnd = new Date(today);
+          weekEnd.setDate(weekEnd.getDate() + 7);
+          return eventDate >= today && eventDate <= weekEnd;
+        }
+        if (dateFilter === 'month') {
+          const monthEnd = new Date(today);
+          monthEnd.setMonth(monthEnd.getMonth() + 1);
+          return eventDate >= today && eventDate <= monthEnd;
+        }
+        return true;
+      });
+    }
+
+    // Venue category filter
+    if (venueFilter !== 'all') {
+      result = result.filter(e => e.venue_category === venueFilter);
+    }
+
+    // Activity type filter
+    if (activityFilter !== 'all') {
+      result = result.filter(e => e.activity_type === activityFilter);
+    }
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      result = result.filter(e => {
+        const eventDate = new Date(e.date);
+        eventDate.setHours(0, 0, 0, 0);
+        if (statusFilter === 'upcoming') return eventDate >= today;
+        if (statusFilter === 'past') return eventDate < today;
+        return true;
+      });
+    }
+
+    // Sorting
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case 'date-desc':
+          return new Date(b.date).getTime() - new Date(a.date).getTime();
+        case 'date-asc':
+          return new Date(a.date).getTime() - new Date(b.date).getTime();
+        case 'name':
+          return a.title.localeCompare(b.title);
+        case 'views':
+          return (b.views || 0) - (a.views || 0);
+        case 'likes':
+          return (b.likes || 0) - (a.likes || 0);
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [events, searchQuery, dateFilter, venueFilter, activityFilter, statusFilter, sortBy]);
+
+  const resetFilters = () => {
+    setSearchQuery('');
+    setDateFilter('all');
+    setVenueFilter('all');
+    setActivityFilter('all');
+    setStatusFilter('all');
+    setSortBy('date-desc');
+  };
   
   if (configLoading) return <LoadingSpinner />;
   if (configError || !config) return <ErrorMessage message="Erreur de configuration" />;
@@ -72,11 +171,10 @@ export default function BusinessEvents() {
   };
 
   const handleDuplicateEvent = (event: BusinessEvent) => {
-    // Create a copy without id and dates
     setDuplicatingEvent({
       ...event,
-      id: '', // Will be generated on create
-      date: '', // User needs to set new date
+      id: '',
+      date: '',
       title: `${event.title} (copie)`,
     });
     setEditingEvent(null);
@@ -141,12 +239,10 @@ export default function BusinessEvents() {
     });
   };
 
-  // Determine which event data to pass to form
   const getFormEventData = (): BusinessEvent | undefined => {
     if (editingEvent) return editingEvent;
     if (duplicatingEvent) return duplicatingEvent as BusinessEvent;
     if (resumingDraft) {
-      // Convert draft to BusinessEvent format
       return {
         id: '',
         title: resumingDraft.title,
@@ -186,11 +282,13 @@ export default function BusinessEvents() {
   return (
     <BusinessLayout>
       <div className="space-y-6">
-        {/* Header with Create Button */}
-        <div className="flex justify-between items-center">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Mes Événements</h1>
-            <p className="text-muted-foreground">Gérez vos événements et créez-en de nouveaux</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Mes Événements</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">
+              Gérez vos événements et créez-en de nouveaux
+            </p>
           </div>
           <Button 
             onClick={() => {
@@ -200,7 +298,7 @@ export default function BusinessEvents() {
                 setShowCreateForm(true);
               }
             }} 
-            className="bg-primary hover:bg-primary/90" 
+            className="bg-primary hover:bg-primary/90 w-full sm:w-auto" 
             size="lg"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -231,24 +329,43 @@ export default function BusinessEvents() {
           />
         )}
 
-        {/* Events List */}
-        <Card>
-          <CardContent className="pt-6">
+        {/* Filters & Events List */}
+        {!showCreateForm && (
+          <div className="space-y-4">
             {loading ? (
               <LoadingSpinner />
             ) : error ? (
               <ErrorMessage message={error.message} />
             ) : (
-              <EventList 
-                config={config} 
-                events={events} 
-                onDeleteEvent={handleDeleteEvent} 
-                onEditEvent={handleEditEvent}
-                onDuplicateEvent={handleDuplicateEvent}
-              />
+              <>
+                <EventFilters
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                  dateFilter={dateFilter}
+                  onDateFilterChange={setDateFilter}
+                  venueFilter={venueFilter}
+                  onVenueFilterChange={setVenueFilter}
+                  activityFilter={activityFilter}
+                  onActivityFilterChange={setActivityFilter}
+                  statusFilter={statusFilter}
+                  onStatusFilterChange={setStatusFilter}
+                  sortBy={sortBy}
+                  onSortChange={setSortBy}
+                  totalResults={filteredEvents.length}
+                  onReset={resetFilters}
+                />
+                
+                <EventList 
+                  config={config} 
+                  events={filteredEvents} 
+                  onDeleteEvent={handleDeleteEvent} 
+                  onEditEvent={handleEditEvent}
+                  onDuplicateEvent={handleDuplicateEvent}
+                />
+              </>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        )}
       </div>
     </BusinessLayout>
   );
