@@ -184,7 +184,7 @@ const fetchEventsByType = async (type: 'user' | 'business'): Promise<UnifiedEven
   return await enrichEventsWithSocialData(unifiedEvents);
 };
 
-// Service pour les événements business (maintient compatibilité avec l'interface existante)
+// Service pour les événements business - utilise la vue unifiée business_all_events
 export const fetchBusinessEventsForDashboard = async (): Promise<BusinessEvent[]> => {
   const { data: { user } } = await supabase.auth.getUser();
   
@@ -192,24 +192,23 @@ export const fetchBusinessEventsForDashboard = async (): Promise<BusinessEvent[]
     return [];
   }
 
-  // Récupérer TOUS les événements business (actifs ET archivés) pour le dashboard
+  // Utiliser la vue business_all_events avec owner_id
   const { data, error } = await supabase
-    .from('events')
+    .from('business_all_events')
     .select('*')
-    .eq('created_by', user.id)
-    .eq('created_by_type', 'business')
-    .order('date', { ascending: false }); // Ordre décroissant pour voir les plus récents d'abord
+    .eq('owner_id', user.id)
+    .order('date', { ascending: false });
 
   if (error) throw error;
   
-  // Map data to BusinessEvent format
+  // Map data to BusinessEvent format (source non exposée dans l'UI)
   const mappedEvents: BusinessEvent[] = (data || []).map(event => ({
     id: event.id,
     title: event.title,
     description: event.description,
-    date: event.date.split('T')[0], // Extract date part only
-    time: '00:00', // Default time since not in unified table
-    venue: event.location, // Use location as venue
+    date: event.date?.split('T')[0] || '',
+    time: event.time || '00:00',
+    venue: event.location,
     category: event.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
     event_type: event.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
     price: event.price ? event.price.toString() : undefined,
@@ -220,7 +219,8 @@ export const fetchBusinessEventsForDashboard = async (): Promise<BusinessEvent[]
     created_at: event.created_at,
     updated_at: event.updated_at,
     external_url: event.external_url,
-    user_id: event.created_by
+    user_id: event.owner_id
+    // NOTE: event.source existe mais N'EST PAS exposé dans l'UI
   }));
   
   return mappedEvents;
@@ -240,6 +240,7 @@ export const createBusinessEvent = async (
     .insert({
       created_by: user.id,
       created_by_type: 'business',
+      venue_id: user.id, // Lier automatiquement au business owner
       title: eventData.title,
       description: eventData.description,
       date: `${eventData.date}T${eventData.time || '00:00'}:00`,
