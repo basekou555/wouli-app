@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, PartyPopper, Rocket, Check } from 'lucide-react';
+import { Sparkles, PartyPopper, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -10,6 +10,25 @@ interface OnboardingTransferProps {
   instagramHandle: string;
   onComplete: () => void;
 }
+
+// Couleurs Wouli
+const wouliColors = {
+  orange: '#F97316',
+  rose: '#EC4899',
+  violet: '#8B5CF6',
+  gold: '#FBBF24',
+  pink: '#FB7185'
+};
+
+const confettiColors = [
+  wouliColors.orange,
+  wouliColors.rose,
+  wouliColors.violet,
+  wouliColors.gold,
+  wouliColors.pink,
+  '#FED7AA', // orange clair
+  '#F5D0FE', // violet clair
+];
 
 export const OnboardingTransfer = ({ userId, instagramHandle, onComplete }: OnboardingTransferProps) => {
   const [progress, setProgress] = useState(0);
@@ -21,9 +40,12 @@ export const OnboardingTransfer = ({ userId, instagramHandle, onComplete }: Onbo
 
   useEffect(() => {
     const transferEvents = async () => {
-      // Phase intro pendant 1.5s
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Phase intro pendant 3 secondes
+      await new Promise(resolve => setTimeout(resolve, 3000));
       setPhase('transfer');
+
+      const startTime = Date.now();
+      const minTransferTime = 2000; // Minimum 2 secondes pour la phase transfer
 
       try {
         // Appeler la fonction de transfert
@@ -42,16 +64,16 @@ export const OnboardingTransfer = ({ userId, instagramHandle, onComplete }: Onbo
 
         // Animer le compteur progressivement
         if (claimed > 0) {
-          const delay = Math.max(50, Math.min(100, 1500 / claimed)); // Entre 50ms et 100ms par event
+          const delay = Math.max(100, Math.min(150, 2000 / claimed)); // Entre 100ms et 150ms par event
           for (let i = 0; i <= claimed; i++) {
             await new Promise(resolve => setTimeout(resolve, delay));
             setDisplayCount(i);
             setProgress((i / claimed) * 100);
           }
         } else {
-          // Pas d'events, simuler une petite progression
-          for (let i = 0; i <= 100; i += 20) {
-            await new Promise(resolve => setTimeout(resolve, 100));
+          // Pas d'events, simuler une progression fluide
+          for (let i = 0; i <= 100; i += 10) {
+            await new Promise(resolve => setTimeout(resolve, 150));
             setProgress(i);
           }
         }
@@ -62,6 +84,15 @@ export const OnboardingTransfer = ({ userId, instagramHandle, onComplete }: Onbo
           .update({ onboarding_completed: true })
           .eq('id', userId);
 
+        // Attendre le temps restant si nécessaire
+        const elapsed = Date.now() - startTime;
+        if (elapsed < minTransferTime) {
+          await new Promise(resolve => setTimeout(resolve, minTransferTime - elapsed));
+        }
+
+        // Pause de 1.5 secondes avant la phase complete
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
         setPhase('complete');
         setIsComplete(true);
       } catch (err) {
@@ -71,6 +102,8 @@ export const OnboardingTransfer = ({ userId, instagramHandle, onComplete }: Onbo
           .from('business_details')
           .update({ onboarding_completed: true })
           .eq('id', userId);
+        
+        await new Promise(resolve => setTimeout(resolve, 1000));
         setPhase('complete');
         setIsComplete(true);
       }
@@ -84,36 +117,41 @@ export const OnboardingTransfer = ({ userId, instagramHandle, onComplete }: Onbo
     navigate('/business');
   };
 
-  // Confetti particles
-  const confettiColors = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'];
-  
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-gradient-to-br from-purple-900 via-indigo-900 to-purple-800 z-50 flex items-center justify-center overflow-hidden"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden"
+      style={{
+        background: `linear-gradient(135deg, ${wouliColors.orange} 0%, ${wouliColors.rose} 50%, ${wouliColors.violet} 100%)`
+      }}
     >
       {/* Animated background particles */}
       <div className="absolute inset-0 overflow-hidden">
-        {[...Array(20)].map((_, i) => (
+        {[...Array(25)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute w-2 h-2 rounded-full opacity-30"
+            className="absolute rounded-full"
             style={{
               background: confettiColors[i % confettiColors.length],
+              width: `${8 + Math.random() * 12}px`,
+              height: `${8 + Math.random() * 12}px`,
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
+              opacity: 0.2,
             }}
             animate={{
-              y: [0, -30, 0],
-              opacity: [0.3, 0.6, 0.3],
-              scale: [1, 1.5, 1],
+              y: [0, -40, 0],
+              x: [0, Math.random() * 20 - 10, 0],
+              opacity: [0.2, 0.4, 0.2],
+              scale: [1, 1.3, 1],
             }}
             transition={{
-              duration: 3 + Math.random() * 2,
+              duration: 4 + Math.random() * 3,
               repeat: Infinity,
-              delay: Math.random() * 2,
+              delay: Math.random() * 3,
+              ease: "easeInOut",
             }}
           />
         ))}
@@ -123,26 +161,28 @@ export const OnboardingTransfer = ({ userId, instagramHandle, onComplete }: Onbo
       <AnimatePresence>
         {isComplete && totalCount > 0 && (
           <>
-            {[...Array(30)].map((_, i) => (
+            {[...Array(40)].map((_, i) => (
               <motion.div
                 key={`confetti-${i}`}
-                className="absolute w-3 h-3 rounded-sm"
+                className="absolute rounded-sm"
                 style={{
                   background: confettiColors[i % confettiColors.length],
+                  width: `${6 + Math.random() * 8}px`,
+                  height: `${6 + Math.random() * 8}px`,
                   left: '50%',
-                  top: '40%',
+                  top: '35%',
                 }}
                 initial={{ scale: 0, x: 0, y: 0, rotate: 0 }}
                 animate={{
-                  scale: [0, 1, 1, 0],
-                  x: (Math.random() - 0.5) * 400,
-                  y: (Math.random() - 0.5) * 400,
-                  rotate: Math.random() * 720,
+                  scale: [0, 1, 1, 0.5],
+                  x: (Math.random() - 0.5) * 500,
+                  y: (Math.random() - 0.5) * 500,
+                  rotate: Math.random() * 720 - 360,
                 }}
                 transition={{
-                  duration: 2,
+                  duration: 2.5,
                   ease: 'easeOut',
-                  delay: i * 0.02,
+                  delay: i * 0.015,
                 }}
               />
             ))}
@@ -158,29 +198,93 @@ export const OnboardingTransfer = ({ userId, instagramHandle, onComplete }: Onbo
               key="intro"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
+              exit={{ opacity: 0, scale: 0.8, y: -20 }}
+              transition={{ duration: 0.5 }}
               className="flex flex-col items-center"
             >
+              {/* Logo W Wouli animé */}
               <motion.div
+                className="relative"
                 animate={{ 
                   scale: [1, 1.1, 1],
-                  rotate: [0, 5, -5, 0]
                 }}
                 transition={{ 
                   repeat: Infinity, 
-                  duration: 2 
+                  duration: 2,
+                  ease: "easeInOut"
                 }}
               >
-                <Rocket className="w-24 h-24 text-yellow-400" />
+                <motion.div
+                  className="w-28 h-28 rounded-3xl flex items-center justify-center shadow-2xl"
+                  style={{ 
+                    background: 'rgba(255, 255, 255, 0.95)',
+                    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
+                  }}
+                  animate={{
+                    boxShadow: [
+                      '0 20px 60px rgba(0, 0, 0, 0.3)',
+                      '0 25px 80px rgba(249, 115, 22, 0.4)',
+                      '0 20px 60px rgba(0, 0, 0, 0.3)',
+                    ]
+                  }}
+                  transition={{ repeat: Infinity, duration: 2 }}
+                >
+                  <span 
+                    className="text-5xl font-black"
+                    style={{ 
+                      background: `linear-gradient(135deg, ${wouliColors.orange}, ${wouliColors.rose})`,
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent'
+                    }}
+                  >
+                    W
+                  </span>
+                </motion.div>
+                
+                {/* Glow effect */}
+                <motion.div
+                  className="absolute -inset-4 rounded-full blur-2xl -z-10"
+                  style={{ background: `rgba(249, 115, 22, 0.3)` }}
+                  animate={{ 
+                    opacity: [0.3, 0.6, 0.3],
+                    scale: [1, 1.2, 1]
+                  }}
+                  transition={{ repeat: Infinity, duration: 2 }}
+                />
               </motion.div>
+
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="text-4xl md:text-5xl font-bold text-white text-center mt-8"
+                transition={{ delay: 0.4 }}
+                className="text-3xl md:text-4xl font-bold text-white text-center mt-10"
+                style={{ textShadow: '0 2px 20px rgba(0, 0, 0, 0.2)' }}
               >
                 Préparation de votre compte...
               </motion.h1>
+              
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.8 }}
+                className="flex gap-2 mt-6"
+              >
+                {[0, 1, 2].map((i) => (
+                  <motion.div
+                    key={i}
+                    className="w-3 h-3 rounded-full bg-white/80"
+                    animate={{
+                      scale: [1, 1.5, 1],
+                      opacity: [0.5, 1, 0.5],
+                    }}
+                    transition={{
+                      repeat: Infinity,
+                      duration: 1,
+                      delay: i * 0.2,
+                    }}
+                  />
+                ))}
+              </motion.div>
             </motion.div>
           )}
 
@@ -188,9 +292,10 @@ export const OnboardingTransfer = ({ userId, instagramHandle, onComplete }: Onbo
           {phase === 'transfer' && (
             <motion.div
               key="transfer"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
+              initial={{ opacity: 0, scale: 0.8, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: -20 }}
+              transition={{ duration: 0.5 }}
               className="flex flex-col items-center w-full"
             >
               <motion.div
@@ -202,7 +307,7 @@ export const OnboardingTransfer = ({ userId, instagramHandle, onComplete }: Onbo
                   damping: 15
                 }}
               >
-                <Sparkles className="w-20 h-20 text-yellow-400" />
+                <Sparkles className="w-20 h-20 text-white drop-shadow-lg" />
               </motion.div>
 
               <motion.h1
@@ -210,6 +315,7 @@ export const OnboardingTransfer = ({ userId, instagramHandle, onComplete }: Onbo
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
                 className="text-3xl md:text-4xl font-bold text-white text-center mt-6 mb-2"
+                style={{ textShadow: '0 2px 20px rgba(0, 0, 0, 0.2)' }}
               >
                 Bienvenue sur Wouli ! ✨
               </motion.h1>
@@ -218,21 +324,24 @@ export const OnboardingTransfer = ({ userId, instagramHandle, onComplete }: Onbo
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="text-xl text-white/80 text-center mb-8"
+                className="text-xl text-white/90 text-center mb-8"
               >
                 Nous importons vos événements...
               </motion.p>
 
-              {/* Progress bar */}
+              {/* Progress bar avec gradient Wouli */}
               <motion.div
                 initial={{ opacity: 0, width: 0 }}
                 animate={{ opacity: 1, width: '100%' }}
                 transition={{ delay: 0.5 }}
                 className="w-full max-w-md mb-6"
               >
-                <div className="w-full h-3 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm">
+                <div className="w-full h-4 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm shadow-inner">
                   <motion.div
-                    className="h-full bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-500 rounded-full"
+                    className="h-full rounded-full"
+                    style={{
+                      background: `linear-gradient(90deg, ${wouliColors.gold}, ${wouliColors.orange}, ${wouliColors.rose})`
+                    }}
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
                     transition={{ duration: 0.3 }}
@@ -243,12 +352,12 @@ export const OnboardingTransfer = ({ userId, instagramHandle, onComplete }: Onbo
               {/* Counter */}
               {totalCount > 0 && (
                 <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-white/70 text-lg"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-white/90 text-lg"
                 >
-                  <span className="text-4xl font-bold text-white">{displayCount}</span>
-                  <span className="ml-2">événement{displayCount > 1 ? 's' : ''} trouvé{displayCount > 1 ? 's' : ''}</span>
+                  <span className="text-5xl font-bold text-white drop-shadow-lg">{displayCount}</span>
+                  <span className="ml-3">événement{displayCount > 1 ? 's' : ''} trouvé{displayCount > 1 ? 's' : ''}</span>
                 </motion.div>
               )}
             </motion.div>
@@ -260,6 +369,7 @@ export const OnboardingTransfer = ({ userId, instagramHandle, onComplete }: Onbo
               key="complete"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
               className="flex flex-col items-center"
             >
               <motion.div
@@ -273,16 +383,16 @@ export const OnboardingTransfer = ({ userId, instagramHandle, onComplete }: Onbo
                 className="relative"
               >
                 {totalCount > 0 ? (
-                  <PartyPopper className="w-24 h-24 text-yellow-400" />
+                  <PartyPopper className="w-28 h-28 text-white drop-shadow-lg" />
                 ) : (
-                  <Check className="w-24 h-24 text-green-400" />
+                  <Check className="w-28 h-28 text-white drop-shadow-lg" />
                 )}
                 
                 {/* Glow effect */}
                 <motion.div
-                  className="absolute inset-0 rounded-full blur-xl"
-                  style={{ background: totalCount > 0 ? 'rgba(255, 215, 0, 0.4)' : 'rgba(74, 222, 128, 0.4)' }}
-                  animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }}
+                  className="absolute -inset-6 rounded-full blur-2xl -z-10"
+                  style={{ background: 'rgba(255, 255, 255, 0.3)' }}
+                  animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0.6, 0.3] }}
                   transition={{ repeat: Infinity, duration: 2 }}
                 />
               </motion.div>
@@ -292,6 +402,7 @@ export const OnboardingTransfer = ({ userId, instagramHandle, onComplete }: Onbo
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
                 className="text-4xl md:text-5xl font-bold text-white text-center mt-8 mb-4"
+                style={{ textShadow: '0 2px 20px rgba(0, 0, 0, 0.2)' }}
               >
                 {totalCount > 0 ? (
                   <>🎉 {totalCount} événement{totalCount > 1 ? 's' : ''} importé{totalCount > 1 ? 's' : ''} !</>
@@ -304,10 +415,10 @@ export const OnboardingTransfer = ({ userId, instagramHandle, onComplete }: Onbo
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
-                className="text-xl text-white/80 text-center mb-8 max-w-md"
+                className="text-xl text-white/90 text-center mb-10 max-w-md"
               >
                 {totalCount > 0 
-                  ? "Vos événements passés ont été automatiquement récupérés. Votre dashboard vous attend !"
+                  ? "Vos événements ont été automatiquement récupérés. Votre dashboard vous attend !"
                   : "Aucun événement trouvé pour l'instant. Créez votre premier événement !"}
               </motion.p>
 
@@ -319,7 +430,12 @@ export const OnboardingTransfer = ({ userId, instagramHandle, onComplete }: Onbo
                 <Button
                   size="lg"
                   onClick={handleContinue}
-                  className="bg-white text-purple-900 hover:bg-white/90 font-semibold px-8 py-6 text-lg shadow-2xl hover:shadow-white/20 transition-all duration-300 hover:scale-105"
+                  className="font-semibold px-10 py-7 text-lg shadow-2xl transition-all duration-300 hover:scale-105 border-0"
+                  style={{
+                    background: `linear-gradient(135deg, ${wouliColors.orange}, ${wouliColors.rose})`,
+                    color: 'white',
+                    boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)'
+                  }}
                 >
                   {totalCount > 0 
                     ? "Découvrir mon dashboard 🚀" 
