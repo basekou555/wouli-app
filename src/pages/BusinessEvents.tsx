@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { BusinessLayout } from '@/components/business/BusinessLayout';
 import EventList from '@/components/business/EventList';
@@ -10,8 +11,19 @@ import { useBusinessConfig } from '@/hooks/useBusinessConfig';
 import { BusinessEvent } from '@/types/events';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import ErrorMessage from '@/components/ErrorMessage';
+
 export default function BusinessEvents() {
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const location = useLocation();
+
+  // Ouvrir le formulaire automatiquement si on arrive avec le state
+  useEffect(() => {
+    if (location.state?.openCreateForm) {
+      setShowCreateForm(true);
+      // Nettoyer le state pour éviter la réouverture au refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
   const [editingEvent, setEditingEvent] = useState<BusinessEvent | null>(null);
   const {
     events,
