@@ -33,22 +33,30 @@ export interface BusinessEvent extends Omit<BaseEvent, 'location'> {
   price?: string;
   external_url?: string;
   user_id: string;
-  // New optional fields for richer event details
+  // Photos
   venue_photo_url?: string;
   ambiance_photo_url?: string;
+  // Capacity & recurrence
   capacity?: number;
   is_recurring?: boolean;
   avg_attendance?: number;
   total_editions?: number;
-  // Archiving and rating fields
+  // Status & archiving
   status?: 'active' | 'grace_period' | 'archived';
   duration_hours?: number;
   end_time?: string;
   average_rating?: number;
-  // New archiving fields
   actual_participants?: number;
   no_show_count?: number;
   archived_at?: string;
+  // NEW: Enriched event tags for recommendations
+  venue_category?: string;
+  activity_type?: string;
+  music_style?: string;
+  ambiance?: string;
+  target_audience?: string[];
+  event_format?: string;
+  social_intensity?: string;
 }
 
 export interface EventInteraction {

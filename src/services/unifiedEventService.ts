@@ -240,7 +240,7 @@ export const createBusinessEvent = async (
     .insert({
       created_by: user.id,
       created_by_type: 'business',
-      venue_id: user.id, // Lier automatiquement au business owner
+      venue_id: user.id,
       title: eventData.title,
       description: eventData.description,
       date: `${eventData.date}T${eventData.time || '00:00'}:00`,
@@ -248,7 +248,15 @@ export const createBusinessEvent = async (
       category: eventData.category,
       price: eventData.price ? parseFloat(eventData.price.replace('€', '')) : null,
       external_url: eventData.external_url,
-      image_url: eventData.image_url
+      image_url: eventData.image_url,
+      // Enriched fields for recommendations
+      venue_category: eventData.venue_category || null,
+      activity_type: eventData.activity_type || null,
+      music_style: eventData.music_style || null,
+      ambiance: eventData.ambiance || null,
+      target_audience: eventData.target_audience || null,
+      event_format: eventData.event_format || null,
+      social_intensity: eventData.social_intensity || null
     })
     .select()
     .single();
@@ -272,7 +280,14 @@ export const createBusinessEvent = async (
     created_at: data.created_at,
     updated_at: data.updated_at,
     external_url: data.external_url,
-    user_id: data.created_by
+    user_id: data.created_by,
+    venue_category: data.venue_category,
+    activity_type: data.activity_type,
+    music_style: data.music_style,
+    ambiance: data.ambiance,
+    target_audience: data.target_audience,
+    event_format: data.event_format,
+    social_intensity: data.social_intensity
   };
 };
 
