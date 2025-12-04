@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -6,9 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertCircle, Mail, Lock, MapPin, ChevronRight, ChevronLeft, Instagram } from 'lucide-react';
+import { AlertCircle, Mail, Lock, MapPin, ChevronRight, ChevronLeft, Instagram, CheckCircle2, Loader2 } from 'lucide-react';
 import EstablishmentTypeSelector from '@/components/business/EstablishmentTypeSelector';
 import { ESTABLISHMENT_TYPES, LYON_CITIES } from '@/data/establishmentTypes';
+import { supabase } from '@/integrations/supabase/client';
 
 const BusinessSignup = () => {
   const navigate = useNavigate();
@@ -27,6 +28,47 @@ const BusinessSignup = () => {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [instagramStatus, setInstagramStatus] = useState<'idle' | 'checking' | 'found' | 'not_found'>('idle');
+  const [eventsCount, setEventsCount] = useState(0);
+
+  // Debounced Instagram validation
+  useEffect(() => {
+    const handle = formData.instagramHandle.replace('@', '').trim().toLowerCase();
+    
+    if (!handle || handle.length < 3) {
+      setInstagramStatus('idle');
+      setEventsCount(0);
+      return;
+    }
+
+    setInstagramStatus('checking');
+    
+    const timer = setTimeout(async () => {
+      try {
+        // Check if events exist for this Instagram handle
+        const { count, error } = await supabase
+          .from('events')
+          .select('id', { count: 'exact', head: true })
+          .eq('venue_instagram', handle);
+
+        if (error) throw error;
+
+        if (count && count > 0) {
+          setInstagramStatus('found');
+          setEventsCount(count);
+        } else {
+          setInstagramStatus('not_found');
+          setEventsCount(0);
+        }
+      } catch (err) {
+        console.error('Instagram check error:', err);
+        setInstagramStatus('not_found');
+        setEventsCount(0);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [formData.instagramHandle]);
 
   const validateStep1 = () => {
     const newErrors: Record<string, string> = {};
@@ -206,16 +248,32 @@ const BusinessSignup = () => {
           Compte Instagram
           <span className="text-xs text-muted-foreground">(optionnel)</span>
         </Label>
-        <Input
-          id="instagramHandle"
-          type="text"
-          placeholder="@monestablissement"
-          value={formData.instagramHandle}
-          onChange={(e) => handleInputChange('instagramHandle', e.target.value)}
-        />
-        <p className="text-xs text-muted-foreground">
-          Permet de récupérer automatiquement vos événements déjà référencés sur Wouli
-        </p>
+        <div className="relative">
+          <Input
+            id="instagramHandle"
+            type="text"
+            placeholder="@monestablissement"
+            value={formData.instagramHandle}
+            onChange={(e) => handleInputChange('instagramHandle', e.target.value)}
+            className={instagramStatus === 'found' ? 'border-green-500 pr-10' : ''}
+          />
+          {instagramStatus === 'checking' && (
+            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
+          )}
+          {instagramStatus === 'found' && (
+            <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+          )}
+        </div>
+        {instagramStatus === 'found' ? (
+          <p className="text-xs text-green-500 flex items-center gap-1 font-medium">
+            <CheckCircle2 className="w-3 h-3" />
+            {eventsCount} événement{eventsCount > 1 ? 's' : ''} trouvé{eventsCount > 1 ? 's' : ''} — sera{eventsCount > 1 ? 'ont' : ''} importé{eventsCount > 1 ? 's' : ''} automatiquement !
+          </p>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Permet de récupérer automatiquement vos événements déjà référencés sur Wouli
+          </p>
+        )}
       </div>
 
       <Button
