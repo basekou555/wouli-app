@@ -33,6 +33,10 @@ const BusinessSignup = () => {
 
     if (!formData.establishmentName) {
       newErrors.establishmentName = 'Nom de l\'établissement requis';
+    } else if (formData.establishmentName.trim().length < 3) {
+      newErrors.establishmentName = 'Le nom doit contenir au moins 3 caractères';
+    } else if (formData.establishmentName.trim().length > 30) {
+      newErrors.establishmentName = 'Le nom ne doit pas dépasser 30 caractères';
     }
 
     if (!formData.establishmentType) {
@@ -45,6 +49,14 @@ const BusinessSignup = () => {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const generateValidUsername = (name: string): string => {
+    let username = name.toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    if (username.length < 3) {
+      username = username.padEnd(3, '_');
+    }
+    return username.substring(0, 30);
   };
 
   const validateStep2 = () => {
@@ -89,8 +101,8 @@ const BusinessSignup = () => {
     setIsSubmitting(true);
     try {
       const { error } = await businessSignUp(formData.email, formData.password, {
-        username: formData.establishmentName.toLowerCase().replace(/\s+/g, '_'),
-        clientName: formData.establishmentName,
+        username: generateValidUsername(formData.establishmentName),
+        clientName: formData.establishmentName.trim(),
         clientType: formData.establishmentType,
         location: formData.location,
         brandColor: '#FF7A1F',
@@ -133,13 +145,21 @@ const BusinessSignup = () => {
           value={formData.establishmentName}
           onChange={(e) => handleInputChange('establishmentName', e.target.value)}
           className={errors.establishmentName ? 'border-destructive' : ''}
+          maxLength={30}
         />
-        {errors.establishmentName && (
-          <p className="text-sm text-destructive flex items-center gap-1">
-            <AlertCircle className="w-3 h-3" />
-            {errors.establishmentName}
-          </p>
-        )}
+        <div className="flex justify-between items-center">
+          {errors.establishmentName ? (
+            <p className="text-sm text-destructive flex items-center gap-1">
+              <AlertCircle className="w-3 h-3" />
+              {errors.establishmentName}
+            </p>
+          ) : (
+            <span />
+          )}
+          <span className={`text-xs ${formData.establishmentName.length > 25 ? 'text-destructive' : 'text-muted-foreground'}`}>
+            {formData.establishmentName.length}/30
+          </span>
+        </div>
       </div>
 
       {/* Establishment Type */}
