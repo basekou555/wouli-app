@@ -213,7 +213,7 @@ export function BusinessDashboardHome() {
   };
 
   const handleCreateEvent = () => {
-    navigate('/business/events/new');
+    navigate('/business/events', { state: { openCreateForm: true } });
   };
 
   // Créer les vraies données pour le funnel basées sur les métriques réelles
