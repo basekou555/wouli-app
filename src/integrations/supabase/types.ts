@@ -659,6 +659,7 @@ export type Database = {
           search_appearances: number | null
           status: string | null
           tags: string[] | null
+          time: string | null
           title: string | null
           updated_at: string | null
           views: number | null
@@ -689,6 +690,7 @@ export type Database = {
           search_appearances?: number | null
           status?: string | null
           tags?: string[] | null
+          time?: string | null
           title?: string | null
           updated_at?: string | null
           views?: number | null
@@ -719,6 +721,7 @@ export type Database = {
           search_appearances?: number | null
           status?: string | null
           tags?: string[] | null
+          time?: string | null
           title?: string | null
           updated_at?: string | null
           views?: number | null
