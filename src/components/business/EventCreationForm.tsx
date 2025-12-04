@@ -11,10 +11,12 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { 
   PlusCircle, MapPin, ExternalLink, Music, Users, Sparkles, 
   Info, User, AlertTriangle, Building, Calendar, Clock,
-  Euro, Hash, Repeat, FileText
+  Euro, Hash, Repeat, FileText, Eye, Save
 } from 'lucide-react';
 import ImageUpload from '@/components/ImageUpload';
 import { BusinessEvent } from '@/types/events';
+import EventPreviewModal from './EventPreviewModal';
+import { EventDraft } from '@/hooks/useEventDrafts';
 import {
   VENUE_CATEGORIES,
   ACTIVITY_TYPES,
@@ -40,9 +42,21 @@ interface EventCreationFormProps {
   editingEvent?: BusinessEvent;
   onEventUpdate?: (eventId: string, event: Partial<BusinessEvent>) => void;
   onCancelEdit?: () => void;
+  onSaveDraft?: (draft: Omit<EventDraft, 'id' | 'savedAt'>) => void;
+  isEditing?: boolean;
+  isDuplicating?: boolean;
 }
 
-const EventCreationForm = ({ config, onEventCreate, editingEvent, onEventUpdate, onCancelEdit }: EventCreationFormProps) => {
+const EventCreationForm = ({ 
+  config, 
+  onEventCreate, 
+  editingEvent, 
+  onEventUpdate, 
+  onCancelEdit,
+  onSaveDraft,
+  isEditing = false,
+  isDuplicating = false
+}: EventCreationFormProps) => {
   const [newEvent, setNewEvent] = useState({
     title: editingEvent?.title || '',
     date: editingEvent?.date || '',
@@ -79,6 +93,7 @@ const EventCreationForm = ({ config, onEventCreate, editingEvent, onEventUpdate,
   const [musicSearch, setMusicSearch] = useState('');
   const [formatSearch, setFormatSearch] = useState('');
   const [customFormat, setCustomFormat] = useState('');
+  const [showPreview, setShowPreview] = useState(false);
   const [isMultiDay, setIsMultiDay] = useState(!!editingEvent?.end_date);
 
   // Auto-suggestions when venue_category changes
@@ -881,25 +896,97 @@ const EventCreationForm = ({ config, onEventCreate, editingEvent, onEventUpdate,
             </div>
 
             {/* Submit buttons */}
-            <div className="flex gap-3 pt-2">
-              <Button 
-                type="submit" 
-                className="flex-1 h-12 text-base font-semibold"
-                style={{ backgroundColor: config.brand_color }}
-              >
-                {editingEvent ? 'Mettre à jour' : 'Créer l\'événement'}
-              </Button>
-              {editingEvent && onCancelEdit && (
+            <div className="flex flex-col gap-3 pt-2">
+              {/* Preview and Save Draft row */}
+              <div className="flex gap-2">
                 <Button 
-                  type="button" 
+                  type="button"
                   variant="outline"
-                  onClick={onCancelEdit}
-                  className="h-12"
+                  onClick={() => setShowPreview(true)}
+                  className="flex-1 h-10 gap-2"
                 >
-                  Annuler
+                  <Eye className="h-4 w-4" />
+                  Prévisualiser
                 </Button>
-              )}
+                {onSaveDraft && !isEditing && (
+                  <Button 
+                    type="button"
+                    variant="outline"
+                    onClick={() => onSaveDraft({
+                      title: newEvent.title,
+                      date: newEvent.date,
+                      end_date: newEvent.end_date,
+                      time: newEvent.time,
+                      venue: newEvent.venue,
+                      custom_venue: newEvent.custom_venue,
+                      description: newEvent.description,
+                      category: newEvent.category,
+                      event_type: newEvent.event_type,
+                      price: newEvent.price,
+                      external_url: newEvent.external_url,
+                      image_url: newEvent.image_url,
+                      venue_photo_url: newEvent.venue_photo_url,
+                      ambiance_photo_url: newEvent.ambiance_photo_url,
+                      capacity: newEvent.capacity,
+                      is_recurring: newEvent.is_recurring,
+                      avg_attendance: newEvent.avg_attendance,
+                      total_editions: newEvent.total_editions,
+                      venue_category: newEvent.venue_category,
+                      activity_type: newEvent.activity_type,
+                      music_style: newEvent.music_style,
+                      ambiance: newEvent.ambiance,
+                      target_audience: newEvent.target_audience,
+                      event_format: newEvent.event_format,
+                      social_intensity: newEvent.social_intensity
+                    })}
+                    className="flex-1 h-10 gap-2 border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
+                  >
+                    <Save className="h-4 w-4" />
+                    Brouillon
+                  </Button>
+                )}
+              </div>
+              
+              {/* Main action buttons */}
+              <div className="flex gap-3">
+                <Button 
+                  type="submit" 
+                  className="flex-1 h-12 text-base font-semibold"
+                  style={{ backgroundColor: config.brand_color }}
+                >
+                  {isEditing ? 'Mettre à jour' : isDuplicating ? 'Publier la copie' : 'Créer l\'événement'}
+                </Button>
+                {(isEditing || isDuplicating) && onCancelEdit && (
+                  <Button 
+                    type="button" 
+                    variant="outline"
+                    onClick={onCancelEdit}
+                    className="h-12"
+                  >
+                    Annuler
+                  </Button>
+                )}
+              </div>
             </div>
+
+            {/* Preview Modal */}
+            <EventPreviewModal
+              open={showPreview}
+              onClose={() => setShowPreview(false)}
+              eventData={{
+                title: newEvent.title,
+                date: newEvent.date,
+                time: newEvent.time,
+                description: newEvent.description,
+                image_url: newEvent.image_url,
+                price: newEvent.price,
+                venue: newEvent.venue,
+                custom_venue: newEvent.custom_venue,
+                venue_category: newEvent.venue_category,
+                activity_type: newEvent.activity_type,
+                capacity: newEvent.capacity
+              }}
+            />
           </form>
         </CardContent>
       </Card>
