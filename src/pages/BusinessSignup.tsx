@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertCircle, Mail, Lock, MapPin, ChevronRight, ChevronLeft } from 'lucide-react';
+import { AlertCircle, Mail, Lock, MapPin, ChevronRight, ChevronLeft, Instagram } from 'lucide-react';
 import EstablishmentTypeSelector from '@/components/business/EstablishmentTypeSelector';
 import { ESTABLISHMENT_TYPES, LYON_CITIES } from '@/data/establishmentTypes';
 
@@ -19,6 +19,7 @@ const BusinessSignup = () => {
     establishmentName: '',
     establishmentType: '',
     location: '',
+    instagramHandle: '',
     // Step 2
     email: '',
     password: '',
@@ -92,7 +93,8 @@ const BusinessSignup = () => {
         clientName: formData.establishmentName,
         clientType: formData.establishmentType,
         location: formData.location,
-        brandColor: '#FF7A1F'
+        brandColor: '#FF7A1F',
+        instagramHandle: formData.instagramHandle.replace('@', '').trim() || undefined
       });
 
       if (!error) {
@@ -177,7 +179,26 @@ const BusinessSignup = () => {
         )}
       </div>
 
-      <Button 
+      {/* Instagram Handle */}
+      <div className="space-y-2">
+        <Label htmlFor="instagramHandle" className="flex items-center gap-2">
+          <Instagram className="w-4 h-4" />
+          Compte Instagram
+          <span className="text-xs text-muted-foreground">(optionnel)</span>
+        </Label>
+        <Input
+          id="instagramHandle"
+          type="text"
+          placeholder="@monestablissement"
+          value={formData.instagramHandle}
+          onChange={(e) => handleInputChange('instagramHandle', e.target.value)}
+        />
+        <p className="text-xs text-muted-foreground">
+          Permet de récupérer automatiquement vos événements déjà référencés sur Wouli
+        </p>
+      </div>
+
+      <Button
         onClick={handleNextStep}
         className="w-full"
         type="button"

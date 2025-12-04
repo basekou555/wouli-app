@@ -20,6 +20,7 @@ interface AuthContextType {
     clientType: string;
     location: string;
     brandColor?: string;
+    instagramHandle?: string;
   }) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -198,6 +199,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     clientType: string;
     location: string;
     brandColor?: string;
+    instagramHandle?: string;
   }) => {
     try {
       const redirectUrl = `${window.location.origin}/business`;
@@ -213,7 +215,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             clientName: businessData.clientName,
             clientType: businessData.clientType,
             location: businessData.location,
-            brandColor: businessData.brandColor || '#FF7A1F'
+            brandColor: businessData.brandColor || '#FF7A1F',
+            instagramHandle: businessData.instagramHandle
           }
         }
       });
