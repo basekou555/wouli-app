@@ -33,6 +33,7 @@ export interface BusinessEvent extends Omit<BaseEvent, 'location'> {
   price?: string;
   external_url?: string;
   user_id: string;
+  end_date?: string;
   // Photos
   venue_photo_url?: string;
   ambiance_photo_url?: string;

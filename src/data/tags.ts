@@ -93,15 +93,18 @@ export const EVENT_FORMAT_OPTIONS = [
   { value: 'performance', label: 'Performance' },
   { value: 'exposition', label: 'Exposition' },
   { value: 'projection', label: 'Projection' },
-  { value: 'competition', label: 'Compétition' }
+  { value: 'competition', label: 'Compétition' },
+  { value: 'conference', label: 'Conférence' },
+  { value: 'masterclass', label: 'Masterclass' },
+  { value: 'degustation', label: 'Dégustation' }
 ];
 
-// Social Intensity Options
+// Social Intensity Options - avec chiffres pour clarifier
 export const SOCIAL_INTENSITY_OPTIONS = [
-  { value: 'solo', label: 'Solo', icon: 'User', description: 'Activité individuelle' },
-  { value: 'petit-groupe', label: 'Petit groupe', icon: 'Users', description: '2-6 personnes' },
-  { value: 'moyen', label: 'Moyen', icon: 'Users', description: '10-30 personnes' },
-  { value: 'grand-groupe', label: 'Grand groupe', icon: 'Users', description: '50+ personnes' }
+  { value: 'solo', label: 'Solo', sublabel: '1 pers.', icon: 'User', description: 'Activité individuelle' },
+  { value: 'petit-groupe', label: 'Petit groupe', sublabel: '2-6 pers.', icon: 'Users', description: '2-6 personnes' },
+  { value: 'moyen', label: 'Moyen', sublabel: '10-30 pers.', icon: 'Users', description: '10-30 personnes' },
+  { value: 'grand-groupe', label: 'Grand groupe', sublabel: '50+ pers.', icon: 'Users', description: '50+ personnes' }
 ];
 
 // Auto-suggestions based on venue category
