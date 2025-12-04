@@ -884,6 +884,53 @@ export type Database = {
           },
         ]
       }
+      public_business_details: {
+        Row: {
+          ambiance_generale: string[] | null
+          created_at: string | null
+          establishment_type: string[] | null
+          id: string | null
+          opening_hours: Json | null
+          primary_music_styles: string[] | null
+          venue_category: string | null
+          venue_name: string | null
+          venue_specialties: string[] | null
+          venue_subcategory: string[] | null
+        }
+        Insert: {
+          ambiance_generale?: string[] | null
+          created_at?: string | null
+          establishment_type?: string[] | null
+          id?: string | null
+          opening_hours?: Json | null
+          primary_music_styles?: string[] | null
+          venue_category?: string | null
+          venue_name?: string | null
+          venue_specialties?: string[] | null
+          venue_subcategory?: string[] | null
+        }
+        Update: {
+          ambiance_generale?: string[] | null
+          created_at?: string | null
+          establishment_type?: string[] | null
+          id?: string | null
+          opening_hours?: Json | null
+          primary_music_styles?: string[] | null
+          venue_category?: string | null
+          venue_name?: string | null
+          venue_specialties?: string[] | null
+          venue_subcategory?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_details_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       public_events: {
         Row: {
           category: Database["public"]["Enums"]["event_category"] | null
