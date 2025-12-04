@@ -851,6 +851,26 @@ export type Database = {
           my_venue_id: string | null
           performance_vs_market: number | null
         }
+        Insert: {
+          comparable_count?: never
+          market_avg_likes?: never
+          market_avg_participants?: never
+          market_avg_views?: never
+          my_event_id?: string | null
+          my_event_title?: string | null
+          my_venue_id?: string | null
+          performance_vs_market?: never
+        }
+        Update: {
+          comparable_count?: never
+          market_avg_likes?: never
+          market_avg_participants?: never
+          market_avg_views?: never
+          my_event_id?: string | null
+          my_event_title?: string | null
+          my_venue_id?: string | null
+          performance_vs_market?: never
+        }
         Relationships: [
           {
             foreignKeyName: "events_venue_id_fkey"
