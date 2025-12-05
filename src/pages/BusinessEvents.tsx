@@ -3,7 +3,10 @@ import { useLocation } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { BusinessLayout } from '@/components/business/BusinessLayout';
 import EventList from '@/components/business/EventList';
-import EventFilters, { DateFilter, StatusFilter, SortOption } from '@/components/business/EventFilters';
+import EventSectionTabs from '@/components/business/EventSectionTabs';
+import UpcomingEventFilters, { UpcomingDateFilter, UpcomingSortOption } from '@/components/business/UpcomingEventFilters';
+import PastEventFilters, { PastPeriodFilter, PastSortOption } from '@/components/business/PastEventFilters';
+import EventListEmpty from '@/components/business/EventListEmpty';
 import EventCreationForm from '@/components/business/EventCreationForm';
 import EventDraftsList from '@/components/business/EventDraftsList';
 import { Button } from '@/components/ui/button';
@@ -20,16 +23,23 @@ export default function BusinessEvents() {
   const [editingEvent, setEditingEvent] = useState<BusinessEvent | null>(null);
   const [duplicatingEvent, setDuplicatingEvent] = useState<BusinessEvent | null>(null);
   const [resumingDraft, setResumingDraft] = useState<EventDraft | null>(null);
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
   const location = useLocation();
   const { toast } = useToast();
 
-  // Filter states
-  const [searchQuery, setSearchQuery] = useState('');
-  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
-  const [venueFilter, setVenueFilter] = useState('all');
-  const [activityFilter, setActivityFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [sortBy, setSortBy] = useState<SortOption>('date-desc');
+  // Upcoming filter states
+  const [upcomingSearch, setUpcomingSearch] = useState('');
+  const [upcomingDateFilter, setUpcomingDateFilter] = useState<UpcomingDateFilter>('all');
+  const [upcomingVenueFilter, setUpcomingVenueFilter] = useState('all');
+  const [upcomingActivityFilter, setUpcomingActivityFilter] = useState('all');
+  const [upcomingSortBy, setUpcomingSortBy] = useState<UpcomingSortOption>('date-asc');
+
+  // Past filter states
+  const [pastSearch, setPastSearch] = useState('');
+  const [pastPeriodFilter, setPastPeriodFilter] = useState<PastPeriodFilter>('all');
+  const [pastVenueFilter, setPastVenueFilter] = useState('all');
+  const [pastActivityFilter, setPastActivityFilter] = useState('all');
+  const [pastSortBy, setPastSortBy] = useState<PastSortOption>('date-desc');
 
   const { drafts, saveDraft, deleteDraft } = useEventDrafts();
 
@@ -56,15 +66,35 @@ export default function BusinessEvents() {
     error: configError
   } = useBusinessConfig();
 
-  // Filter and sort events
-  const filteredEvents = useMemo(() => {
-    let result = [...events];
+  // Separate events into upcoming and past
+  const { upcomingEvents, pastEvents } = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const upcoming = events.filter(e => {
+      const eventDate = new Date(e.date);
+      eventDate.setHours(0, 0, 0, 0);
+      return eventDate >= today;
+    });
+
+    const past = events.filter(e => {
+      const eventDate = new Date(e.date);
+      eventDate.setHours(0, 0, 0, 0);
+      return eventDate < today;
+    });
+
+    return { upcomingEvents: upcoming, pastEvents: past };
+  }, [events]);
+
+  // Filter upcoming events
+  const filteredUpcomingEvents = useMemo(() => {
+    let result = [...upcomingEvents];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+    if (upcomingSearch) {
+      const query = upcomingSearch.toLowerCase();
       result = result.filter(e => 
         e.title.toLowerCase().includes(query) ||
         e.venue?.toLowerCase().includes(query) ||
@@ -73,20 +103,20 @@ export default function BusinessEvents() {
     }
 
     // Date filter
-    if (dateFilter !== 'all') {
+    if (upcomingDateFilter !== 'all') {
       result = result.filter(e => {
         const eventDate = new Date(e.date);
         eventDate.setHours(0, 0, 0, 0);
         
-        if (dateFilter === 'today') {
+        if (upcomingDateFilter === 'today') {
           return eventDate.getTime() === today.getTime();
         }
-        if (dateFilter === 'week') {
+        if (upcomingDateFilter === 'week') {
           const weekEnd = new Date(today);
           weekEnd.setDate(weekEnd.getDate() + 7);
           return eventDate >= today && eventDate <= weekEnd;
         }
-        if (dateFilter === 'month') {
+        if (upcomingDateFilter === 'month') {
           const monthEnd = new Date(today);
           monthEnd.setMonth(monthEnd.getMonth() + 1);
           return eventDate >= today && eventDate <= monthEnd;
@@ -95,34 +125,23 @@ export default function BusinessEvents() {
       });
     }
 
-    // Venue category filter
-    if (venueFilter !== 'all') {
-      result = result.filter(e => e.venue_category === venueFilter);
+    // Venue filter
+    if (upcomingVenueFilter !== 'all') {
+      result = result.filter(e => e.venue_category === upcomingVenueFilter);
     }
 
-    // Activity type filter
-    if (activityFilter !== 'all') {
-      result = result.filter(e => e.activity_type === activityFilter);
-    }
-
-    // Status filter
-    if (statusFilter !== 'all') {
-      result = result.filter(e => {
-        const eventDate = new Date(e.date);
-        eventDate.setHours(0, 0, 0, 0);
-        if (statusFilter === 'upcoming') return eventDate >= today;
-        if (statusFilter === 'past') return eventDate < today;
-        return true;
-      });
+    // Activity filter
+    if (upcomingActivityFilter !== 'all') {
+      result = result.filter(e => e.activity_type === upcomingActivityFilter);
     }
 
     // Sorting
     result.sort((a, b) => {
-      switch (sortBy) {
-        case 'date-desc':
-          return new Date(b.date).getTime() - new Date(a.date).getTime();
+      switch (upcomingSortBy) {
         case 'date-asc':
           return new Date(a.date).getTime() - new Date(b.date).getTime();
+        case 'date-desc':
+          return new Date(b.date).getTime() - new Date(a.date).getTime();
         case 'name':
           return a.title.localeCompare(b.title);
         case 'views':
@@ -135,15 +154,93 @@ export default function BusinessEvents() {
     });
 
     return result;
-  }, [events, searchQuery, dateFilter, venueFilter, activityFilter, statusFilter, sortBy]);
+  }, [upcomingEvents, upcomingSearch, upcomingDateFilter, upcomingVenueFilter, upcomingActivityFilter, upcomingSortBy]);
 
-  const resetFilters = () => {
-    setSearchQuery('');
-    setDateFilter('all');
-    setVenueFilter('all');
-    setActivityFilter('all');
-    setStatusFilter('all');
-    setSortBy('date-desc');
+  // Filter past events
+  const filteredPastEvents = useMemo(() => {
+    let result = [...pastEvents];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Search filter
+    if (pastSearch) {
+      const query = pastSearch.toLowerCase();
+      result = result.filter(e => 
+        e.title.toLowerCase().includes(query) ||
+        e.venue?.toLowerCase().includes(query) ||
+        e.custom_venue?.toLowerCase().includes(query)
+      );
+    }
+
+    // Period filter
+    if (pastPeriodFilter !== 'all') {
+      result = result.filter(e => {
+        const eventDate = new Date(e.date);
+        
+        if (pastPeriodFilter === '7days') {
+          const weekAgo = new Date(today);
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          return eventDate >= weekAgo;
+        }
+        if (pastPeriodFilter === '30days') {
+          const monthAgo = new Date(today);
+          monthAgo.setDate(monthAgo.getDate() - 30);
+          return eventDate >= monthAgo;
+        }
+        if (pastPeriodFilter === '3months') {
+          const threeMonthsAgo = new Date(today);
+          threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+          return eventDate >= threeMonthsAgo;
+        }
+        return true;
+      });
+    }
+
+    // Venue filter
+    if (pastVenueFilter !== 'all') {
+      result = result.filter(e => e.venue_category === pastVenueFilter);
+    }
+
+    // Activity filter
+    if (pastActivityFilter !== 'all') {
+      result = result.filter(e => e.activity_type === pastActivityFilter);
+    }
+
+    // Sorting
+    result.sort((a, b) => {
+      switch (pastSortBy) {
+        case 'date-desc':
+          return new Date(b.date).getTime() - new Date(a.date).getTime();
+        case 'date-asc':
+          return new Date(a.date).getTime() - new Date(b.date).getTime();
+        case 'views':
+          return (b.views || 0) - (a.views || 0);
+        case 'likes':
+          return (b.likes || 0) - (a.likes || 0);
+        case 'participants':
+          return (b.participants || 0) - (a.participants || 0);
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [pastEvents, pastSearch, pastPeriodFilter, pastVenueFilter, pastActivityFilter, pastSortBy]);
+
+  const resetUpcomingFilters = () => {
+    setUpcomingSearch('');
+    setUpcomingDateFilter('all');
+    setUpcomingVenueFilter('all');
+    setUpcomingActivityFilter('all');
+    setUpcomingSortBy('date-asc');
+  };
+
+  const resetPastFilters = () => {
+    setPastSearch('');
+    setPastPeriodFilter('all');
+    setPastVenueFilter('all');
+    setPastActivityFilter('all');
+    setPastSortBy('date-desc');
   };
   
   if (configLoading) return <LoadingSpinner />;
@@ -278,6 +375,13 @@ export default function BusinessEvents() {
     }
     return undefined;
   };
+
+  const openCreateForm = () => {
+    setShowCreateForm(true);
+    setEditingEvent(null);
+    setDuplicatingEvent(null);
+    setResumingDraft(null);
+  };
   
   return (
     <BusinessLayout>
@@ -295,7 +399,7 @@ export default function BusinessEvents() {
               if (showCreateForm) {
                 handleCancelEdit();
               } else {
-                setShowCreateForm(true);
+                openCreateForm();
               }
             }} 
             className="bg-primary hover:bg-primary/90 w-full sm:w-auto" 
@@ -329,7 +433,7 @@ export default function BusinessEvents() {
           />
         )}
 
-        {/* Filters & Events List */}
+        {/* Events with Tabs */}
         {!showCreateForm && (
           <div className="space-y-4">
             {loading ? (
@@ -337,32 +441,73 @@ export default function BusinessEvents() {
             ) : error ? (
               <ErrorMessage message={error.message} />
             ) : (
-              <>
-                <EventFilters
-                  searchQuery={searchQuery}
-                  onSearchChange={setSearchQuery}
-                  dateFilter={dateFilter}
-                  onDateFilterChange={setDateFilter}
-                  venueFilter={venueFilter}
-                  onVenueFilterChange={setVenueFilter}
-                  activityFilter={activityFilter}
-                  onActivityFilterChange={setActivityFilter}
-                  statusFilter={statusFilter}
-                  onStatusFilterChange={setStatusFilter}
-                  sortBy={sortBy}
-                  onSortChange={setSortBy}
-                  totalResults={filteredEvents.length}
-                  onReset={resetFilters}
-                />
-                
-                <EventList 
-                  config={config} 
-                  events={filteredEvents} 
-                  onDeleteEvent={handleDeleteEvent} 
-                  onEditEvent={handleEditEvent}
-                  onDuplicateEvent={handleDuplicateEvent}
-                />
-              </>
+              <EventSectionTabs
+                upcomingCount={upcomingEvents.length}
+                pastCount={pastEvents.length}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                upcomingContent={
+                  <div className="space-y-4">
+                    <UpcomingEventFilters
+                      searchQuery={upcomingSearch}
+                      onSearchChange={setUpcomingSearch}
+                      dateFilter={upcomingDateFilter}
+                      onDateFilterChange={setUpcomingDateFilter}
+                      venueFilter={upcomingVenueFilter}
+                      onVenueFilterChange={setUpcomingVenueFilter}
+                      activityFilter={upcomingActivityFilter}
+                      onActivityFilterChange={setUpcomingActivityFilter}
+                      sortBy={upcomingSortBy}
+                      onSortChange={setUpcomingSortBy}
+                      totalResults={filteredUpcomingEvents.length}
+                      onReset={resetUpcomingFilters}
+                    />
+                    {filteredUpcomingEvents.length > 0 ? (
+                      <EventList 
+                        config={config} 
+                        events={filteredUpcomingEvents} 
+                        onDeleteEvent={handleDeleteEvent} 
+                        onEditEvent={handleEditEvent}
+                        onDuplicateEvent={handleDuplicateEvent}
+                      />
+                    ) : (
+                      <EventListEmpty 
+                        variant="upcoming" 
+                        onCreateEvent={openCreateForm}
+                      />
+                    )}
+                  </div>
+                }
+                pastContent={
+                  <div className="space-y-4">
+                    <PastEventFilters
+                      searchQuery={pastSearch}
+                      onSearchChange={setPastSearch}
+                      periodFilter={pastPeriodFilter}
+                      onPeriodFilterChange={setPastPeriodFilter}
+                      venueFilter={pastVenueFilter}
+                      onVenueFilterChange={setPastVenueFilter}
+                      activityFilter={pastActivityFilter}
+                      onActivityFilterChange={setPastActivityFilter}
+                      sortBy={pastSortBy}
+                      onSortChange={setPastSortBy}
+                      totalResults={filteredPastEvents.length}
+                      onReset={resetPastFilters}
+                    />
+                    {filteredPastEvents.length > 0 ? (
+                      <EventList 
+                        config={config} 
+                        events={filteredPastEvents} 
+                        onDeleteEvent={handleDeleteEvent} 
+                        onEditEvent={handleEditEvent}
+                        onDuplicateEvent={handleDuplicateEvent}
+                      />
+                    ) : (
+                      <EventListEmpty variant="past" />
+                    )}
+                  </div>
+                }
+              />
             )}
           </div>
         )}
