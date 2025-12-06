@@ -1,14 +1,21 @@
-
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { X, Heart, Share2, Euro, Users, MapPin, Calendar, Clock, Navigation, Copy, Eye, Timer } from 'lucide-react';
-import { UnifiedEvent } from '@/types/unified';
-import { formatEventDateTime, getPriceInfo, getLocationDisplay, getUrgencyBadge } from '@/utils/eventCardHelpers';
+import { 
+  ArrowLeft, 
+  Share2, 
+  Heart, 
+  Clock, 
+  Euro, 
+  Users, 
+  MapPin, 
+  Navigation, 
+  Copy,
+  Sparkles
+} from 'lucide-react';
 import { getCategoryIcon, getCategoryName } from '@/data/wouliCategories';
-import { formatPrice } from '@/utils/eventDetailHelpers';
+import { formatPrice, isToday } from '@/utils/eventDetailHelpers';
 
 interface EventPreviewModalProps {
   open: boolean;
@@ -34,42 +41,31 @@ interface EventPreviewModalProps {
 }
 
 const EventPreviewModal: React.FC<EventPreviewModalProps> = ({ open, onClose, eventData }) => {
-  const mockEvent: Partial<UnifiedEvent> = {
-    id: 'preview',
-    title: eventData.title || 'Titre de l\'événement',
-    date: eventData.date ? `${eventData.date}T${eventData.time || '20:00'}` : new Date().toISOString(),
-    time: eventData.time || '20:00',
-    description: eventData.description || 'Description de votre événement...',
-    image_url: eventData.image_url,
-    price_text: eventData.price || 'Gratuit',
-    venue: eventData.custom_venue || eventData.venue || 'Votre établissement',
-    location: eventData.custom_venue || eventData.venue || 'Lyon',
-    participants: 0,
-    likes: 0,
-    views: 0,
-    category: eventData.venue_category as any,
-    event_type: eventData.activity_type as any,
+  const venueName = eventData.custom_venue || eventData.venue || 'Lieu à confirmer';
+  const address = eventData.custom_venue || eventData.venue || 'Adresse à confirmer';
+  const isEventToday = eventData.date ? isToday(eventData.date) : false;
+
+  // Générer les avatars placeholder
+  const generateAvatars = () => {
+    return (
+      <div className="flex -space-x-2">
+        {[0, 1, 2].map((i) => (
+          <div 
+            key={i} 
+            className="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-xs font-medium"
+            style={{ 
+              backgroundColor: `hsl(${(i * 137.5) % 360}, 65%, 75%)`,
+              color: `hsl(${(i * 137.5) % 360}, 65%, 25%)`
+            }}
+          >
+            {String.fromCharCode(65 + i)}
+          </div>
+        ))}
+      </div>
+    );
   };
 
-  const urgencyLabel = eventData.date ? getUrgencyBadge(mockEvent.date!, mockEvent.time) : null;
-  const priceInfo = getPriceInfo(mockEvent.price_text);
-  const venueName = eventData.custom_venue || eventData.venue || 'Lieu à confirmer';
-
-  // Générer les avatars mockés
-  const generateMockAvatars = () => (
-    <div className="flex -space-x-2">
-      {[1, 2, 3].map((i) => (
-        <div
-          key={i}
-          className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 border-2 border-card flex items-center justify-center"
-        >
-          <span className="text-[10px] text-white font-medium">?</span>
-        </div>
-      ))}
-    </div>
-  );
-
-  // Infos pratiques
+  // Infos pratiques grid
   const infos = [
     {
       icon: <Euro className="w-5 h-5 text-purple-600" />,
@@ -102,216 +98,195 @@ const EventPreviewModal: React.FC<EventPreviewModalProps> = ({ open, onClose, ev
   }
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md p-0 overflow-hidden bg-card max-h-[90vh] flex flex-col">
-        <DialogHeader className="sr-only">
-          <DialogTitle>Prévisualisation</DialogTitle>
-          <DialogDescription>Aperçu de votre événement</DialogDescription>
-        </DialogHeader>
-        
-        {/* Header fixe */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card shrink-0">
-          <span className="font-semibold text-foreground">Aperçu utilisateur</span>
-          <Button 
-            variant="ghost" 
-            size="sm" 
+    <Sheet open={open} onOpenChange={onClose}>
+      <SheetContent 
+        side="bottom" 
+        className="h-screen p-0 border-0 bg-white overflow-hidden"
+      >
+        {/* Header flottant - identique à EventPreview */}
+        <div className="fixed top-4 left-4 right-4 flex justify-between z-50">
+          <button 
             onClick={onClose}
-            className="h-8 w-8 p-0 rounded-full hover:bg-muted"
+            className="bg-white/90 backdrop-blur rounded-full p-2 hover:bg-white transition-colors shadow-sm"
           >
-            <X className="h-4 w-4" />
-          </Button>
+            <ArrowLeft className="w-5 h-5 text-gray-700" />
+          </button>
+          <button 
+            className="bg-white/90 backdrop-blur rounded-full p-2 shadow-sm opacity-50 cursor-not-allowed"
+            disabled
+          >
+            <Share2 className="w-5 h-5 text-gray-700" />
+          </button>
         </div>
 
         {/* Contenu scrollable */}
-        <ScrollArea className="flex-1">
-          <div className="pb-24">
-            {/* Image section */}
-            <div className="relative aspect-[4/5] bg-muted">
-              {eventData.image_url ? (
-                <img
-                  src={eventData.image_url}
-                  alt={mockEvent.title}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-500/20 to-pink-500/20">
-                  <span className="text-muted-foreground">Ajoutez une image</span>
-                </div>
-              )}
-              
-              {/* Urgency badge */}
-              {urgencyLabel && (
-                <Badge className="absolute top-4 right-4 bg-red-500 text-white border-none animate-pulse text-xs font-medium px-2 py-1 rounded-lg shadow-lg">
-                  {urgencyLabel}
-                </Badge>
-              )}
-              
-              {/* Share button mock */}
-              <Button 
-                size="sm"
-                className="absolute top-4 left-4 w-10 h-10 bg-white/90 backdrop-blur rounded-full p-0 border-0"
-                disabled
-              >
-                <Share2 className="h-4 w-4 text-gray-700" />
-              </Button>
-            </div>
-
-            {/* Titre */}
-            <div className="px-5 pt-5">
-              <h1 className="text-xl font-bold text-foreground">
-                {mockEvent.title}
-              </h1>
-            </div>
-
-            {/* Social proof section */}
-            <div className="px-5 py-4">
-              <div className="flex items-center justify-between bg-muted/50 rounded-xl p-3">
-                <div className="flex items-center gap-3">
-                  {generateMockAvatars()}
-                  <span className="text-sm text-muted-foreground">
-                    Sois le premier à participer !
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Eye className="w-3 h-3" /> 0
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Heart className="w-3 h-3" /> 0
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Capacité warning si presque plein (mock) */}
-            {eventData.capacity && (
-              <div className="px-5 pb-3">
-                <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 flex items-center gap-2">
-                  <Users className="w-4 h-4 text-orange-600" />
-                  <span className="text-sm text-orange-700">
-                    Capacité : {eventData.capacity} personnes
-                  </span>
-                </div>
+        <div className="overflow-y-auto h-full pb-24">
+          {/* Image pleine largeur ratio 4:5 */}
+          <div className="w-full aspect-[4/5] bg-black">
+            {eventData.image_url ? (
+              <img
+                src={eventData.image_url}
+                alt={eventData.title}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-500/30 to-pink-500/30">
+                <span className="text-white/60">Ajoutez une image</span>
               </div>
             )}
+          </div>
 
-            {/* Description - À propos */}
-            <div className="px-5 py-4 border-t border-border">
-              <h2 className="text-lg font-semibold text-foreground mb-3">À propos</h2>
-              <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">
-                {eventData.description || 'Aucune description pour le moment...'}
-              </p>
-              
-              {/* Tags ambiance / audience */}
-              {(eventData.ambiance || (eventData.target_audience && eventData.target_audience.length > 0)) && (
-                <div className="flex flex-wrap gap-2 mt-4">
-                  {eventData.ambiance && (
-                    <Badge variant="secondary" className="text-xs">
-                      {eventData.ambiance}
-                    </Badge>
-                  )}
-                  {eventData.target_audience?.slice(0, 3).map((audience, i) => (
-                    <Badge key={i} variant="outline" className="text-xs">
-                      {audience}
-                    </Badge>
-                  ))}
-                </div>
+          {/* Contenu principal - identique à EventPreview */}
+          <div className="px-6 py-6 space-y-6">
+            {/* 1. Titre avec badge urgence */}
+            <div>
+              {isEventToday && (
+                <span className="inline-flex items-center bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium mb-3">
+                  <Clock className="w-4 h-4 mr-1" />
+                  CE SOIR
+                </span>
               )}
+              <h1 className="text-3xl font-bold text-gray-900">
+                {eventData.title || 'Titre de l\'événement'}
+              </h1>
             </div>
+          </div>
 
-            {/* Informations pratiques */}
-            <div className="px-5 py-4 border-t border-border">
-              <h2 className="text-lg font-semibold text-foreground mb-4">Informations pratiques</h2>
-              <div className="grid grid-cols-2 gap-4">
-                {infos.map((info, index) => (
-                  <div key={index} className="flex items-start gap-3">
-                    <div className={`w-10 h-10 ${info.bgColor} rounded-lg flex items-center justify-center flex-shrink-0`}>
-                      {info.icon}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-foreground text-sm">{info.label}</p>
-                      <p className="text-sm text-muted-foreground break-words">{info.value}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Section Lieu */}
-            <div className="px-5 py-4 border-t border-border">
-              <h2 className="text-lg font-semibold text-foreground mb-3">Lieu</h2>
-              
-              <div className="bg-muted/50 rounded-xl p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-muted-foreground" />
-                      <h3 className="font-medium text-foreground">{venueName}</h3>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1 ml-6">
-                      {eventData.custom_venue || eventData.venue || 'Adresse à confirmer'}, Lyon
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Actions lieu - mockées */}
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 h-9"
-                    disabled
-                  >
-                    <Navigation className="w-4 h-4 mr-1" />
-                    Itinéraire
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 h-9"
-                    disabled
-                  >
-                    <Copy className="w-4 h-4 mr-1" />
-                    Copier
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Preview notice */}
-            <div className="px-5 py-4">
-              <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
-                <p className="text-xs text-amber-600 text-center">
-                  ✨ Ceci est un aperçu de comment les utilisateurs verront votre événement
+          {/* 2. Social Proof Section - identique structure à EventSocialProof */}
+          <div className="px-6 py-4 border-b bg-white">
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 flex items-center gap-3">
+              <Sparkles className="w-5 h-5 text-purple-600 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-purple-900">
+                  Première édition ! Sois parmi les pionniers
+                </p>
+                <p className="text-xs text-purple-700 mt-1">
+                  0 personnes ont déjà regardé
                 </p>
               </div>
             </div>
           </div>
-        </ScrollArea>
 
-        {/* Footer fixe avec actions */}
-        <div className="absolute bottom-0 left-0 right-0 bg-card border-t border-border p-4">
-          <div className="flex gap-3 items-center">
-            <Button 
-              variant="outline" 
-              size="lg"
-              className="h-12 w-12 p-0 border-2"
-              disabled
-            >
-              <Heart className="h-5 w-5" />
-            </Button>
+          {/* Indicateur de capacité */}
+          {eventData.capacity && (
+            <div className="px-6 py-4">
+              <div className="p-4 bg-orange-50 border border-orange-100 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Users className="w-5 h-5 text-orange-600" />
+                  <p className="text-sm">
+                    <span className="font-semibold">Capacité : {eventData.capacity} personnes</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 3. Description - À propos */}
+          <div className="px-6 py-4">
+            <h2 className="text-lg font-semibold mb-3 text-gray-900">À propos</h2>
+            <p className="text-gray-700 leading-relaxed whitespace-pre-line">
+              {eventData.description || 'Aucune description pour le moment...'}
+            </p>
             
-            <Button 
-              className="h-12 font-semibold flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-              disabled
-            >
-              <Users className="w-4 h-4 mr-2" />
-              Participer (0)
-            </Button>
+            {/* Tags ambiance / audience */}
+            {(eventData.ambiance || (eventData.target_audience && eventData.target_audience.length > 0)) && (
+              <div className="flex flex-wrap gap-2 mt-4">
+                {eventData.ambiance && (
+                  <Badge variant="secondary" className="text-xs">
+                    {eventData.ambiance}
+                  </Badge>
+                )}
+                {eventData.target_audience?.slice(0, 3).map((audience, i) => (
+                  <Badge key={i} variant="outline" className="text-xs">
+                    {audience}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 4. Infos pratiques - identique à EventInfoGrid */}
+          <div className="px-6 py-4">
+            <h2 className="text-lg font-semibold mb-4 text-gray-900">Informations pratiques</h2>
+            <div className="grid grid-cols-2 gap-4">
+              {infos.map((info, index) => (
+                <div key={index} className="flex items-start gap-3">
+                  <div className={`w-10 h-10 ${info.bgColor} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                    {info.icon}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-gray-900">{info.label}</p>
+                    <p className="text-sm text-gray-600 break-words">{info.value}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 5. Section Lieu - identique à EventLocationSection */}
+          <div className="px-6 py-4 border-t bg-white">
+            <h2 className="text-lg font-semibold mb-3 text-gray-900">Lieu</h2>
+            
+            <div className="bg-gray-50 rounded-xl p-4">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1">
+                  <h3 className="font-medium text-gray-900">{venueName}</h3>
+                  <p className="text-sm text-gray-600 mt-1">{address}, Lyon</p>
+                </div>
+              </div>
+              
+              {/* Actions lieu - mockées */}
+              <div className="flex gap-2">
+                <button 
+                  className="flex-1 bg-white border border-gray-200 rounded-lg py-2 px-3 text-sm font-medium flex items-center justify-center gap-1 opacity-50 cursor-not-allowed"
+                  disabled
+                >
+                  <Navigation className="w-4 h-4" />
+                  Itinéraire
+                </button>
+                <button 
+                  className="flex-1 bg-white border border-gray-200 rounded-lg py-2 px-3 text-sm font-medium flex items-center justify-center gap-1 opacity-50 cursor-not-allowed"
+                  disabled
+                >
+                  <Copy className="w-4 h-4" />
+                  Copier
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Notice preview */}
+          <div className="px-6 py-4">
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-xs text-amber-700 text-center">
+                ✨ Aperçu de l'événement tel qu'il apparaîtra aux utilisateurs
+              </p>
+            </div>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+
+        {/* Bottom Bar Fixe - identique à EventPreview */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 z-50 safe-area-bottom">
+          <div className="flex gap-3 max-w-lg mx-auto">
+            {/* Bouton Like */}
+            <button 
+              className="p-3 rounded-xl border-2 bg-white border-gray-200 opacity-50 cursor-not-allowed"
+              disabled
+            >
+              <Heart className="w-6 h-6 text-gray-400" />
+            </button>
+            
+            {/* Bouton principal */}
+            <button 
+              className="flex-1 py-3 px-6 rounded-xl font-semibold bg-gradient-to-r from-purple-600 to-pink-600 text-white opacity-50 cursor-not-allowed"
+              disabled
+            >
+              Je participe (0)
+            </button>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 };
 
