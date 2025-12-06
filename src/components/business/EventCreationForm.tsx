@@ -13,7 +13,7 @@ import {
   Info, User, AlertTriangle, Building, Calendar, Clock,
   Euro, Hash, Repeat, FileText, Eye, Save
 } from 'lucide-react';
-import ImageUpload from '@/components/ImageUpload';
+import InlineImageCropper from './InlineImageCropper';
 import { BusinessEvent } from '@/types/events';
 import EventPreviewModal from './EventPreviewModal';
 import { EventDraft } from '@/hooks/useEventDrafts';
@@ -247,12 +247,12 @@ const EventCreationForm = ({
                 SECTION: Informations de base
             ═══════════════════════════════════════════════════════════════ */}
             <div className="space-y-4">
-              {/* Image principale */}
+              {/* Image principale avec crop intégré */}
               <div>
-                <Label className="block text-sm font-medium mb-2">Image de l'événement</Label>
-                <ImageUpload
-                  onImageSelect={(imageUrl) => setNewEvent({ ...newEvent, image_url: imageUrl })}
-                  currentImage={newEvent.image_url}
+                <Label className="block text-sm font-medium mb-3">Image de l'événement</Label>
+                <InlineImageCropper
+                  value={newEvent.image_url || null}
+                  onChange={(imageUrl) => setNewEvent({ ...newEvent, image_url: imageUrl })}
                 />
               </div>
 
