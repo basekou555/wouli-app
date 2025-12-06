@@ -9,11 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar, MapPin, Euro, Save, X, Sparkles, Loader2 } from 'lucide-react';
 import { WOULI_CATEGORIES } from '@/data/wouliCategories';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 import { enhanceEventContent } from '@/services/aiEnhancementService';
-import { ImageEditorModal } from './ImageEditorModal';
-import { uploadEventImage, updateEventImageUrl } from '@/services/imageUploadService';
-import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
+import AdminInlineImageCropper from './AdminInlineImageCropper';
+import { updateEventImageUrl } from '@/services/imageUploadService';
 import { toast } from 'sonner';
 
 interface PendingEvent {
@@ -52,8 +50,6 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
   });
   const [saving, setSaving] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
-  const [imageEditorOpen, setImageEditorOpen] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
   
 
   useEffect(() => {
@@ -142,21 +138,12 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
     }
   };
 
-  const handleImageCrop = async (croppedImageBlob: Blob) => {
+  const handleImageUpdated = async (newUrl: string) => {
     if (!event?.id) return;
 
-    setUploadingImage(true);
     try {
-      // Upload new image
-      const uploadResult = await uploadEventImage(croppedImageBlob, event.id);
-      
-      if (!uploadResult.success || !uploadResult.url) {
-        toast.error(uploadResult.error || 'Erreur lors de l\'upload');
-        return;
-      }
-
       // Update event in database
-      const updateResult = await updateEventImageUrl(event.id, uploadResult.url);
+      const updateResult = await updateEventImageUrl(event.id, newUrl);
       
       if (!updateResult.success) {
         toast.error(updateResult.error || 'Erreur lors de la mise à jour');
@@ -166,15 +153,11 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
       // Update local form data
       setFormData(prev => ({
         ...prev,
-        image_url: uploadResult.url
+        image_url: newUrl
       }));
-
-      toast.success('Image mise à jour avec succès');
     } catch (error) {
-      console.error('Erreur handleImageCrop:', error);
-      toast.error('Erreur lors du traitement de l\'image');
-    } finally {
-      setUploadingImage(false);
+      console.error('Erreur handleImageUpdated:', error);
+      toast.error('Erreur lors de la mise à jour de l\'image');
     }
   };
 
@@ -194,34 +177,14 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
         </DialogHeader>
 
         <div className="grid grid-cols-2 gap-6">
-          {/* Image preview with editor */}
-          <div className="col-span-2 space-y-2">
-            <Label>Image de l'événement</Label>
-            <div className="space-y-2">
-              <div className="w-full aspect-[4/5] rounded-lg border bg-black flex items-center justify-center overflow-hidden">
-                <img 
-                  src={getProxiedImageUrl(formData.image_url || event.image_url) || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30'} 
-                  alt="Aperçu"
-                  className="w-full h-full object-contain"
-                  onError={handleImageError}
-                />
-              </div>
-              {(formData.image_url || event.image_url) && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setImageEditorOpen(true)}
-                  disabled={uploadingImage}
-                  className="flex items-center gap-2"
-                >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  {uploadingImage ? 'Traitement...' : 'Recadrer l\'image'}
-                </Button>
-              )}
-            </div>
+          {/* Image avec éditeur inline */}
+          <div className="col-span-2">
+            <Label className="mb-2 block">Image de l'événement</Label>
+            <AdminInlineImageCropper
+              eventId={event.id}
+              imageUrl={formData.image_url || event.image_url || ''}
+              onImageUpdated={handleImageUpdated}
+            />
           </div>
 
           {/* Titre avec bouton IA */}
@@ -399,13 +362,6 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
       </DialogContent>
     </Dialog>
 
-    {/* Image Editor Modal */}
-    <ImageEditorModal
-      isOpen={imageEditorOpen}
-      onClose={() => setImageEditorOpen(false)}
-      imageUrl={formData.image_url || event.image_url || ''}
-      onSave={handleImageCrop}
-    />
     </>
   );
 };
