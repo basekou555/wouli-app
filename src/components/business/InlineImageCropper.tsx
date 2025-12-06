@@ -119,6 +119,8 @@ const InlineImageCropper: React.FC<InlineImageCropperProps> = ({
       const croppedImage = await createCroppedImage(rawImage, croppedAreaPixels);
       onChange(croppedImage);
       setIsCropped(true);
+      // Garder rawImage null pour afficher la preview de l'image croppée
+      setRawImage(null);
       toast({
         title: "Image recadrée",
         description: "Votre image est prête",
