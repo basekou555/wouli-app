@@ -241,6 +241,7 @@ export const createBusinessEvent = async (
       created_by: user.id,
       created_by_type: 'business',
       venue_id: user.id,
+      status: 'active',
       title: eventData.title,
       description: eventData.description,
       date: `${eventData.date}T${eventData.time || '00:00'}:00`,
