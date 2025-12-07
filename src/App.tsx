@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { RatingModal } from "@/components/rating/RatingModal";
+import { UpdatePrompt } from "@/components/UpdatePrompt";
 import { useRatingModal } from "@/hooks/useRatingModal";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
@@ -178,6 +179,7 @@ function App() {
           <TooltipProvider>
             <Toaster />
             <Sonner />
+            <UpdatePrompt />
             <AppContent />
           </TooltipProvider>
         </AuthProvider>
