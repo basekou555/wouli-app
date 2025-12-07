@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wouli-cache-v1';
+const CACHE_NAME = 'wouli-cache-v2';
 
 // Installation - Cache les ressources essentielles
 self.addEventListener('install', (event) => {
@@ -41,4 +41,11 @@ self.addEventListener('fetch', (event) => {
       })
       .catch(() => caches.match(event.request))
   );
+});
+
+// Écoute le message pour forcer la mise à jour
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
