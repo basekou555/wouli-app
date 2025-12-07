@@ -117,24 +117,13 @@ const EventCard: React.FC<EventCardProps> = ({
         className="flex-shrink-0 h-14 px-4 flex items-center justify-between bg-card border-b border-border"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
-        {!isFirstEvent ? (
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={onBack}
-            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-accent transition-colors"
-            aria-label="Retour"
-          >
-            <span className="text-xl">↑</span>
-          </motion.button>
-        ) : (
-          <button
-            onClick={onMenuClick}
-            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-accent transition-colors"
-            aria-label="Menu"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-        )}
+        <button
+          onClick={onMenuClick}
+          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-accent transition-colors"
+          aria-label="Menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
         
         <span className="font-bold text-lg tracking-wide">WOULI</span>
         
