@@ -18,7 +18,7 @@ interface InstallPromptProps {
 // Variable globale pour stocker le deferredPrompt (partagé entre instances)
 let globalDeferredPrompt: BeforeInstallPromptEvent | null = null;
 
-export const InstallPrompt = ({ pageId = 'default', delay = 3000 }: InstallPromptProps) => {
+export const InstallPrompt = ({ pageId = 'default', delay = 300 }: InstallPromptProps) => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(globalDeferredPrompt);
   const [showPrompt, setShowPrompt] = useState(false);
 

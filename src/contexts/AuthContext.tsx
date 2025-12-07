@@ -71,8 +71,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
-          if (error.message.includes('refresh_token_not_found')) {
+          // Handle expired/invalid refresh token gracefully
+          if (error.message.includes('refresh_token') || error.message.includes('Refresh Token')) {
+            console.log('Session expirée, nettoyage...');
             await supabase.auth.signOut();
+            // Clear any stale auth data from localStorage
+            localStorage.removeItem('sb-ddvboxgescsptvhkjgjl-auth-token');
           }
           setLoading(false);
         } else {
@@ -86,8 +90,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setLoading(false);
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Erreur récupération session:', error);
+        // Handle any auth errors by clearing session
+        if (error?.message?.includes('refresh_token') || error?.message?.includes('Refresh Token')) {
+          await supabase.auth.signOut();
+          localStorage.removeItem('sb-ddvboxgescsptvhkjgjl-auth-token');
+        }
         setLoading(false);
       }
     };
@@ -137,7 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const redirectUrl = `${window.location.origin}/`;
       
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -147,19 +156,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
+        // Handle specific error messages for better UX
+        let errorMessage = error.message;
+        if (error.message.includes('already registered') || error.message.includes('already been registered')) {
+          errorMessage = "Cet email est déjà utilisé. Essayez de vous connecter.";
+        } else if (error.message.includes('invalid email')) {
+          errorMessage = "Format d'email invalide.";
+        } else if (error.message.includes('password')) {
+          errorMessage = "Le mot de passe doit contenir au moins 6 caractères.";
+        }
+        
         toast({
           title: "Erreur d'inscription",
-          description: error.message,
+          description: errorMessage,
           variant: "destructive"
         });
-      } else {
+        return { error };
+      }
+      
+      // Check if user already exists (Supabase returns user but no session for existing users)
+      if (data?.user && !data?.session && data.user.identities?.length === 0) {
         toast({
-          title: "Inscription réussie !",
-          description: "Vérifiez votre email pour confirmer votre compte."
+          title: "Compte existant",
+          description: "Cet email est déjà enregistré. Connectez-vous ou vérifiez vos emails.",
+          variant: "destructive"
         });
+        return { error: { message: 'User already registered' } };
       }
 
-      return { error };
+      toast({
+        title: "Inscription réussie !",
+        description: "Vérifiez votre email pour confirmer votre compte."
+      });
+
+      return { error: null };
     } catch (error) {
       console.error('Erreur inscription:', error);
       return { error };
@@ -174,9 +204,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
+        // Handle specific error messages for better UX
+        let errorMessage = error.message;
+        if (error.message.includes('Invalid login credentials')) {
+          errorMessage = "Email ou mot de passe incorrect.";
+        } else if (error.message.includes('Email not confirmed')) {
+          errorMessage = "Veuillez confirmer votre email avant de vous connecter.";
+        } else if (error.message.includes('Too many requests')) {
+          errorMessage = "Trop de tentatives. Réessayez dans quelques minutes.";
+        }
+        
         toast({
           title: "Erreur de connexion",
-          description: error.message,
+          description: errorMessage,
           variant: "destructive"
         });
       } else {
