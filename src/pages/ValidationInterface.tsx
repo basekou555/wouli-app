@@ -508,7 +508,7 @@ const ValidationInterface = () => {
                         <TableHead className="min-w-[300px]">Événement</TableHead>
                         <TableHead className="max-w-[200px]">Description</TableHead>
                         <TableHead className="text-center w-24">Score</TableHead>
-                        <TableHead className="w-32">Actions</TableHead>
+                        <TableHead className="min-w-[280px]">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
