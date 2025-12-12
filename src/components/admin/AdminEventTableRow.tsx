@@ -68,7 +68,8 @@ export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
     const variants: Record<string, any> = {
       pending: { variant: 'secondary', label: '⏳ En attente' },
       active: { variant: 'default', label: '✅ Validé' },
-      rejected: { variant: 'destructive', label: '❌ Rejeté' }
+      rejected: { variant: 'destructive', label: '❌ Rejeté' },
+      manual_review: { variant: 'warning', label: '🔶 À traiter' }
     };
     const config = variants[status] || { variant: 'secondary', label: status };
     return <Badge variant={config.variant} className="text-xs">{config.label}</Badge>;
@@ -164,63 +165,110 @@ export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
         </div>
       </TableCell>
 
-      {/* Actions rapides */}
-      <TableCell className="w-32">
+      {/* Actions rapides - Boutons directs */}
+      <TableCell className="w-auto min-w-[280px]">
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Preview - Toujours visible */}
           <Button
             size="sm"
             variant="ghost"
             onClick={() => onPreview(event)}
-            className="h-8 w-8 p-0"
+            className="h-8 px-2 text-xs hover:bg-muted"
+            title="Aperçu rapide"
           >
-            <Eye className="w-4 h-4" />
+            <Eye className="w-3.5 h-3.5 sm:mr-1" />
+            <span className="hidden sm:inline">Preview</span>
           </Button>
 
+          {/* Modifier - Toujours visible */}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => onEdit(event)}
+            className="h-8 px-2 text-xs hover:bg-muted"
+            title="Modifier l'événement"
+          >
+            <Edit className="w-3.5 h-3.5 sm:mr-1" />
+            <span className="hidden sm:inline">Modifier</span>
+          </Button>
+
+          {/* Actions contextuelles selon statut */}
+          {event.status === 'pending' && (
+            <>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => onStatusChange([event.id], 'pending', 'active')}
+                className="h-8 px-2 text-xs text-green-600 hover:text-green-700 hover:bg-green-50"
+                title="Valider l'événement"
+              >
+                <Check className="w-3.5 h-3.5 sm:mr-1" />
+                <span className="hidden sm:inline">Accepter</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => onStatusChange([event.id], 'pending', 'rejected')}
+                className="h-8 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                title="Rejeter l'événement"
+              >
+                <X className="w-3.5 h-3.5 sm:mr-1" />
+                <span className="hidden sm:inline">Refuser</span>
+              </Button>
+            </>
+          )}
+
+          {event.status === 'manual_review' && (
+            <>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => onEdit(event)}
+                className="h-8 px-2 text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                title="Traiter le programme manuellement"
+              >
+                <Edit className="w-3.5 h-3.5 sm:mr-1" />
+                <span className="hidden sm:inline">Traiter</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => onStatusChange([event.id], 'manual_review', 'archived')}
+                className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted"
+                title="Archiver sans traiter"
+              >
+                <X className="w-3.5 h-3.5 sm:mr-1" />
+                <span className="hidden sm:inline">Ignorer</span>
+              </Button>
+            </>
+          )}
+
+          {(event.status === 'active' || event.status === 'rejected') && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => onStatusChange([event.id], event.status, 'pending')}
+              className="h-8 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              title="Remettre en attente"
+            >
+              <History className="w-3.5 h-3.5 sm:mr-1" />
+              <span className="hidden sm:inline">Réactiver</span>
+            </Button>
+          )}
+
+          {/* Dropdown léger pour Historique */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                className="h-8 w-8 p-0 hover:bg-muted"
+                title="Plus d'actions"
+              >
                 <MoreHorizontal className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              {/* Actions contextuelles selon le statut */}
-              {event.status === 'pending' && (
-                <>
-                  <DropdownMenuItem 
-                    onClick={() => onStatusChange([event.id], 'pending', 'active')}
-                    className="text-green-600"
-                  >
-                    <Check className="w-4 h-4 mr-2" />
-                    Valider
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={() => onStatusChange([event.id], 'pending', 'rejected')}
-                    className="text-red-600"
-                  >
-                    <X className="w-4 h-4 mr-2" />
-                    Rejeter
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </>
-              )}
-              
-              {event.status !== 'pending' && (
-                <>
-                  <DropdownMenuItem 
-                    onClick={() => onStatusChange([event.id], event.status, 'pending')}
-                  >
-                    <History className="w-4 h-4 mr-2" />
-                    Remettre en attente
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </>
-              )}
-              
-              <DropdownMenuItem onClick={() => onEdit(event)}>
-                <Edit className="w-4 h-4 mr-2" />
-                Modifier
-              </DropdownMenuItem>
-              
+            <DropdownMenuContent align="end" className="w-40">
               <DropdownMenuItem onClick={() => onHistory(event.id, event.title)}>
                 <History className="w-4 h-4 mr-2" />
                 Historique

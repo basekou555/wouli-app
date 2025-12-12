@@ -364,6 +364,7 @@ export type Database = {
       }
       events: {
         Row: {
+          account_username: string | null
           activity_type: string | null
           actual_participants: number | null
           address: string | null
@@ -378,15 +379,21 @@ export type Database = {
           description: string | null
           end_date: string | null
           end_time: string | null
+          event_day: string | null
           event_format: string | null
+          event_type: string | null
           external_url: string | null
           id: string
           image_url: string | null
           likes: number | null
           location: string
+          manual_review_reason: string | null
           max_participants: number | null
           music_style: string | null
+          needs_manual_image: boolean | null
           no_show_count: number | null
+          parsing_confidence: number | null
+          parsing_method: string | null
           participants: number | null
           price: number | null
           scraped_at: string | null
@@ -407,6 +414,7 @@ export type Database = {
           views: number | null
         }
         Insert: {
+          account_username?: string | null
           activity_type?: string | null
           actual_participants?: number | null
           address?: string | null
@@ -421,15 +429,21 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           end_time?: string | null
+          event_day?: string | null
           event_format?: string | null
+          event_type?: string | null
           external_url?: string | null
           id?: string
           image_url?: string | null
           likes?: number | null
           location: string
+          manual_review_reason?: string | null
           max_participants?: number | null
           music_style?: string | null
+          needs_manual_image?: boolean | null
           no_show_count?: number | null
+          parsing_confidence?: number | null
+          parsing_method?: string | null
           participants?: number | null
           price?: number | null
           scraped_at?: string | null
@@ -450,6 +464,7 @@ export type Database = {
           views?: number | null
         }
         Update: {
+          account_username?: string | null
           activity_type?: string | null
           actual_participants?: number | null
           address?: string | null
@@ -464,15 +479,21 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           end_time?: string | null
+          event_day?: string | null
           event_format?: string | null
+          event_type?: string | null
           external_url?: string | null
           id?: string
           image_url?: string | null
           likes?: number | null
           location?: string
+          manual_review_reason?: string | null
           max_participants?: number | null
           music_style?: string | null
+          needs_manual_image?: boolean | null
           no_show_count?: number | null
+          parsing_confidence?: number | null
+          parsing_method?: string | null
           participants?: number | null
           price?: number | null
           scraped_at?: string | null
@@ -595,6 +616,48 @@ export type Database = {
           updated_at?: string | null
           username?: string
           website?: string | null
+        }
+        Relationships: []
+      }
+      scraper_stats: {
+        Row: {
+          auto_validated: number | null
+          created_at: string | null
+          date: string
+          events_detected: number | null
+          execution_time_seconds: number | null
+          filtering_mode: string | null
+          id: string
+          manual_review_needed: number | null
+          programs_detected: number | null
+          programs_parsed: number | null
+          total_posts_analyzed: number | null
+        }
+        Insert: {
+          auto_validated?: number | null
+          created_at?: string | null
+          date: string
+          events_detected?: number | null
+          execution_time_seconds?: number | null
+          filtering_mode?: string | null
+          id?: string
+          manual_review_needed?: number | null
+          programs_detected?: number | null
+          programs_parsed?: number | null
+          total_posts_analyzed?: number | null
+        }
+        Update: {
+          auto_validated?: number | null
+          created_at?: string | null
+          date?: string
+          events_detected?: number | null
+          execution_time_seconds?: number | null
+          filtering_mode?: string | null
+          id?: string
+          manual_review_needed?: number | null
+          programs_detected?: number | null
+          programs_parsed?: number | null
+          total_posts_analyzed?: number | null
         }
         Relationships: []
       }
