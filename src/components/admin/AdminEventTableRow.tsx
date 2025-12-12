@@ -3,16 +3,9 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
-  Check, X, Edit, Eye, History, MoreHorizontal, 
+  Check, X, Edit, Eye, History, RotateCcw,
   Calendar, MapPin, Euro, ExternalLink, Instagram 
 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { PendingEvent } from '@/hooks/utils/adminEventMappers';
 import { getCategoryById } from '@/data/wouliCategories';
 
@@ -112,7 +105,10 @@ export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
           {/* Info principale */}
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
-              <h4 className="font-semibold text-sm line-clamp-2 text-foreground">
+              <h4 
+                className="font-semibold text-sm line-clamp-2 text-foreground cursor-pointer hover:text-purple-600 transition-colors"
+                onClick={() => onPreview(event)}
+              >
                 {event.title}
               </h4>
               <div className="flex items-center gap-1 flex-shrink-0">
@@ -165,116 +161,98 @@ export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
         </div>
       </TableCell>
 
-      {/* Actions rapides - Boutons directs */}
-      <TableCell className="w-auto min-w-[280px]">
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          {/* Preview - Toujours visible */}
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => onPreview(event)}
-            className="h-8 px-2 text-xs hover:bg-muted"
-            title="Aperçu rapide"
-          >
-            <Eye className="w-3.5 h-3.5 sm:mr-1" />
-            <span className="hidden sm:inline">Preview</span>
-          </Button>
-
-          {/* Modifier - Toujours visible */}
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => onEdit(event)}
-            className="h-8 px-2 text-xs hover:bg-muted"
-            title="Modifier l'événement"
-          >
-            <Edit className="w-3.5 h-3.5 sm:mr-1" />
-            <span className="hidden sm:inline">Modifier</span>
-          </Button>
-
-          {/* Actions contextuelles selon statut */}
-          {event.status === 'pending' && (
-            <>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => onStatusChange([event.id], 'pending', 'active')}
-                className="h-8 px-2 text-xs text-green-600 hover:text-green-700 hover:bg-green-50"
-                title="Valider l'événement"
-              >
-                <Check className="w-3.5 h-3.5 sm:mr-1" />
-                <span className="hidden sm:inline">Accepter</span>
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => onStatusChange([event.id], 'pending', 'rejected')}
-                className="h-8 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-                title="Rejeter l'événement"
-              >
-                <X className="w-3.5 h-3.5 sm:mr-1" />
-                <span className="hidden sm:inline">Refuser</span>
-              </Button>
-            </>
-          )}
-
-          {event.status === 'manual_review' && (
-            <>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => onEdit(event)}
-                className="h-8 px-2 text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                title="Traiter le programme manuellement"
-              >
-                <Edit className="w-3.5 h-3.5 sm:mr-1" />
-                <span className="hidden sm:inline">Traiter</span>
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => onStatusChange([event.id], 'manual_review', 'archived')}
-                className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted"
-                title="Archiver sans traiter"
-              >
-                <X className="w-3.5 h-3.5 sm:mr-1" />
-                <span className="hidden sm:inline">Ignorer</span>
-              </Button>
-            </>
-          )}
-
-          {(event.status === 'active' || event.status === 'rejected') && (
+      {/* Actions rapides - Boutons sur 2 lignes */}
+      <TableCell className="w-auto min-w-[200px]">
+        <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Ligne 1 : Modifier + Historique */}
+          <div className="flex items-center gap-1">
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => onStatusChange([event.id], event.status, 'pending')}
-              className="h-8 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-              title="Remettre en attente"
+              onClick={() => onEdit(event)}
+              className="h-7 px-2 text-xs hover:bg-muted"
+              title="Modifier l'événement"
+            >
+              <Edit className="w-3.5 h-3.5 sm:mr-1" />
+              <span className="hidden sm:inline">Modifier</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => onHistory(event.id, event.title)}
+              className="h-7 px-2 text-xs hover:bg-muted"
+              title="Voir l'historique"
             >
               <History className="w-3.5 h-3.5 sm:mr-1" />
-              <span className="hidden sm:inline">Réactiver</span>
+              <span className="hidden sm:inline">Historique</span>
             </Button>
-          )}
+          </div>
+          
+          {/* Ligne 2 : Actions contextuelles selon statut */}
+          <div className="flex items-center gap-1">
+            {event.status === 'pending' && (
+              <>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onStatusChange([event.id], 'pending', 'active')}
+                  className="h-7 px-2 text-xs text-green-600 hover:text-green-700 hover:bg-green-50"
+                  title="Valider l'événement"
+                >
+                  <Check className="w-3.5 h-3.5 sm:mr-1" />
+                  <span className="hidden sm:inline">Accepter</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onStatusChange([event.id], 'pending', 'rejected')}
+                  className="h-7 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                  title="Rejeter l'événement"
+                >
+                  <X className="w-3.5 h-3.5 sm:mr-1" />
+                  <span className="hidden sm:inline">Refuser</span>
+                </Button>
+              </>
+            )}
 
-          {/* Dropdown léger pour Historique */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                size="sm" 
-                variant="ghost" 
-                className="h-8 w-8 p-0 hover:bg-muted"
-                title="Plus d'actions"
+            {event.status === 'manual_review' && (
+              <>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onStatusChange([event.id], 'manual_review', 'active')}
+                  className="h-7 px-2 text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                  title="Traiter et valider"
+                >
+                  <Check className="w-3.5 h-3.5 sm:mr-1" />
+                  <span className="hidden sm:inline">Traiter</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onStatusChange([event.id], 'manual_review', 'archived')}
+                  className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted"
+                  title="Archiver sans traiter"
+                >
+                  <X className="w-3.5 h-3.5 sm:mr-1" />
+                  <span className="hidden sm:inline">Ignorer</span>
+                </Button>
+              </>
+            )}
+
+            {(event.status === 'active' || event.status === 'rejected') && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => onStatusChange([event.id], event.status, 'pending')}
+                className="h-7 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                title="Remettre en attente"
               >
-                <MoreHorizontal className="w-4 h-4" />
+                <RotateCcw className="w-3.5 h-3.5 sm:mr-1" />
+                <span className="hidden sm:inline">Réactiver</span>
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuItem onClick={() => onHistory(event.id, event.title)}>
-                <History className="w-4 h-4 mr-2" />
-                Historique
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            )}
+          </div>
         </div>
       </TableCell>
     </TableRow>
