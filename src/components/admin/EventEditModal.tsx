@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, MapPin, Euro, Save, X, Sparkles, Loader2 } from 'lucide-react';
+import { Calendar, MapPin, Euro, Save, X, Sparkles, Loader2, Check } from 'lucide-react';
 import { WOULI_CATEGORIES } from '@/data/wouliCategories';
 import { supabase } from '@/integrations/supabase/client';
 import { enhanceEventContent } from '@/services/aiEnhancementService';
@@ -100,33 +100,43 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (andValidate = false) => {
     if (!event) return;
     
     setSaving(true);
     try {
       const dateTime = new Date(`${formData.date}T${formData.time}`);
       
-      // Mettre à jour l'événement directement
+      const updateData: any = {
+        title: formData.title,
+        description: formData.description || null,
+        date: dateTime.toISOString(),
+        location: formData.location,
+        address: formData.address || null,
+        category: formData.category as any,
+        price: formData.price ? parseFloat(formData.price) : null,
+        image_url: formData.image_url || null,
+        external_url: formData.external_url || null,
+        updated_at: new Date().toISOString()
+      };
+
+      // Si validation demandée, ajouter le statut active
+      if (andValidate) {
+        updateData.status = 'active';
+        updateData.validated_at = new Date().toISOString();
+      }
+
       const { error } = await supabase
         .from('events')
-        .update({
-          title: formData.title,
-          description: formData.description || null,
-          date: dateTime.toISOString(),
-          location: formData.location,
-          address: formData.address || null,
-          category: formData.category as any,
-          price: formData.price ? parseFloat(formData.price) : null,
-          image_url: formData.image_url || null,
-          external_url: formData.external_url || null,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', event.id);
 
       if (error) throw error;
 
-      toast.success("✅ Événement modifié avec succès");
+      toast.success(andValidate 
+        ? "✅ Événement modifié et validé !" 
+        : "✅ Événement modifié avec succès"
+      );
 
       onSuccess();
       onClose();
@@ -346,18 +356,28 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
         </div>
 
         <div className="flex gap-2 pt-6 border-t">
-          <Button onClick={onClose} variant="outline" className="flex-1">
+          <Button onClick={onClose} variant="outline">
             <X className="w-4 h-4 mr-2" />
             Annuler
           </Button>
           <Button 
-            onClick={handleSave} 
+            onClick={() => handleSave(false)} 
             disabled={saving || !formData.title || !formData.location}
-            className="flex-1"
+            variant="secondary"
           >
             <Save className="w-4 h-4 mr-2" />
             {saving ? 'Sauvegarde...' : 'Sauvegarder'}
           </Button>
+          {event.status !== 'active' && (
+            <Button 
+              onClick={() => handleSave(true)} 
+              disabled={saving || !formData.title || !formData.location}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <Check className="w-4 h-4 mr-2" />
+              {saving ? 'Validation...' : 'Sauvegarder et Valider'}
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
