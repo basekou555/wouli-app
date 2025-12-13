@@ -3,7 +3,7 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
-  Check, X, Edit, Eye, History, RotateCcw,
+  Check, X, Edit, Eye, History, RotateCcw, FileEdit,
   Calendar, MapPin, Euro, ExternalLink, Instagram 
 } from 'lucide-react';
 import { PendingEvent } from '@/hooks/utils/adminEventMappers';
@@ -15,6 +15,7 @@ interface AdminEventTableRowProps {
   onSelect: (eventId: string) => void;
   onPreview: (event: PendingEvent) => void;
   onEdit: (event: PendingEvent) => void;
+  onProcessManualReview?: (event: PendingEvent) => void;
   onHistory: (eventId: string, eventTitle: string) => void;
   onStatusChange: (eventIds: string[], currentStatus: string, targetStatus: string) => void;
   calculateScore: (event: PendingEvent) => number;
@@ -27,6 +28,7 @@ export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
   onSelect,
   onPreview,
   onEdit,
+  onProcessManualReview,
   onHistory,
   onStatusChange,
   calculateScore,
@@ -220,11 +222,11 @@ export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => onStatusChange([event.id], 'manual_review', 'active')}
+                  onClick={() => onProcessManualReview?.(event)}
                   className="h-7 px-2 text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                  title="Traiter et valider"
+                  title="Créer les événements manuellement"
                 >
-                  <Check className="w-3.5 h-3.5 sm:mr-1" />
+                  <FileEdit className="w-3.5 h-3.5 sm:mr-1" />
                   <span className="hidden sm:inline">Traiter</span>
                 </Button>
                 <Button

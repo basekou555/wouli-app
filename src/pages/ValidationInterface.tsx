@@ -77,6 +77,31 @@ const ValidationInterface = () => {
   const EVENTS_PER_PAGE = 10;
   const { toast } = useToast();
 
+  // State pour modale Manual Review
+  const [processManualReview, setProcessManualReview] = useState<PendingEvent | null>(null);
+  const [manualEventCount, setManualEventCount] = useState(1);
+  const [manualEvents, setManualEvents] = useState<Array<{
+    title: string;
+    date: string;
+    time: string;
+    description: string;
+    price: number;
+  }>>([]);
+
+  // Initialiser les formulaires quand la modale s'ouvre
+  useEffect(() => {
+    if (processManualReview) {
+      const initialForms = Array.from({ length: manualEventCount }, () => ({
+        title: '',
+        date: new Date().toISOString().split('T')[0],
+        time: '22:00',
+        description: '',
+        price: 0
+      }));
+      setManualEvents(initialForms);
+    }
+  }, [processManualReview, manualEventCount]);
+
   // Filtres avancés
   const [searchQuery, setSearchQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<'all' | 'urgent' | 'normal'>('all');
@@ -365,20 +390,23 @@ const ValidationInterface = () => {
   const counts = useMemo(() => {
     const notArchived = events.filter(e => e.status !== 'archived' && getEventStatus(e) !== 'archived');
     const today = new Date().toISOString().split('T')[0];
+    const scopedEvents = filter === 'all' ? notArchived : notArchived.filter(e => e.category === filter);
     
     return {
       pending: notArchived.filter(e => e.status === 'pending').length,
       active: notArchived.filter(e => e.status === 'active').length,
       rejected: notArchived.filter(e => e.status === 'rejected').length,
+      manualReview: notArchived.filter(e => e.status === 'manual_review').length,
       todayValidated: notArchived.filter(e => 
         e.status === 'active' && 
         e.validated_at && 
         e.validated_at.startsWith(today)
       ).length,
-      scopedPending: (filter === 'all' ? notArchived : notArchived.filter(e => e.category === filter)).filter(e => e.status === 'pending').length,
-      scopedActive: (filter === 'all' ? notArchived : notArchived.filter(e => e.category === filter)).filter(e => e.status === 'active').length,
-      scopedRejected: (filter === 'all' ? notArchived : notArchived.filter(e => e.category === filter)).filter(e => e.status === 'rejected').length,
-      scopedAll: (filter === 'all' ? notArchived : notArchived.filter(e => e.category === filter)).length,
+      scopedManualReview: scopedEvents.filter(e => e.status === 'manual_review').length,
+      scopedPending: scopedEvents.filter(e => e.status === 'pending').length,
+      scopedActive: scopedEvents.filter(e => e.status === 'active').length,
+      scopedRejected: scopedEvents.filter(e => e.status === 'rejected').length,
+      scopedAll: scopedEvents.length,
     };
   }, [events, filter]);
 
@@ -581,11 +609,14 @@ const ValidationInterface = () => {
 
         {/* Onglets par statut */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="pending">En attente ({counts.scopedPending})</TabsTrigger>
-            <TabsTrigger value="active">Validés ({counts.scopedActive})</TabsTrigger>
-            <TabsTrigger value="rejected">Rejetés ({counts.scopedRejected})</TabsTrigger>
-            <TabsTrigger value="all">Tous ({counts.scopedAll})</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-5 max-w-3xl">
+            <TabsTrigger value="manual_review" className="text-orange-600">
+              ⚠️ À Réviser ({counts.scopedManualReview})
+            </TabsTrigger>
+            <TabsTrigger value="pending">📥 En attente ({counts.scopedPending})</TabsTrigger>
+            <TabsTrigger value="active">✅ Validés ({counts.scopedActive})</TabsTrigger>
+            <TabsTrigger value="rejected">❌ Rejetés ({counts.scopedRejected})</TabsTrigger>
+            <TabsTrigger value="all">📋 Tous ({counts.scopedAll})</TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab} className="space-y-4">
@@ -756,6 +787,7 @@ const ValidationInterface = () => {
                           onSelect={handleSelect}
                           onPreview={setShowDetails}
                           onEdit={setEditingEvent}
+                          onProcessManualReview={setProcessManualReview}
                           onHistory={(eventId, eventTitle) => {
                             setHistoryEventId(eventId);
                             setHistoryEventTitle(eventTitle);
@@ -872,6 +904,267 @@ const ValidationInterface = () => {
             setEnhanceWithAI([]);
           }}
         />
+      )}
+
+      {/* Modale Manual Review - Création multiple événements */}
+      {processManualReview && (
+        <Dialog open={!!processManualReview} onOpenChange={() => setProcessManualReview(null)}>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-orange-500" />
+                Traitement Programme Manuel
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="grid grid-cols-2 gap-6">
+              {/* COLONNE GAUCHE - Info scraping */}
+              <div className="space-y-4 border-r pr-6">
+                <div>
+                  <h3 className="font-semibold text-sm mb-2">📸 Screenshot Instagram</h3>
+                  {processManualReview.image_url ? (
+                    <img 
+                      src={processManualReview.image_url} 
+                      alt="Programme" 
+                      className="w-full rounded-lg border"
+                    />
+                  ) : (
+                    <div className="w-full h-48 bg-muted rounded-lg flex items-center justify-center">
+                      <p className="text-muted-foreground text-sm">Pas d'image disponible</p>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <h3 className="font-semibold text-sm mb-2">📝 Texte détecté (OCR)</h3>
+                  <div className="bg-muted p-3 rounded-lg text-sm max-h-40 overflow-y-auto">
+                    {processManualReview.description || 'Aucun texte extrait'}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="font-semibold text-sm mb-2">⚠️ Raison révision manuelle</h3>
+                  <div className="bg-orange-50 border border-orange-200 p-3 rounded-lg text-sm text-orange-800">
+                    {processManualReview.manual_review_reason || 'Non spécifiée'}
+                  </div>
+                </div>
+
+                {processManualReview.external_url && (
+                  <div>
+                    <h3 className="font-semibold text-sm mb-2">🔗 Post Instagram</h3>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => window.open(processManualReview.external_url!, '_blank')}
+                    >
+                      <Instagram className="w-4 h-4 mr-2" />
+                      Voir le post original
+                    </Button>
+                  </div>
+                )}
+
+                <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg text-sm">
+                  <p className="text-blue-800">
+                    <strong>Source :</strong> @{processManualReview.account_username || 'inconnu'}
+                  </p>
+                </div>
+              </div>
+
+              {/* COLONNE DROITE - Création événements */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold">Créer les événements</h3>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-muted-foreground">Nombre :</label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="10"
+                      value={manualEventCount}
+                      onChange={(e) => setManualEventCount(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
+                      className="w-16 h-8"
+                    />
+                  </div>
+                </div>
+
+                {/* Formulaires empilés */}
+                <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+                  {manualEvents.map((evt, idx) => (
+                    <div key={idx} className="border rounded-lg p-4 space-y-3 bg-card">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold text-sm">Événement {idx + 1}</h4>
+                        {manualEventCount > 1 && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setManualEventCount(c => c - 1);
+                              setManualEvents(prev => prev.filter((_, i) => i !== idx));
+                            }}
+                            className="h-6 w-6 p-0 text-red-600"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-medium">Titre *</label>
+                        <Input
+                          value={evt.title}
+                          onChange={(e) => {
+                            const newEvents = [...manualEvents];
+                            newEvents[idx].title = e.target.value;
+                            setManualEvents(newEvents);
+                          }}
+                          placeholder="Ex: Soirée Electro"
+                          className="mt-1"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-xs font-medium">Date *</label>
+                          <Input
+                            type="date"
+                            value={evt.date}
+                            onChange={(e) => {
+                              const newEvents = [...manualEvents];
+                              newEvents[idx].date = e.target.value;
+                              setManualEvents(newEvents);
+                            }}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium">Heure *</label>
+                          <Input
+                            type="time"
+                            value={evt.time}
+                            onChange={(e) => {
+                              const newEvents = [...manualEvents];
+                              newEvents[idx].time = e.target.value;
+                              setManualEvents(newEvents);
+                            }}
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-medium">Description</label>
+                        <textarea
+                          value={evt.description}
+                          onChange={(e) => {
+                            const newEvents = [...manualEvents];
+                            newEvents[idx].description = e.target.value;
+                            setManualEvents(newEvents);
+                          }}
+                          placeholder="Décrivez l'événement..."
+                          className="mt-1 w-full min-h-16 p-2 border rounded-md text-sm bg-background"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-medium">Prix (€)</label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.5"
+                          value={evt.price}
+                          onChange={(e) => {
+                            const newEvents = [...manualEvents];
+                            newEvents[idx].price = parseFloat(e.target.value) || 0;
+                            setManualEvents(newEvents);
+                          }}
+                          placeholder="0"
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Boutons d'action */}
+                <div className="flex gap-2 pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={() => setProcessManualReview(null)}
+                    className="flex-1"
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      const hasEmptyTitles = manualEvents.some(e => !e.title.trim());
+                      if (hasEmptyTitles) {
+                        toast({
+                          title: "Erreur",
+                          description: "Tous les événements doivent avoir un titre",
+                          variant: "destructive"
+                        });
+                        return;
+                      }
+
+                      try {
+                        const { data: userData } = await supabase.auth.getUser();
+                        const userId = userData.user?.id;
+                        
+                        const eventsToCreate = manualEvents.map(evt => ({
+                          title: evt.title,
+                          description: evt.description,
+                          date: `${evt.date}T${evt.time}:00`,
+                          price: evt.price,
+                          status: 'pending' as const,
+                          event_type: 'program_manual',
+                          category: processManualReview.category as 'a-boire' | 'a-manger' | 'activites' | 'soirees',
+                          location: processManualReview.location,
+                          image_url: processManualReview.image_url,
+                          external_url: processManualReview.external_url,
+                          account_username: processManualReview.account_username,
+                          created_by: userId!
+                        }));
+
+                        const { error: createError } = await supabase
+                          .from('events')
+                          .insert(eventsToCreate);
+
+                        if (createError) throw createError;
+
+                        const { error: archiveError } = await supabase
+                          .from('events')
+                          .update({ status: 'archived' })
+                          .eq('id', processManualReview.id);
+
+                        if (archiveError) throw archiveError;
+
+                        toast({
+                          title: "Succès",
+                          description: `${manualEvents.length} événement(s) créé(s) avec succès`
+                        });
+                        setProcessManualReview(null);
+                        setManualEventCount(1);
+                        fetchEvents(0, false);
+                      } catch (error: any) {
+                        console.error('Erreur création événements:', error);
+                        toast({
+                          title: "Erreur",
+                          description: "Erreur lors de la création des événements",
+                          variant: "destructive"
+                        });
+                      }
+                    }}
+                    className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                  >
+                    <Check className="w-4 h-4 mr-2" />
+                    Créer les {manualEvents.length} événement(s)
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
