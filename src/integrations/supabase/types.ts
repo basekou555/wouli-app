@@ -619,6 +619,60 @@ export type Database = {
         }
         Relationships: []
       }
+      scraper_errors: {
+        Row: {
+          account_username: string | null
+          batch_number: number | null
+          created_at: string | null
+          error_code: string | null
+          error_message: string | null
+          error_type: string
+          event_data: Json
+          id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          retry_at: string | null
+          retry_count: number | null
+          retry_error: string | null
+          retry_status: string | null
+          scraper_run_id: string | null
+        }
+        Insert: {
+          account_username?: string | null
+          batch_number?: number | null
+          created_at?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          error_type: string
+          event_data: Json
+          id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          retry_at?: string | null
+          retry_count?: number | null
+          retry_error?: string | null
+          retry_status?: string | null
+          scraper_run_id?: string | null
+        }
+        Update: {
+          account_username?: string | null
+          batch_number?: number | null
+          created_at?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          error_type?: string
+          event_data?: Json
+          id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          retry_at?: string | null
+          retry_count?: number | null
+          retry_error?: string | null
+          retry_status?: string | null
+          scraper_run_id?: string | null
+        }
+        Relationships: []
+      }
       scraper_stats: {
         Row: {
           auto_validated: number | null
