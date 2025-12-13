@@ -1,19 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Calendar, MapPin, Euro, ExternalLink, Check, X, Clock, Filter, RefreshCw, 
-  AlertCircle, Instagram, Edit, RotateCcw, History, ArrowUpDown, Sparkles 
+  AlertCircle, Instagram, Edit, RotateCcw, History, ArrowUpDown, Sparkles, Search
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
-// AdminProfileChecker removed - using user_roles table for admin checks
 import { WOULI_CATEGORIES, getCategoryById } from '@/data/wouliCategories';
 import EventEditModal from '@/components/admin/EventEditModal';
 import EventModerationHistory from '@/components/admin/EventModerationHistory';
@@ -39,6 +40,9 @@ interface PendingEvent {
   created_at: string;
   validated_at?: string;
   image_url: string | null;
+  account_username?: string;
+  event_type?: string;
+  manual_review_reason?: string;
 }
 
 interface EventStats {
@@ -73,6 +77,30 @@ const ValidationInterface = () => {
   const EVENTS_PER_PAGE = 10;
   const { toast } = useToast();
 
+  // Filtres avancés
+  const [searchQuery, setSearchQuery] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState<'all' | 'urgent' | 'normal'>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [accountFilter, setAccountFilter] = useState<string>('all');
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
+  const [accounts, setAccounts] = useState<string[]>([]);
+
+  // Charger la liste des comptes Instagram uniques
+  useEffect(() => {
+    const loadAccounts = async () => {
+      const { data } = await supabase
+        .from('events')
+        .select('account_username')
+        .not('account_username', 'is', null);
+      
+      if (data) {
+        const uniqueAccounts = [...new Set(data.map(e => e.account_username))].filter(Boolean) as string[];
+        setAccounts(uniqueAccounts.sort());
+      }
+    };
+    loadAccounts();
+  }, []);
+
   useEffect(() => {
     fetchEvents();
     
@@ -95,19 +123,17 @@ const ValidationInterface = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [activeTab]); // Recharger quand l'onglet change
+  }, [activeTab]);
 
   const fetchEvents = async (pageNum = 0, append = false) => {
     try {
       const start = pageNum * EVENTS_PER_PAGE;
       const end = start + EVENTS_PER_PAGE - 1;
 
-      // Construire la requête en fonction de l'onglet actif
       let query = supabase
         .from('events')
         .select('*', { count: 'exact' });
 
-      // Filtrer par statut selon l'onglet actif
       if (activeTab === 'all') {
         query = query.neq('status', 'archived');
       } else {
@@ -122,7 +148,6 @@ const ValidationInterface = () => {
       
       const newEvents = data || [];
       
-      // Fusion intelligente : éviter les doublons
       if (append) {
         const existingIds = new Set(events.map(e => e.id));
         const uniqueNewEvents = newEvents.filter(e => !existingIds.has(e.id));
@@ -133,7 +158,6 @@ const ValidationInterface = () => {
       
       setHasMore(newEvents.length === EVENTS_PER_PAGE);
       
-      // Enregistrer le total
       if (count !== null) setTotalCount(count);
       
       if (!append) setPage(pageNum);
@@ -157,7 +181,6 @@ const ValidationInterface = () => {
     setLoadingMore(false);
   };
 
-  // Actions rapides (legacy - pour compatibilité)
   const handleApprove = async (eventIds: string | string[]) => {
     const ids = Array.isArray(eventIds) ? eventIds : [eventIds];
     setStatusChange({
@@ -181,11 +204,9 @@ const ValidationInterface = () => {
   };
 
   const onStatusChangeSuccess = async () => {
-    // Recharger la première page
     await fetchEvents(0, false);
     setSelectedIds(new Set());
     
-    // Charger automatiquement plus d'événements si la page courante est vide/faible
     setTimeout(async () => {
       const visibleEvents = events.filter(e => 
         e.status !== 'archived' && 
@@ -202,7 +223,6 @@ const ValidationInterface = () => {
     }, 500);
   };
 
-  // Utility functions
   const calculateScore = (event: PendingEvent) => {
     let score = 0;
     if (event.image_url) score += 2;
@@ -217,6 +237,69 @@ const ValidationInterface = () => {
     if (score >= 7) return 'text-green-600';
     if (score >= 5) return 'text-yellow-600';
     return 'text-red-600';
+  };
+
+  // Fonction de filtrage avancée
+  const applyAdvancedFilters = (events: PendingEvent[]) => {
+    let filtered = events;
+
+    // Recherche full-text
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(e => 
+        e.title.toLowerCase().includes(query) ||
+        e.description?.toLowerCase().includes(query) ||
+        e.account_username?.toLowerCase().includes(query) ||
+        e.location?.toLowerCase().includes(query)
+      );
+    }
+
+    // Filtre priorité (urgent = manual_review + erreurs)
+    if (priorityFilter === 'urgent') {
+      filtered = filtered.filter(e => 
+        e.status === 'manual_review' || 
+        e.manual_review_reason !== null
+      );
+    } else if (priorityFilter === 'normal') {
+      filtered = filtered.filter(e => 
+        e.status === 'pending' && 
+        !e.manual_review_reason
+      );
+    }
+
+    // Filtre type d'événement
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter(e => e.event_type === typeFilter);
+    }
+
+    // Filtre compte Instagram
+    if (accountFilter !== 'all') {
+      filtered = filtered.filter(e => e.account_username === accountFilter);
+    }
+
+    // Filtre date événement
+    if (dateFilter !== 'all') {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
+      filtered = filtered.filter(e => {
+        const eventDate = new Date(e.date);
+        if (dateFilter === 'today') return eventDate.toDateString() === today.toDateString();
+        if (dateFilter === 'week') {
+          const weekLater = new Date(today);
+          weekLater.setDate(today.getDate() + 7);
+          return eventDate >= today && eventDate <= weekLater;
+        }
+        if (dateFilter === 'month') {
+          const monthLater = new Date(today);
+          monthLater.setMonth(today.getMonth() + 1);
+          return eventDate >= today && eventDate <= monthLater;
+        }
+        return true;
+      });
+    }
+
+    return filtered;
   };
 
   const handleSelectAll = () => {
@@ -239,26 +322,28 @@ const ValidationInterface = () => {
   };
 
   const getFilteredEvents = () => {
-    return events
+    let filtered = events
       .filter(event => {
-        // Le filtrage par statut est déjà fait côté Supabase
-        // On filtre uniquement par catégorie ici
         if (filter !== 'all' && event.category !== filter) return false;
         return true;
-      })
-      .sort((a, b) => {
-        switch(sortBy) {
-          case 'date': return new Date(a.date).getTime() - new Date(b.date).getTime();
-          case 'score': return calculateScore(b) - calculateScore(a);
-          case 'created': return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-          default: return 0;
-        }
       });
+
+    // Appliquer les filtres avancés
+    filtered = applyAdvancedFilters(filtered);
+
+    return filtered.sort((a, b) => {
+      switch(sortBy) {
+        case 'date': return new Date(a.date).getTime() - new Date(b.date).getTime();
+        case 'score': return calculateScore(b) - calculateScore(a);
+        case 'created': return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        default: return 0;
+      }
+    });
   };
 
   const filteredEvents = getFilteredEvents();
 
-  const counts = React.useMemo(() => {
+  const counts = useMemo(() => {
     const notArchived = events.filter(e => e.status !== 'archived' && getEventStatus(e) !== 'archived');
     const today = new Date().toISOString().split('T')[0];
     
@@ -271,13 +356,22 @@ const ValidationInterface = () => {
         e.validated_at && 
         e.validated_at.startsWith(today)
       ).length,
-      // Filtered counts for tabs
       scopedPending: (filter === 'all' ? notArchived : notArchived.filter(e => e.category === filter)).filter(e => e.status === 'pending').length,
       scopedActive: (filter === 'all' ? notArchived : notArchived.filter(e => e.category === filter)).filter(e => e.status === 'active').length,
       scopedRejected: (filter === 'all' ? notArchived : notArchived.filter(e => e.category === filter)).filter(e => e.status === 'rejected').length,
       scopedAll: (filter === 'all' ? notArchived : notArchived.filter(e => e.category === filter)).length,
     };
   }, [events, filter]);
+
+  const resetFilters = () => {
+    setSearchQuery('');
+    setPriorityFilter('all');
+    setTypeFilter('all');
+    setAccountFilter('all');
+    setDateFilter('all');
+  };
+
+  const hasActiveFilters = searchQuery || priorityFilter !== 'all' || typeFilter !== 'all' || accountFilter !== 'all' || dateFilter !== 'all';
 
   if (loading) {
     return (
@@ -349,7 +443,122 @@ const ValidationInterface = () => {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Admin role check handled by AdminRoute wrapper */}
+        {/* Section Filtres Avancés */}
+        <div className="bg-card rounded-lg border p-4 space-y-4 mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <Search className="w-5 h-5 text-muted-foreground" />
+            <h3 className="font-semibold">Recherche & Filtres</h3>
+            {hasActiveFilters && (
+              <Badge variant="secondary" className="ml-2">Filtres actifs</Badge>
+            )}
+          </div>
+
+          {/* Barre de recherche */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Rechercher par titre, description, lieu, compte Instagram..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+            {searchQuery && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                onClick={() => setSearchQuery('')}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+
+          {/* Filtres en grille */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Priorité */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Priorité</label>
+              <Select value={priorityFilter} onValueChange={(v: 'all' | 'urgent' | 'normal') => setPriorityFilter(v)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toutes</SelectItem>
+                  <SelectItem value="urgent">🔥 Urgentes (Manual Review)</SelectItem>
+                  <SelectItem value="normal">📥 Normales (Pending)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Type */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Type</label>
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous</SelectItem>
+                  <SelectItem value="single">🎉 Single</SelectItem>
+                  <SelectItem value="program_unparsed">📅 Programme</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Compte Instagram */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Source Instagram</label>
+              <Select value={accountFilter} onValueChange={setAccountFilter}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les comptes</SelectItem>
+                  {accounts.map(account => (
+                    <SelectItem key={account} value={account}>
+                      @{account}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Date événement */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Date événement</label>
+              <Select value={dateFilter} onValueChange={(v: 'all' | 'today' | 'week' | 'month') => setDateFilter(v)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toutes</SelectItem>
+                  <SelectItem value="today">Aujourd'hui</SelectItem>
+                  <SelectItem value="week">Cette semaine</SelectItem>
+                  <SelectItem value="month">Ce mois</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Reset + Compteur */}
+          <div className="flex items-center justify-between pt-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={resetFilters}
+              className="h-8"
+              disabled={!hasActiveFilters}
+            >
+              <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+              Réinitialiser
+            </Button>
+            
+            <Badge variant="secondary" className="h-8 px-3">
+              {filteredEvents.length} résultat{filteredEvents.length > 1 ? 's' : ''}
+            </Badge>
+          </div>
+        </div>
 
         {/* Onglets par statut */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
@@ -405,7 +614,6 @@ const ValidationInterface = () => {
                       {selectedIds.size} sélectionné(s)
                     </span>
                     
-                    {/* Actions selon l'onglet actif */}
                     {activeTab === 'pending' && (
                       <>
                         <Button
@@ -479,7 +687,7 @@ const ValidationInterface = () => {
               </div>
             )}
 
-            {/* Tableau moderne des événements */}
+            {/* Tableau des événements */}
             {processingId === 'bulk' ? (
               <div className="text-center py-12">
                 <LoadingSpinner size="lg" text="Traitement en cours..." />
@@ -488,8 +696,17 @@ const ValidationInterface = () => {
               <div className="bg-card rounded-lg border p-12 text-center">
                 <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">
-                  Aucun événement {activeTab === 'all' ? '' : activeTab === 'pending' ? 'en attente' : activeTab === 'active' ? 'validé' : 'rejeté'}
+                  {hasActiveFilters 
+                    ? "Aucun événement ne correspond aux filtres actifs"
+                    : `Aucun événement ${activeTab === 'all' ? '' : activeTab === 'pending' ? 'en attente' : activeTab === 'active' ? 'validé' : 'rejeté'}`
+                  }
                 </p>
+                {hasActiveFilters && (
+                  <Button variant="outline" onClick={resetFilters} className="mt-4">
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Réinitialiser les filtres
+                  </Button>
+                )}
               </div>
             ) : (
               <>
@@ -533,7 +750,7 @@ const ValidationInterface = () => {
                   </Table>
                 </div>
                 
-                {/* Bouton "Charger plus" amélioré */}
+                {/* Bouton "Charger plus" */}
                 {hasMore && (
                   <div className="flex flex-col items-center gap-2 mt-6">
                     <Button
@@ -573,7 +790,7 @@ const ValidationInterface = () => {
         </Tabs>
       </div>
 
-      {/* Preview Modal avec WouliEventCard */}
+      {/* Preview Modal */}
       <Dialog open={!!showDetails} onOpenChange={() => setShowDetails(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           {showDetails && (
