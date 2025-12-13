@@ -125,7 +125,7 @@ const ValidationInterface = () => {
     };
   }, [activeTab]);
 
-  const fetchEvents = async (pageNum = 0, append = false) => {
+  const fetchEvents = async (pageNum = 0, append = false, search = '') => {
     try {
       const start = pageNum * EVENTS_PER_PAGE;
       const end = start + EVENTS_PER_PAGE - 1;
@@ -134,10 +134,18 @@ const ValidationInterface = () => {
         .from('events')
         .select('*', { count: 'exact' });
 
-      if (activeTab === 'all') {
+      // Si recherche active, chercher dans tous les événements (sauf archivés)
+      if (search.trim()) {
+        const searchTerm = `%${search.trim()}%`;
+        query = query.or(`title.ilike.${searchTerm},description.ilike.${searchTerm},location.ilike.${searchTerm},account_username.ilike.${searchTerm}`);
         query = query.neq('status', 'archived');
       } else {
-        query = query.eq('status', activeTab);
+        // Logique normale par onglet
+        if (activeTab === 'all') {
+          query = query.neq('status', 'archived');
+        } else {
+          query = query.eq('status', activeTab);
+        }
       }
 
       const { data, error, count } = await query
@@ -173,11 +181,22 @@ const ValidationInterface = () => {
     }
   };
 
+  // Recherche côté serveur avec debounce
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setPage(0);
+      setLoading(true);
+      fetchEvents(0, false, searchQuery);
+    }, 300);
+    
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
   const loadMore = async () => {
     setLoadingMore(true);
     const nextPage = page + 1;
     setPage(nextPage);
-    await fetchEvents(nextPage, true);
+    await fetchEvents(nextPage, true, searchQuery);
     setLoadingMore(false);
   };
 
