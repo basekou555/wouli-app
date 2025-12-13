@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Calendar, MapPin, Euro, ExternalLink, Check, X, Clock, Filter, RefreshCw, 
-  AlertCircle, Instagram, Edit, RotateCcw, History, ArrowUpDown, Sparkles, Search
+  AlertCircle, Instagram, Edit, RotateCcw, History, ArrowUpDown, Sparkles, Search,
+  CheckCircle, Image as ImageIcon, Loader2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -88,6 +89,12 @@ const ValidationInterface = () => {
     price: number;
   }>>([]);
 
+  // State pour erreurs scraper
+  const [scraperErrors, setScraperErrors] = useState<any[]>([]);
+  const [errorCount, setErrorCount] = useState(0);
+  const [loadingErrors, setLoadingErrors] = useState(false);
+  const [retryingError, setRetryingError] = useState<string | null>(null);
+
   // Initialiser les formulaires quand la modale s'ouvre
   useEffect(() => {
     if (processManualReview) {
@@ -126,11 +133,33 @@ const ValidationInterface = () => {
     loadAccounts();
   }, []);
 
+  // Charger les erreurs scraper
+  const loadScraperErrors = async () => {
+    setLoadingErrors(true);
+    try {
+      const { data, error } = await supabase
+        .from('scraper_errors')
+        .select('*')
+        .eq('retry_status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      
+      setScraperErrors(data || []);
+      setErrorCount((data || []).length);
+    } catch (error) {
+      console.error('Erreur chargement scraper errors:', error);
+    } finally {
+      setLoadingErrors(false);
+    }
+  };
+
   useEffect(() => {
     fetchEvents();
+    loadScraperErrors();
     
     // Realtime subscription sur la table events
-    const channel = supabase
+    const eventsChannel = supabase
       .channel('events_changes')
       .on(
         'postgres_changes',
@@ -145,8 +174,25 @@ const ValidationInterface = () => {
       )
       .subscribe();
 
+    // Realtime subscription sur scraper_errors
+    const errorsChannel = supabase
+      .channel('scraper_errors_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'scraper_errors'
+        },
+        () => {
+          loadScraperErrors();
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(eventsChannel);
+      supabase.removeChannel(errorsChannel);
     };
   }, [activeTab]);
 
@@ -420,6 +466,115 @@ const ValidationInterface = () => {
 
   const hasActiveFilters = searchQuery || priorityFilter !== 'all' || typeFilter !== 'all' || accountFilter !== 'all' || dateFilter !== 'all';
 
+  // Fonction de retry erreur scraper
+  const handleRetryError = async (errorId: string, eventData: any) => {
+    setRetryingError(errorId);
+    try {
+      // Tenter de sauvegarder l'événement
+      const { error: insertError } = await supabase
+        .from('events')
+        .insert([eventData]);
+
+      if (insertError) {
+        // Échec du retry
+        await supabase
+          .from('scraper_errors')
+          .update({
+            retry_status: 'failed',
+            retry_count: (scraperErrors.find(e => e.id === errorId)?.retry_count || 0) + 1,
+            retry_at: new Date().toISOString(),
+            retry_error: insertError.message
+          })
+          .eq('id', errorId);
+
+        toast({
+          title: "Échec du retry",
+          description: insertError.message,
+          variant: "destructive"
+        });
+      } else {
+        // Succès du retry
+        await supabase
+          .from('scraper_errors')
+          .update({
+            retry_status: 'success',
+            retry_count: (scraperErrors.find(e => e.id === errorId)?.retry_count || 0) + 1,
+            retry_at: new Date().toISOString(),
+            resolved_at: new Date().toISOString()
+          })
+          .eq('id', errorId);
+
+        toast({
+          title: "Succès",
+          description: "Événement récupéré avec succès !"
+        });
+        loadScraperErrors();
+        fetchEvents();
+      }
+    } catch (error: any) {
+      console.error('Erreur retry:', error);
+      toast({
+        title: "Erreur",
+        description: "Erreur lors du retry",
+        variant: "destructive"
+      });
+    } finally {
+      setRetryingError(null);
+    }
+  };
+
+  const handleRetryAllErrors = async () => {
+    const pendingErrors = scraperErrors.filter(e => e.retry_status === 'pending');
+    
+    if (pendingErrors.length === 0) {
+      toast({
+        title: "Info",
+        description: "Aucune erreur à traiter"
+      });
+      return;
+    }
+
+    toast({
+      title: "Traitement en cours",
+      description: `Traitement de ${pendingErrors.length} erreur(s)...`
+    });
+
+    for (const error of pendingErrors) {
+      await handleRetryError(error.id, error.event_data);
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    toast({
+      title: "Terminé",
+      description: "Traitement terminé"
+    });
+  };
+
+  const handleIgnoreError = async (errorId: string) => {
+    try {
+      await supabase
+        .from('scraper_errors')
+        .update({
+          retry_status: 'failed',
+          resolved_at: new Date().toISOString()
+        })
+        .eq('id', errorId);
+
+      toast({
+        title: "Ignoré",
+        description: "Erreur ignorée"
+      });
+      loadScraperErrors();
+    } catch (error) {
+      console.error('Erreur ignore:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'ignorer l'erreur",
+        variant: "destructive"
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -609,15 +764,165 @@ const ValidationInterface = () => {
 
         {/* Onglets par statut */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="grid w-full grid-cols-5 max-w-3xl">
+          <TabsList className="grid w-full grid-cols-6 max-w-4xl">
             <TabsTrigger value="manual_review" className="text-orange-600">
               ⚠️ À Réviser ({counts.scopedManualReview})
             </TabsTrigger>
+            <TabsTrigger value="errors" className="text-red-600">
+              ❌ Erreurs ({errorCount})
+            </TabsTrigger>
             <TabsTrigger value="pending">📥 En attente ({counts.scopedPending})</TabsTrigger>
             <TabsTrigger value="active">✅ Validés ({counts.scopedActive})</TabsTrigger>
-            <TabsTrigger value="rejected">❌ Rejetés ({counts.scopedRejected})</TabsTrigger>
+            <TabsTrigger value="rejected">🗑️ Rejetés ({counts.scopedRejected})</TabsTrigger>
             <TabsTrigger value="all">📋 Tous ({counts.scopedAll})</TabsTrigger>
           </TabsList>
+
+          {/* Onglet Erreurs Scraper */}
+          <TabsContent value="errors" className="mt-6">
+            {loadingErrors ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+              </div>
+            ) : scraperErrors.length === 0 ? (
+              <div className="bg-card rounded-lg border p-12 text-center">
+                <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  Aucune erreur de scraping en attente 🎉
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Header avec stats et actions */}
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-600" />
+                    <div>
+                      <p className="font-semibold text-red-900">
+                        {scraperErrors.length} événement{scraperErrors.length > 1 ? 's' : ''} perdu{scraperErrors.length > 1 ? 's' : ''}
+                      </p>
+                      <p className="text-sm text-red-700">
+                        Ces événements n'ont pas pu être sauvegardés lors du scraping
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleRetryAllErrors}
+                    disabled={retryingError !== null}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    <RefreshCw className={`w-4 h-4 mr-2 ${retryingError ? 'animate-spin' : ''}`} />
+                    Réessayer tout
+                  </Button>
+                </div>
+
+                {/* Liste des erreurs */}
+                <div className="space-y-3">
+                  {scraperErrors.map((error) => {
+                    const eventData = error.event_data;
+                    
+                    return (
+                      <div key={error.id} className="bg-card border rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="flex gap-4">
+                          {/* Image événement */}
+                          <div className="flex-shrink-0">
+                            {eventData?.image_url ? (
+                              <img 
+                                src={eventData.image_url} 
+                                alt={eventData.title}
+                                className="w-20 h-25 object-cover rounded-lg"
+                              />
+                            ) : (
+                              <div className="w-20 h-25 bg-muted rounded-lg flex items-center justify-center">
+                                <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Info événement */}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold truncate">{eventData?.title || 'Sans titre'}</h3>
+                            <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                              {eventData?.description || 'Pas de description'}
+                            </p>
+                            
+                            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                              {eventData?.date && (
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="w-3 h-3" />
+                                  {new Date(eventData.date).toLocaleDateString('fr-FR')}
+                                </span>
+                              )}
+                              {eventData?.account_username && (
+                                <span className="flex items-center gap-1">
+                                  <Instagram className="w-3 h-3" />
+                                  @{eventData.account_username}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Info erreur */}
+                            <div className="bg-red-50 border border-red-200 rounded p-2 mt-3">
+                              <p className="text-xs text-red-800">
+                                <strong>Erreur :</strong> {error.error_type} 
+                                {error.error_message && ` - ${error.error_message}`}
+                              </p>
+                              {error.batch_number && (
+                                <p className="text-xs text-red-700 mt-1">
+                                  Batch #{error.batch_number}
+                                </p>
+                              )}
+                              <p className="text-xs text-red-600 mt-1">
+                                {new Date(error.created_at).toLocaleString('fr-FR')}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex flex-col gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => handleRetryError(error.id, eventData)}
+                              disabled={retryingError === error.id}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              {retryingError === error.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <RefreshCw className="w-4 h-4 mr-1" />
+                                  Retry
+                                </>
+                              )}
+                            </Button>
+                            
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleIgnoreError(error.id)}
+                              disabled={retryingError !== null}
+                            >
+                              <X className="w-4 h-4 mr-1" />
+                              Ignorer
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Tentatives précédentes */}
+                        {error.retry_count > 0 && (
+                          <div className="mt-3 pt-3 border-t text-xs text-muted-foreground">
+                            <p>
+                              {error.retry_count} tentative{error.retry_count > 1 ? 's' : ''} de retry
+                              {error.retry_error && ` - Dernière erreur: ${error.retry_error}`}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </TabsContent>
 
           <TabsContent value={activeTab} className="space-y-4">
             {/* Contrôles */}
