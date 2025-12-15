@@ -673,6 +673,72 @@ export type Database = {
         }
         Relationships: []
       }
+      scraper_runs: {
+        Row: {
+          accounts_count: number | null
+          accounts_targeted: string[] | null
+          completed_at: string | null
+          created_at: string | null
+          duration_seconds: number | null
+          error_count: number | null
+          error_message: string | null
+          events_failed: number | null
+          events_found: number | null
+          events_manual_review: number | null
+          events_saved: number | null
+          id: string
+          logs: Json | null
+          posts_analyzed: number | null
+          scraper_version: string | null
+          started_at: string | null
+          status: string | null
+          trigger_type: string | null
+          triggered_by: string | null
+        }
+        Insert: {
+          accounts_count?: number | null
+          accounts_targeted?: string[] | null
+          completed_at?: string | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          error_count?: number | null
+          error_message?: string | null
+          events_failed?: number | null
+          events_found?: number | null
+          events_manual_review?: number | null
+          events_saved?: number | null
+          id?: string
+          logs?: Json | null
+          posts_analyzed?: number | null
+          scraper_version?: string | null
+          started_at?: string | null
+          status?: string | null
+          trigger_type?: string | null
+          triggered_by?: string | null
+        }
+        Update: {
+          accounts_count?: number | null
+          accounts_targeted?: string[] | null
+          completed_at?: string | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          error_count?: number | null
+          error_message?: string | null
+          events_failed?: number | null
+          events_found?: number | null
+          events_manual_review?: number | null
+          events_saved?: number | null
+          id?: string
+          logs?: Json | null
+          posts_analyzed?: number | null
+          scraper_version?: string | null
+          started_at?: string | null
+          status?: string | null
+          trigger_type?: string | null
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
       scraper_stats: {
         Row: {
           auto_validated: number | null

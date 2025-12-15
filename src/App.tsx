@@ -27,6 +27,7 @@ import Friends from "./pages/Friends";
 import UserProfileView from "./pages/UserProfileView";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminValidationPage from "./pages/AdminValidationPage";
+import ScraperControl from "./pages/ScraperControl";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AuthRedirect from "./components/AuthRedirect";
 import { AdminRoute } from "./components/AdminRoute";
@@ -151,6 +152,11 @@ function AppContent() {
                 <Route path="/admin/validation" element={
                   <AdminRoute>
                     <AdminValidationPage />
+                  </AdminRoute>
+                } />
+                <Route path="/admin/scraper" element={
+                  <AdminRoute>
+                    <ScraperControl />
                   </AdminRoute>
                 } />
                 
