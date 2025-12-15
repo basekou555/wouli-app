@@ -26,6 +26,13 @@ const AdminDashboard = () => {
       badge: stats?.pendingEvents || 0
     },
     {
+      title: "Contrôle Scraper",
+      description: "Lancer et monitorer le scraper Instagram",
+      action: () => navigate('/admin/scraper'),
+      urgent: false,
+      badge: null
+    },
+    {
       title: "Gérer les utilisateurs",
       description: `${stats?.totalUsers || 0} utilisateurs inscrits`,
       action: null,
@@ -120,7 +127,7 @@ const AdminDashboard = () => {
               {(stats?.problematicAccounts?.length || 0) > 0 && (
                 <div 
                   className="bg-white border border-yellow-300 rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow"
-                  onClick={() => navigate('/admin/validation')}
+                  onClick={() => navigate('/admin/scraper')}
                 >
                   <div className="flex items-center justify-between">
                     <div>
