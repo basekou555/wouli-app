@@ -60,17 +60,12 @@ interface AccountStatus {
   statusMessage: string;
 }
 
-const INSTAGRAM_ACCOUNTS = [
-  'laferialyon', 'nhlyon', 'olma.club', 'transbolyon', 'lepetitsalon',
-  'heat_lyon', 'culturel_lyon', 'lesoundclubfdy', 'wallacelyon', 'operadelyon',
-  'le_roi_lyon_bar', 'sonic_lyon', 'onlylyon', 'lyon_citycrunch', 'mylittlelyon',
-  'lyonfood', 'docks40', 'le_bonbon_lyon', 'tuviensmanger', 'maisonmlyon',
-  'loft_club_lyon_', 'lapasserelle_lyon', 'lesgourmandiseslyon'
-];
+// Comptes chargés dynamiquement depuis la base de données
 
 export default function ScraperControl() {
   const navigate = useNavigate();
   const logsEndRef = useRef<HTMLDivElement>(null);
+  const currentRunRef = useRef<ScraperRun | null>(null);
   
   const [loading, setLoading] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
@@ -84,6 +79,7 @@ export default function ScraperControl() {
   
   const [accountsStatus, setAccountsStatus] = useState<AccountStatus[]>([]);
   const [accountFilter, setAccountFilter] = useState<'all' | 'active' | 'warning' | 'error'>('all');
+  const [instagramAccounts, setInstagramAccounts] = useState<string[]>([]);
   
   const [stats, setStats] = useState({
     totalRuns: 0,
@@ -91,6 +87,11 @@ export default function ScraperControl() {
     avgEventsPerRun: 0,
     lastRunDate: null as string | null,
   });
+
+  // Sync ref with state to avoid stale closures
+  useEffect(() => {
+    currentRunRef.current = currentRun;
+  }, [currentRun]);
 
   // Auto-scroll logs
   useEffect(() => {
@@ -147,9 +148,23 @@ export default function ScraperControl() {
 
   const loadAccountsStatus = async () => {
     try {
+      // Charger les comptes uniques depuis la base de données
+      const { data: accountsData } = await supabase
+        .from('events')
+        .select('account_username')
+        .not('account_username', 'is', null);
+
+      const uniqueAccounts = [...new Set(
+        (accountsData || [])
+          .map(a => a.account_username)
+          .filter((u): u is string => !!u)
+      )].sort();
+
+      setInstagramAccounts(uniqueAccounts);
+
       const statusList: AccountStatus[] = [];
 
-      for (const username of INSTAGRAM_ACCOUNTS) {
+      for (const username of uniqueAccounts) {
         const { data: events } = await supabase
           .from('events')
           .select('created_at, id')
@@ -208,7 +223,7 @@ export default function ScraperControl() {
       setIsPending(true);
       setLogs([]);
       
-      const accountsTargeted = selectedAccount === 'all' ? INSTAGRAM_ACCOUNTS : [selectedAccount];
+      const accountsTargeted = selectedAccount === 'all' ? instagramAccounts : [selectedAccount];
       
       const { data: newRun, error: runError } = await supabase
         .from('scraper_runs')
@@ -288,8 +303,11 @@ export default function ScraperControl() {
         (payload) => {
           const updatedRun = payload.new as ScraperRun;
           
+          // Use ref to avoid stale closure
+          const activeRun = currentRunRef.current;
+          
           // Update current run if it's the one being modified
-          if (currentRun && updatedRun.id === currentRun.id) {
+          if (activeRun && updatedRun.id === activeRun.id) {
             setCurrentRun(updatedRun);
             
             // Update status flags
@@ -318,7 +336,7 @@ export default function ScraperControl() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentRun?.id]);
+  }, []); // Empty dependency - subscription never recreated
 
   const filteredAccounts = accountsStatus.filter(acc => {
     if (accountFilter === 'all') return true;
@@ -429,9 +447,9 @@ export default function ScraperControl() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">
-                  🌍 Tous les comptes ({INSTAGRAM_ACCOUNTS.length})
+                  🌍 Tous les comptes ({instagramAccounts.length})
                 </SelectItem>
-                {INSTAGRAM_ACCOUNTS.map(account => (
+                {instagramAccounts.map(account => (
                   <SelectItem key={account} value={account}>
                     @{account}
                   </SelectItem>
@@ -616,7 +634,7 @@ export default function ScraperControl() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold flex items-center gap-2 text-foreground">
             <Instagram className="w-5 h-5" />
-            Comptes Instagram ({INSTAGRAM_ACCOUNTS.length})
+            Comptes Instagram ({instagramAccounts.length})
           </h2>
 
           <Select value={accountFilter} onValueChange={(v: any) => setAccountFilter(v)}>

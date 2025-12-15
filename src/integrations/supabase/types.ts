@@ -1256,6 +1256,10 @@ export type Database = {
       }
     }
     Functions: {
+      append_scraper_log: {
+        Args: { log_entry: Json; run_id: string }
+        Returns: undefined
+      }
       approve_pending_event: {
         Args: { p_event_id: string }
         Returns: undefined
