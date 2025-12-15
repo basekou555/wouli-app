@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import {
   Play, RefreshCw, Instagram, AlertTriangle, CheckCircle,
-  XCircle, Clock, TrendingUp, ArrowLeft, Loader2, Zap, Square
+  XCircle, Clock, TrendingUp, ArrowLeft, Loader2, Zap, Square,
+  Terminal, Copy, ChevronDown, ChevronUp
 } from 'lucide-react';
 import {
   Select,
@@ -24,6 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface ScraperRun {
   id: string;
@@ -40,6 +42,14 @@ interface ScraperRun {
   events_failed: number;
   error_count: number;
   error_message: string | null;
+  logs: unknown;
+}
+
+interface LogEntry {
+  timestamp: string;
+  level: 'info' | 'success' | 'warning' | 'error';
+  message: string;
+  account?: string;
 }
 
 interface AccountStatus {
@@ -60,13 +70,17 @@ const INSTAGRAM_ACCOUNTS = [
 
 export default function ScraperControl() {
   const navigate = useNavigate();
+  const logsEndRef = useRef<HTMLDivElement>(null);
   
   const [loading, setLoading] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
+  const [isPending, setIsPending] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<string>('all');
   
   const [runs, setRuns] = useState<ScraperRun[]>([]);
   const [currentRun, setCurrentRun] = useState<ScraperRun | null>(null);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [showConsole, setShowConsole] = useState(true);
   
   const [accountsStatus, setAccountsStatus] = useState<AccountStatus[]>([]);
   const [accountFilter, setAccountFilter] = useState<'all' | 'active' | 'warning' | 'error'>('all');
@@ -77,6 +91,13 @@ export default function ScraperControl() {
     avgEventsPerRun: 0,
     lastRunDate: null as string | null,
   });
+
+  // Auto-scroll logs
+  useEffect(() => {
+    if (logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [logs]);
 
   const loadRuns = async () => {
     try {
@@ -95,16 +116,27 @@ export default function ScraperControl() {
         
         setStats({
           totalRuns: data.length,
-          successRate: (completed.length / data.length) * 100,
+          successRate: completed.length > 0 ? (completed.length / data.length) * 100 : 0,
           avgEventsPerRun: completed.length > 0 ? totalEvents / completed.length : 0,
           lastRunDate: data[0].created_at,
         });
       }
 
-      const runningRun = data?.find(r => r.status === 'running');
-      if (runningRun) {
-        setCurrentRun(runningRun as ScraperRun);
-        setIsRunning(true);
+      // Check for pending or running run
+      const activeRun = data?.find(r => r.status === 'pending' || r.status === 'running');
+      if (activeRun) {
+        setCurrentRun(activeRun as ScraperRun);
+        setIsPending(activeRun.status === 'pending');
+        setIsRunning(activeRun.status === 'running');
+        
+        // Load logs from the run
+        if (activeRun.logs && Array.isArray(activeRun.logs)) {
+          setLogs(activeRun.logs as unknown as LogEntry[]);
+        }
+      } else {
+        setCurrentRun(null);
+        setIsPending(false);
+        setIsRunning(false);
       }
 
     } catch (error) {
@@ -173,15 +205,19 @@ export default function ScraperControl() {
 
   const handleStartScraper = async () => {
     try {
-      setIsRunning(true);
+      setIsPending(true);
+      setLogs([]);
+      
+      const accountsTargeted = selectedAccount === 'all' ? INSTAGRAM_ACCOUNTS : [selectedAccount];
       
       const { data: newRun, error: runError } = await supabase
         .from('scraper_runs')
         .insert([{
-          status: 'running',
+          status: 'pending',
           trigger_type: 'manual',
-          accounts_targeted: selectedAccount === 'all' ? INSTAGRAM_ACCOUNTS : [selectedAccount],
-          accounts_count: selectedAccount === 'all' ? INSTAGRAM_ACCOUNTS.length : 1,
+          accounts_targeted: accountsTargeted,
+          accounts_count: accountsTargeted.length,
+          logs: []
         }])
         .select()
         .single();
@@ -189,51 +225,42 @@ export default function ScraperControl() {
       if (runError) throw runError;
       setCurrentRun(newRun as ScraperRun);
 
-      toast.success('Scraper lancé !');
-      
-      // Simulation - remplacer par appel API réel
-      setTimeout(() => {
-        handleScraperCompleted(newRun.id, {
-          posts_analyzed: 50,
-          events_found: 27,
-          events_saved: 17,
-          events_manual_review: 3,
-          events_failed: 7,
-          error_count: 1,
-        });
-      }, 5000);
+      toast.info('Run créé - En attente du scraper...', {
+        description: 'Lancez node scraper-v5.js dans votre terminal'
+      });
 
     } catch (error: any) {
-      console.error('Erreur lancement scraper:', error);
-      toast.error('Impossible de lancer le scraper');
-      setIsRunning(false);
+      console.error('Erreur création run:', error);
+      toast.error('Impossible de créer le run');
+      setIsPending(false);
     }
   };
 
-  const handleScraperCompleted = async (runId: string, results: any) => {
+  const handleCancelRun = async () => {
+    if (!currentRun) return;
+    
     try {
-      const duration = Math.floor((Date.now() - new Date(currentRun?.started_at || Date.now()).getTime()) / 1000);
-
       await supabase
         .from('scraper_runs')
-        .update({
-          status: 'completed',
-          completed_at: new Date().toISOString(),
-          duration_seconds: duration,
-          ...results,
+        .update({ 
+          status: 'cancelled',
+          completed_at: new Date().toISOString()
         })
-        .eq('id', runId);
-
-      setIsRunning(false);
-      setCurrentRun(null);
-      toast.success(`Scraper terminé : ${results.events_saved} événements sauvegardés`);
+        .eq('id', currentRun.id);
       
+      setCurrentRun(null);
+      setIsPending(false);
+      setIsRunning(false);
+      toast.info('Run annulé');
       loadRuns();
-      loadAccountsStatus();
-
     } catch (error) {
-      console.error('Erreur finalisation run:', error);
+      console.error('Erreur annulation:', error);
     }
+  };
+
+  const copyCommand = () => {
+    navigator.clipboard.writeText('node scraper-v5.js');
+    toast.success('Commande copiée !');
   };
 
   useEffect(() => {
@@ -248,6 +275,7 @@ export default function ScraperControl() {
 
     init();
 
+    // Real-time subscription for scraper_runs updates
     const channel = supabase
       .channel('scraper_runs_realtime')
       .on(
@@ -257,7 +285,31 @@ export default function ScraperControl() {
           schema: 'public',
           table: 'scraper_runs',
         },
-        () => {
+        (payload) => {
+          const updatedRun = payload.new as ScraperRun;
+          
+          // Update current run if it's the one being modified
+          if (currentRun && updatedRun.id === currentRun.id) {
+            setCurrentRun(updatedRun);
+            
+            // Update status flags
+            setIsPending(updatedRun.status === 'pending');
+            setIsRunning(updatedRun.status === 'running');
+            
+            // Update logs if available
+            if (updatedRun.logs && Array.isArray(updatedRun.logs)) {
+              setLogs(updatedRun.logs as unknown as LogEntry[]);
+            }
+            
+            // Handle completion
+            if (updatedRun.status === 'completed') {
+              toast.success(`Scraper terminé : ${updatedRun.events_saved} événements sauvegardés`);
+              loadAccountsStatus();
+            } else if (updatedRun.status === 'failed') {
+              toast.error(`Scraper échoué : ${updatedRun.error_message || 'Erreur inconnue'}`);
+            }
+          }
+          
           loadRuns();
         }
       )
@@ -266,7 +318,7 @@ export default function ScraperControl() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [currentRun?.id]);
 
   const filteredAccounts = accountsStatus.filter(acc => {
     if (accountFilter === 'all') return true;
@@ -291,12 +343,13 @@ export default function ScraperControl() {
 
   const getRunStatusBadge = (status: string) => {
     const variants: Record<string, any> = {
+      pending: { variant: 'outline' as const, icon: Clock, label: 'En attente', className: 'border-amber-500 text-amber-600' },
       running: { variant: 'secondary' as const, icon: Loader2, label: 'En cours', className: 'animate-pulse' },
       completed: { variant: 'default' as const, icon: CheckCircle, label: 'Terminé' },
       failed: { variant: 'destructive' as const, icon: XCircle, label: 'Échoué' },
       cancelled: { variant: 'outline' as const, icon: Square, label: 'Annulé' },
     };
-    const config = variants[status] || variants.running;
+    const config = variants[status] || variants.pending;
     const Icon = config.icon;
     return (
       <Badge variant={config.variant} className={`text-xs ${config.className || ''}`}>
@@ -304,6 +357,15 @@ export default function ScraperControl() {
         {config.label}
       </Badge>
     );
+  };
+
+  const getLogColor = (level: string) => {
+    switch (level) {
+      case 'success': return 'text-green-400';
+      case 'warning': return 'text-amber-400';
+      case 'error': return 'text-red-400';
+      default: return 'text-zinc-300';
+    }
   };
 
   if (loading) {
@@ -348,18 +410,20 @@ export default function ScraperControl() {
             Lancer le Scraper
           </h2>
           
-          {currentRun && isRunning && (
-            <Badge variant="secondary" className="animate-pulse">
-              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-              Scraping en cours...
-            </Badge>
+          {currentRun && (isPending || isRunning) && (
+            <div className="flex items-center gap-2">
+              {getRunStatusBadge(currentRun.status)}
+              <Button variant="ghost" size="sm" onClick={handleCancelRun}>
+                <XCircle className="w-4 h-4" />
+              </Button>
+            </div>
           )}
         </div>
 
         <div className="flex gap-4 items-end">
           <div className="flex-1">
             <label className="text-sm font-medium mb-2 block text-foreground">Comptes à scraper</label>
-            <Select value={selectedAccount} onValueChange={setSelectedAccount} disabled={isRunning}>
+            <Select value={selectedAccount} onValueChange={setSelectedAccount} disabled={isPending || isRunning}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -378,9 +442,14 @@ export default function ScraperControl() {
 
           <Button
             onClick={handleStartScraper}
-            disabled={isRunning}
+            disabled={isPending || isRunning}
           >
-            {isRunning ? (
+            {isPending ? (
+              <>
+                <Clock className="w-4 h-4 mr-2" />
+                En attente...
+              </>
+            ) : isRunning ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 En cours...
@@ -394,8 +463,34 @@ export default function ScraperControl() {
           </Button>
         </div>
 
+        {/* Instructions pour lancer le scraper */}
+        {isPending && currentRun && (
+          <div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+            <div className="flex items-start gap-3">
+              <Terminal className="w-5 h-5 text-amber-500 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-medium text-amber-600 mb-2">
+                  ⏳ En attente du scraper
+                </p>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Ouvrez votre terminal et lancez la commande suivante :
+                </p>
+                <div className="flex items-center gap-2 bg-zinc-900 rounded-lg p-3 font-mono text-sm">
+                  <code className="text-green-400 flex-1">node scraper-v5.js</code>
+                  <Button variant="ghost" size="sm" onClick={copyCommand} className="h-7 px-2">
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Run ID: <code className="text-amber-500">{currentRun.id.slice(0, 8)}...</code>
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Progress actuel */}
-        {currentRun && isRunning && (
+        {isRunning && currentRun && (
           <div className="mt-4 p-4 bg-primary/10 border border-primary/20 rounded-lg">
             <div className="grid grid-cols-4 gap-4 text-sm">
               <div>
@@ -418,6 +513,56 @@ export default function ScraperControl() {
           </div>
         )}
       </Card>
+
+      {/* Console Logs */}
+      {(isPending || isRunning || logs.length > 0) && (
+        <Card className="overflow-hidden">
+          <div 
+            className="flex items-center justify-between p-4 bg-zinc-900 cursor-pointer"
+            onClick={() => setShowConsole(!showConsole)}
+          >
+            <div className="flex items-center gap-2">
+              <Terminal className="w-5 h-5 text-green-400" />
+              <h2 className="text-lg font-bold text-white">Console</h2>
+              {logs.length > 0 && (
+                <Badge variant="secondary" className="text-xs">{logs.length} logs</Badge>
+              )}
+            </div>
+            {showConsole ? (
+              <ChevronUp className="w-5 h-5 text-zinc-400" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-zinc-400" />
+            )}
+          </div>
+          
+          {showConsole && (
+            <ScrollArea className="h-64 bg-zinc-950">
+              <div className="p-4 font-mono text-sm space-y-1">
+                {logs.length === 0 ? (
+                  <p className="text-zinc-500 italic">
+                    {isPending 
+                      ? "En attente des logs du scraper..." 
+                      : "Aucun log disponible"}
+                  </p>
+                ) : (
+                  logs.map((log, i) => (
+                    <div key={i} className="flex gap-2">
+                      <span className="text-zinc-500 text-xs">
+                        {new Date(log.timestamp).toLocaleTimeString('fr-FR')}
+                      </span>
+                      {log.account && (
+                        <span className="text-purple-400">[@{log.account}]</span>
+                      )}
+                      <span className={getLogColor(log.level)}>{log.message}</span>
+                    </div>
+                  ))
+                )}
+                <div ref={logsEndRef} />
+              </div>
+            </ScrollArea>
+          )}
+        </Card>
+      )}
 
       {/* Stats globales */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
