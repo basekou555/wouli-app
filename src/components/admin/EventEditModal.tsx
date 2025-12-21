@@ -321,19 +321,8 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
             </Select>
           </div>
 
-          {/* URL Image */}
-          <div>
-            <Label htmlFor="image_url">URL de l'image</Label>
-            <Input
-              id="image_url"
-              value={formData.image_url}
-              onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
-              placeholder="https://..."
-            />
-          </div>
-
           {/* URL externe */}
-          <div className="col-span-2">
+          <div>
             <Label htmlFor="external_url">Lien externe (optionnel)</Label>
             <Input
               id="external_url"
@@ -342,40 +331,30 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
               placeholder="https://..."
             />
           </div>
-
-          {/* Raison de la modification */}
-          <div className="col-span-2">
-            <Label htmlFor="reason">Raison de la modification</Label>
-            <Input
-              id="reason"
-              value={formData.reason}
-              onChange={(e) => setFormData(prev => ({ ...prev, reason: e.target.value }))}
-              placeholder="Pourquoi cette modification ? (optionnel)"
-            />
-          </div>
         </div>
 
-        <div className="flex gap-2 pt-6 border-t">
-          <Button onClick={onClose} variant="outline">
-            <X className="w-4 h-4 mr-2" />
+        <div className="flex gap-2 pt-6 border-t justify-end">
+          <Button onClick={onClose} variant="ghost" size="sm">
             Annuler
           </Button>
           <Button 
             onClick={() => handleSave(false)} 
             disabled={saving || !formData.title || !formData.location}
-            variant="secondary"
+            variant="outline"
+            size="sm"
           >
             <Save className="w-4 h-4 mr-2" />
-            {saving ? 'Sauvegarde...' : 'Sauvegarder'}
+            Sauvegarder
           </Button>
           {event.status !== 'active' && (
             <Button 
               onClick={() => handleSave(true)} 
               disabled={saving || !formData.title || !formData.location}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              size="sm"
+              className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white"
             >
               <Check className="w-4 h-4 mr-2" />
-              {saving ? 'Validation...' : 'Sauvegarder et Valider'}
+              Valider
             </Button>
           )}
         </div>

@@ -7,7 +7,11 @@ import {
   Check,
   Loader2,
   RotateCcw,
-  Upload
+  Upload,
+  Trash2,
+  Move,
+  MoveHorizontal,
+  MoveVertical
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { uploadEventImage } from '@/services/imageUploadService';
@@ -73,12 +77,12 @@ const AdminInlineImageCropper: React.FC<AdminInlineImageCropperProps> = ({
   onImageUpdated,
   className = ''
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [localImageUrl, setLocalImageUrl] = useState<string | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -86,17 +90,14 @@ const AdminInlineImageCropper: React.FC<AdminInlineImageCropperProps> = ({
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
 
-  const handleStartEdit = () => {
-    setIsEditing(true);
-    setCrop({ x: 0, y: 0 });
-    setZoom(1);
+  const handleCropChange = (newCrop: { x: number; y: number }) => {
+    setCrop(newCrop);
+    setHasChanges(true);
   };
 
-  const handleCancel = () => {
-    setIsEditing(false);
-    setLocalImageUrl(null);
-    setCrop({ x: 0, y: 0 });
-    setZoom(1);
+  const handleZoomChange = (newZoom: number) => {
+    setZoom(newZoom);
+    setHasChanges(true);
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -112,9 +113,9 @@ const AdminInlineImageCropper: React.FC<AdminInlineImageCropperProps> = ({
     reader.onload = (e) => {
       const result = e.target?.result as string;
       setLocalImageUrl(result);
-      setIsEditing(true);
       setCrop({ x: 0, y: 0 });
       setZoom(1);
+      setHasChanges(true);
     };
     reader.readAsDataURL(file);
   };
@@ -138,8 +139,10 @@ const AdminInlineImageCropper: React.FC<AdminInlineImageCropperProps> = ({
       }
 
       onImageUpdated(uploadResult.url);
-      setIsEditing(false);
       setLocalImageUrl(null);
+      setHasChanges(false);
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
       toast.success('Image recadrée et sauvegardée');
     } catch (error) {
       console.error('Erreur crop:', error);
@@ -152,9 +155,22 @@ const AdminInlineImageCropper: React.FC<AdminInlineImageCropperProps> = ({
   const handleReset = () => {
     setCrop({ x: 0, y: 0 });
     setZoom(1);
+    if (localImageUrl) {
+      setLocalImageUrl(null);
+    }
+    setHasChanges(false);
+  };
+
+  const handleRemoveImage = () => {
+    onImageUpdated('');
+    setLocalImageUrl(null);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setHasChanges(false);
   };
 
   const currentImage = localImageUrl || imageUrl;
+  const hasImage = !!currentImage;
 
   return (
     <div className={`space-y-3 ${className}`}>
@@ -166,150 +182,199 @@ const AdminInlineImageCropper: React.FC<AdminInlineImageCropperProps> = ({
         className="hidden"
       />
 
-      {/* Mode édition */}
-      {isEditing && currentImage ? (
-        <div className="space-y-4">
-          {/* Zone de crop */}
-          <div className="relative aspect-[4/5] w-full rounded-xl overflow-hidden bg-black/90 border border-border/30">
-            <Cropper
-              image={currentImage}
-              crop={crop}
-              zoom={zoom}
-              aspect={4 / 5}
-              onCropChange={setCrop}
-              onCropComplete={onCropComplete}
-              onZoomChange={setZoom}
-              showGrid={true}
-              cropShape="rect"
-              objectFit="contain"
-            />
-            
-            {/* Badge format */}
-            <div className="absolute bottom-3 left-3 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-md">
-              <span className="text-xs text-white/80 font-medium">4:5 • 1080×1350px</span>
-            </div>
-          </div>
-
-          {/* Contrôle de zoom */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <ZoomIn className="h-4 w-4 text-muted-foreground shrink-0" />
-              <Slider
-                value={[zoom]}
-                onValueChange={(values) => setZoom(values[0])}
-                min={1}
-                max={3}
-                step={0.1}
-                className="flex-1"
+      {hasImage ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Zone de crop - toujours visible quand il y a une image */}
+          <div className="lg:col-span-2 space-y-3">
+            <div className="relative aspect-[4/5] w-full rounded-xl overflow-hidden bg-black/90 border border-border/30">
+              <Cropper
+                image={currentImage}
+                crop={crop}
+                zoom={zoom}
+                aspect={4 / 5}
+                onCropChange={handleCropChange}
+                onCropComplete={onCropComplete}
+                onZoomChange={handleZoomChange}
+                showGrid={true}
+                cropShape="rect"
+                objectFit="contain"
               />
-              <span className="text-xs text-muted-foreground w-12 text-right">
-                {Math.round(zoom * 100)}%
-              </span>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleReset}
-              className="flex-1"
-            >
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Réinitialiser
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              className="flex-1"
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              Autre image
-            </Button>
-          </div>
-
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={handleCancel}
-              className="flex-1"
-            >
-              Annuler
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleApplyCrop}
-              disabled={isProcessing}
-              className="flex-1 bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90"
-            >
-              {isProcessing ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Check className="h-4 w-4 mr-2" />
-              )}
-              Sauvegarder
-            </Button>
-          </div>
-        </div>
-      ) : (
-        /* Mode aperçu */
-        <div className="space-y-3">
-          <div className="relative aspect-[4/5] w-full rounded-xl overflow-hidden border border-border/30 bg-black">
-            {imageUrl ? (
-              <img
-                src={imageUrl}
-                alt="Image événement"
-                className="w-full h-full object-contain"
-                crossOrigin="anonymous"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                Aucune image
+              
+              {/* Badge format */}
+              <div className="absolute bottom-3 left-3 px-2 py-1 bg-black/60 backdrop-blur-sm rounded-md">
+                <span className="text-xs text-white/80 font-medium">4:5 • 1080×1350px</span>
               </div>
-            )}
-          </div>
 
-          {/* Actions */}
-          <div className="flex gap-2">
-            {imageUrl && (
+              {/* Indicateur de modification */}
+              {hasChanges && (
+                <div className="absolute top-3 right-3 px-2 py-1 bg-amber-500/80 backdrop-blur-sm rounded-md">
+                  <span className="text-xs text-white font-medium">Non sauvegardé</span>
+                </div>
+              )}
+            </div>
+
+            {/* Actions rapides sous le crop */}
+            <div className="flex gap-2">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={handleStartEdit}
+                onClick={() => fileInputRef.current?.click()}
                 className="flex-1"
               >
-                Recadrer
+                <Upload className="h-4 w-4 mr-2" />
+                Autre image
               </Button>
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              className="flex-1"
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              {imageUrl ? 'Changer' : 'Ajouter'}
-            </Button>
-          </div>
-
-          {/* Info format */}
-          <div className="flex justify-center">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-muted/50 rounded-full">
-              <div className="w-1.5 h-1.5 rounded-full bg-primary/60" />
-              <span className="text-xs text-muted-foreground">
-                Format 4:5 (1080×1350px)
-              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleRemoveImage}
+                className="text-destructive hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           </div>
+
+          {/* Panneau de contrôles - toujours visible */}
+          <div className="space-y-4 p-4 bg-muted/30 rounded-xl border border-border/30">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Move className="h-4 w-4 text-primary" />
+              Ajustements
+            </div>
+
+            {/* Contrôle Position X */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MoveHorizontal className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Position X</span>
+                </div>
+                <span className="text-xs font-mono text-muted-foreground">
+                  {crop.x.toFixed(0)}
+                </span>
+              </div>
+              <Slider
+                value={[crop.x + 100]}
+                onValueChange={(values) => handleCropChange({ ...crop, x: values[0] - 100 })}
+                min={0}
+                max={200}
+                step={1}
+                className="h-8"
+              />
+            </div>
+
+            {/* Contrôle Position Y */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MoveVertical className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Position Y</span>
+                </div>
+                <span className="text-xs font-mono text-muted-foreground">
+                  {crop.y.toFixed(0)}
+                </span>
+              </div>
+              <Slider
+                value={[crop.y + 100]}
+                onValueChange={(values) => handleCropChange({ ...crop, y: values[0] - 100 })}
+                min={0}
+                max={200}
+                step={1}
+                className="h-8"
+              />
+            </div>
+
+            {/* Contrôle de zoom */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ZoomIn className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Zoom</span>
+                </div>
+                <span className="text-xs font-mono text-muted-foreground">
+                  {Math.round(zoom * 100)}%
+                </span>
+              </div>
+              <Slider
+                value={[zoom]}
+                onValueChange={(values) => handleZoomChange(values[0])}
+                min={1}
+                max={3}
+                step={0.05}
+                className="h-8"
+              />
+            </div>
+
+            {/* Preview miniature */}
+            <div className="pt-2 border-t border-border/30">
+              <p className="text-xs text-muted-foreground mb-2">Aperçu final</p>
+              <div className="aspect-[4/5] w-full max-w-[120px] mx-auto bg-black rounded-lg overflow-hidden border-2 border-primary/30">
+                <div 
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    backgroundImage: `url(${currentImage})`,
+                    backgroundSize: `${zoom * 100}%`,
+                    backgroundPosition: `${50 - crop.x / 5}% ${50 - crop.y / 5}%`,
+                    backgroundRepeat: 'no-repeat'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Boutons d'action */}
+            <div className="space-y-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleReset}
+                className="w-full"
+                disabled={!hasChanges}
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Réinitialiser
+              </Button>
+              
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleApplyCrop}
+                disabled={isProcessing || !hasChanges}
+                className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white"
+              >
+                {isProcessing ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4 mr-2" />
+                )}
+                {isProcessing ? 'Sauvegarde...' : 'Appliquer'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* État sans image */
+        <div 
+          className="aspect-[4/5] w-full max-w-md mx-auto rounded-xl border-2 border-dashed border-border/50 bg-muted/20 flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center">
+            <Upload className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-medium text-foreground">Ajouter une image</p>
+            <p className="text-xs text-muted-foreground mt-1">Format recommandé : 4:5 (1080×1350px)</p>
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+          >
+            Parcourir
+          </Button>
         </div>
       )}
     </div>
