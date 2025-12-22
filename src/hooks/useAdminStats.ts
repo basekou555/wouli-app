@@ -89,11 +89,13 @@ export const useAdminStats = () => {
         .from('profiles')
         .select('*', { count: 'exact', head: true });
 
-      // Compter les événements actifs (statut 'active')
+      // Compter les événements actifs à venir (disponibles dans l'app)
+      const now = new Date().toISOString();
       const { count: activeEvents } = await supabase
         .from('events')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'active');
+        .eq('status', 'active')
+        .gte('date', now);
 
       // Compter les établissements (profils business)
       const { count: businessCount } = await supabase
