@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -57,7 +56,6 @@ const ValidationInterface = () => {
   const [filter, setFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('date');
   const [activeTab, setActiveTab] = useState<string>('urgent');
-  const [historyFilter, setHistoryFilter] = useState<'all' | 'active' | 'rejected'>('all');
   const [showDetails, setShowDetails] = useState<PendingEvent | null>(null);
   const [editingEvent, setEditingEvent] = useState<PendingEvent | null>(null);
   const [historyEventId, setHistoryEventId] = useState<string | null>(null);
@@ -156,10 +154,10 @@ const ValidationInterface = () => {
         return 'manual_review';
       case 'pending':
         return 'pending';
-      case 'history':
-        if (historyFilter === 'active') return 'active';
-        if (historyFilter === 'rejected') return 'rejected';
-        return ['active', 'rejected'];
+      case 'active':
+        return 'active';
+      case 'rejected':
+        return 'rejected';
       default:
         return 'pending';
     }
@@ -205,7 +203,7 @@ const ValidationInterface = () => {
       supabase.removeChannel(eventsChannel);
       supabase.removeChannel(errorsChannel);
     };
-  }, [activeTab, historyFilter]);
+  }, [activeTab]);
 
   const fetchEvents = async (pageNum = 0, append = false, search = '') => {
     try {
@@ -229,16 +227,16 @@ const ValidationInterface = () => {
           query = query.eq('status', statuses);
         }
         
-        // Pour les événements "active" (validés), ne montrer que les événements à venir
-        // Les événements passés ne sont plus disponibles dans l'app
-        if (activeTab === 'history' && (historyFilter === 'active' || historyFilter === 'all')) {
+        // Pour les événements "active", ne montrer que les événements à venir
+        if (activeTab === 'active') {
           const now = new Date().toISOString();
-          if (historyFilter === 'active') {
-            // Seulement les validés à venir
-            query = query.gte('date', now);
-          }
-          // Pour 'all', on garde tous les rejetés mais seulement les actifs à venir
-          // On doit faire une logique OR complexe, donc on filtre côté client pour 'all'
+          query = query.gte('date', now);
+        }
+        
+        // Pour les événements "rejected", ne montrer que les événements à venir
+        if (activeTab === 'rejected') {
+          const now = new Date().toISOString();
+          query = query.gte('date', now);
         }
       }
 
@@ -248,20 +246,7 @@ const ValidationInterface = () => {
 
       if (error) throw error;
       
-      let newEvents = data || [];
-      
-      // Pour le filtre "all" dans l'historique, filtrer les events actifs passés côté client
-      // (on garde tous les rejetés, mais seulement les actifs à venir)
-      if (activeTab === 'history' && historyFilter === 'all' && !search.trim()) {
-        const now = new Date();
-        newEvents = newEvents.filter(event => {
-          if (event.status === 'rejected') return true; // Garder tous les rejetés
-          if (event.status === 'active') {
-            return new Date(event.date) >= now; // Garder seulement les actifs à venir
-          }
-          return true;
-        });
-      }
+      const newEvents = data || [];
       
       if (append) {
         const existingIds = new Set(events.map(e => e.id));
@@ -631,34 +616,11 @@ const ValidationInterface = () => {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Onglets simplifiés 3 tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="grid w-full grid-cols-3 max-w-lg">
-            <TabsTrigger 
-              value="urgent" 
-              className="data-[state=active]:bg-red-100 data-[state=active]:text-red-700"
-            >
-              <Flame className="w-4 h-4 mr-1.5" />
-              Urgents ({urgentCount})
-            </TabsTrigger>
-            <TabsTrigger 
-              value="pending"
-              className="data-[state=active]:bg-orange-100 data-[state=active]:text-orange-700"
-            >
-              <Clock className="w-4 h-4 mr-1.5" />
-              À valider ({stats?.pendingEvents || 0})
-            </TabsTrigger>
-            <TabsTrigger 
-              value="history"
-              className="data-[state=active]:bg-muted"
-            >
-              <History className="w-4 h-4 mr-1.5" />
-              Historique
-            </TabsTrigger>
-          </TabsList>
-
-          {/* TAB URGENT - Erreurs + Manual Review */}
-          <TabsContent value="urgent" className="mt-6 space-y-6">
+        {/* Contenu basé sur l'onglet actif (via WorkloadCards) */}
+        
+        {/* URGENT - Erreurs + Manual Review */}
+        {activeTab === 'urgent' && (
+          <div className="space-y-6">
             {/* Section Erreurs Scraper */}
             {scraperErrors.length > 0 && (
               <div className="space-y-4">
@@ -800,45 +762,17 @@ const ValidationInterface = () => {
                 </p>
               </div>
             )}
-          </TabsContent>
+          </div>
+        )}
 
-          {/* TAB PENDING - À valider */}
-          <TabsContent value="pending" className="mt-6">
-            {renderFiltersAndTable()}
-          </TabsContent>
+        {/* PENDING - À valider */}
+        {activeTab === 'pending' && renderFiltersAndTable()}
 
-          {/* TAB HISTORY - Historique avec sous-filtres */}
-          <TabsContent value="history" className="mt-6">
-            {/* Sous-filtres historique */}
-            <div className="flex gap-2 mb-4">
-              <Button 
-                variant={historyFilter === 'all' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setHistoryFilter('all')}
-              >
-                Tous ({(stats?.activeEvents || 0) + (stats?.rejectedEvents || 0)})
-              </Button>
-              <Button 
-                variant={historyFilter === 'active' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setHistoryFilter('active')}
-              >
-                <CheckCircle className="w-4 h-4 mr-1.5" />
-                Validés ({stats?.activeEvents || 0})
-              </Button>
-              <Button 
-                variant={historyFilter === 'rejected' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setHistoryFilter('rejected')}
-              >
-                <X className="w-4 h-4 mr-1.5" />
-                Rejetés ({stats?.rejectedEvents || 0})
-              </Button>
-            </div>
+        {/* ACTIVE - Événements actifs */}
+        {activeTab === 'active' && renderFiltersAndTable()}
 
-            {renderFiltersAndTable()}
-          </TabsContent>
-        </Tabs>
+        {/* REJECTED - Événements rejetés */}
+        {activeTab === 'rejected' && renderFiltersAndTable()}
       </div>
 
       {/* Modales */}
@@ -1287,7 +1221,7 @@ const ValidationInterface = () => {
                   </>
                 )}
                 
-                {activeTab === 'history' && historyFilter === 'active' && (
+                {activeTab === 'active' && (
                   <Button
                     onClick={() => handleStatusChange(Array.from(selectedIds), 'active', 'pending')}
                     size="sm"
@@ -1298,7 +1232,7 @@ const ValidationInterface = () => {
                   </Button>
                 )}
                 
-                {activeTab === 'history' && historyFilter === 'rejected' && (
+                {activeTab === 'rejected' && (
                   <Button
                     onClick={() => handleStatusChange(Array.from(selectedIds), 'rejected', 'pending')}
                     size="sm"
