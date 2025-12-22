@@ -228,6 +228,18 @@ const ValidationInterface = () => {
         } else {
           query = query.eq('status', statuses);
         }
+        
+        // Pour les événements "active" (validés), ne montrer que les événements à venir
+        // Les événements passés ne sont plus disponibles dans l'app
+        if (activeTab === 'history' && (historyFilter === 'active' || historyFilter === 'all')) {
+          const now = new Date().toISOString();
+          if (historyFilter === 'active') {
+            // Seulement les validés à venir
+            query = query.gte('date', now);
+          }
+          // Pour 'all', on garde tous les rejetés mais seulement les actifs à venir
+          // On doit faire une logique OR complexe, donc on filtre côté client pour 'all'
+        }
       }
 
       const { data, error, count } = await query
@@ -236,7 +248,20 @@ const ValidationInterface = () => {
 
       if (error) throw error;
       
-      const newEvents = data || [];
+      let newEvents = data || [];
+      
+      // Pour le filtre "all" dans l'historique, filtrer les events actifs passés côté client
+      // (on garde tous les rejetés, mais seulement les actifs à venir)
+      if (activeTab === 'history' && historyFilter === 'all' && !search.trim()) {
+        const now = new Date();
+        newEvents = newEvents.filter(event => {
+          if (event.status === 'rejected') return true; // Garder tous les rejetés
+          if (event.status === 'active') {
+            return new Date(event.date) >= now; // Garder seulement les actifs à venir
+          }
+          return true;
+        });
+      }
       
       if (append) {
         const existingIds = new Set(events.map(e => e.id));
