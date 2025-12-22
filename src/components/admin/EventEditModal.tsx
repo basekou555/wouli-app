@@ -26,6 +26,10 @@ interface PendingEvent {
   external_url: string | null;
   image_url: string | null;
   status: string;
+  tags?: string[] | null;
+  end_date?: string | null;
+  end_time?: string | null;
+  time?: string | null;
 }
 
 interface EventEditModalProps {
@@ -40,12 +44,15 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
     description: '',
     date: '',
     time: '',
+    end_date: '',
+    end_time: '',
     location: '',
     address: '',
     category: '',
     price: '',
     image_url: '',
     external_url: '',
+    tags: '',
     reason: ''
   });
   const [saving, setSaving] = useState(false);
@@ -55,17 +62,21 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
   useEffect(() => {
     if (event) {
       const eventDate = new Date(event.date);
+      const endDate = event.end_date ? new Date(event.end_date) : null;
       setFormData({
         title: event.title || '',
         description: event.description || '',
         date: eventDate.toISOString().split('T')[0],
-        time: eventDate.toTimeString().slice(0, 5),
+        time: event.time || eventDate.toTimeString().slice(0, 5),
+        end_date: endDate ? endDate.toISOString().split('T')[0] : '',
+        end_time: event.end_time || '',
         location: event.location || '',
         address: event.address || '',
         category: event.category || '',
         price: event.price?.toString() || '',
         image_url: event.image_url || '',
         external_url: event.external_url || '',
+        tags: event.tags?.join(', ') || '',
         reason: ''
       });
     }
@@ -111,12 +122,16 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
         title: formData.title,
         description: formData.description || null,
         date: dateTime.toISOString(),
+        time: formData.time || null,
+        end_date: formData.end_date ? new Date(`${formData.end_date}T${formData.end_time || '23:59'}`).toISOString() : null,
+        end_time: formData.end_time || null,
         location: formData.location,
         address: formData.address || null,
         category: formData.category as any,
         price: formData.price ? parseFloat(formData.price) : null,
         image_url: formData.image_url || null,
         external_url: formData.external_url || null,
+        tags: formData.tags ? formData.tags.split(',').map(t => t.trim()).filter(Boolean) : null,
         updated_at: new Date().toISOString()
       };
 
@@ -261,6 +276,27 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
             />
           </div>
 
+          {/* Date et heure de fin */}
+          <div>
+            <Label htmlFor="end_date">Date de fin (optionnel)</Label>
+            <Input
+              id="end_date"
+              type="date"
+              value={formData.end_date}
+              onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="end_time">Heure de fin</Label>
+            <Input
+              id="end_time"
+              type="time"
+              value={formData.end_time}
+              onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
+            />
+          </div>
+
           {/* Lieu */}
           <div>
             <Label htmlFor="location">Lieu *</Label>
@@ -329,6 +365,17 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
               value={formData.external_url}
               onChange={(e) => setFormData(prev => ({ ...prev, external_url: e.target.value }))}
               placeholder="https://..."
+            />
+          </div>
+
+          {/* Tags */}
+          <div className="col-span-2">
+            <Label htmlFor="tags">Tags (séparés par virgule)</Label>
+            <Input
+              id="tags"
+              value={formData.tags}
+              onChange={(e) => setFormData(prev => ({ ...prev, tags: e.target.value }))}
+              placeholder="afterwork, rooftop, dj-set, gratuit..."
             />
           </div>
         </div>

@@ -300,28 +300,11 @@ const AdminInlineImageCropper: React.FC<AdminInlineImageCropperProps> = ({
               <Slider
                 value={[zoom]}
                 onValueChange={(values) => handleZoomChange(values[0])}
-                min={1}
+                min={0.3}
                 max={3}
                 step={0.05}
                 className="h-8"
               />
-            </div>
-
-            {/* Preview miniature */}
-            <div className="pt-2 border-t border-border/30">
-              <p className="text-xs text-muted-foreground mb-2">Aperçu final</p>
-              <div className="aspect-[4/5] w-full max-w-[120px] mx-auto bg-black rounded-lg overflow-hidden border-2 border-primary/30">
-                <div 
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    backgroundImage: `url(${currentImage})`,
-                    backgroundSize: `${zoom * 100}%`,
-                    backgroundPosition: `${50 - crop.x / 5}% ${50 - crop.y / 5}%`,
-                    backgroundRepeat: 'no-repeat'
-                  }}
-                />
-              </div>
             </div>
 
             {/* Boutons d'action */}
