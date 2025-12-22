@@ -110,7 +110,7 @@ export const ValidationWorkload = ({
         isActive={activeTab === 'pending'}
       />
       <WorkloadCard
-        label="Validés"
+        label="Actifs"
         count={stats?.activeEvents || 0}
         icon={<CheckCircle className="w-6 h-6 text-green-500" />}
         variant="success"
