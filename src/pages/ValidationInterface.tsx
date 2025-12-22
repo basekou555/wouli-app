@@ -148,7 +148,7 @@ const ValidationInterface = () => {
   };
 
   // Mapper le tab vers le status pour la requête
-  const getStatusForTab = (tab: string): string | string[] => {
+  const getStatusForTab = (tab: string): string | string[] | null => {
     switch (tab) {
       case 'urgent':
         return 'manual_review';
@@ -158,6 +158,8 @@ const ValidationInterface = () => {
         return 'active';
       case 'rejected':
         return 'rejected';
+      case 'all':
+        return null; // Pas de filtre de statut, on récupère tout
       default:
         return 'pending';
     }
@@ -221,7 +223,10 @@ const ValidationInterface = () => {
         query = query.neq('status', 'archived');
       } else {
         const statuses = getStatusForTab(activeTab);
-        if (Array.isArray(statuses)) {
+        if (statuses === null) {
+          // Tab "all" - récupérer tout sauf archivés
+          query = query.neq('status', 'archived');
+        } else if (Array.isArray(statuses)) {
           query = query.in('status', statuses);
         } else {
           query = query.eq('status', statuses);
@@ -586,7 +591,6 @@ const ValidationInterface = () => {
             isLoading={statsLoading}
             activeTab={activeTab}
             onTabChange={setActiveTab}
-            todayValidated={todayValidated}
           />
 
           {/* Alerte urgente */}
@@ -773,6 +777,9 @@ const ValidationInterface = () => {
 
         {/* REJECTED - Événements rejetés */}
         {activeTab === 'rejected' && renderFiltersAndTable()}
+
+        {/* ALL - Tous les événements */}
+        {activeTab === 'all' && renderFiltersAndTable()}
       </div>
 
       {/* Modales */}
