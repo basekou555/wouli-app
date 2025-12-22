@@ -7,10 +7,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { 
   Calendar, MapPin, Euro, ExternalLink, Check, X, Clock, Filter, RefreshCw, 
   AlertCircle, Instagram, Edit, RotateCcw, History, ArrowUpDown, Sparkles, Search,
-  CheckCircle, Image as ImageIcon, Loader2
+  CheckCircle, Image as ImageIcon, Loader2, Flame
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -24,6 +25,8 @@ import EnhanceWithAIModal from '@/components/admin/EnhanceWithAIModal';
 import { getEventStatus } from '@/utils/eventStatus';
 import { AdminEventPreview } from '@/components/admin/AdminEventPreview';
 import { AdminEventTableRow } from '@/components/admin/AdminEventTableRow';
+import { ValidationWorkload } from '@/components/admin/ValidationWorkload';
+import { useAdminStats } from '@/hooks/useAdminStats';
 
 interface PendingEvent {
   id: string;
@@ -46,13 +49,6 @@ interface PendingEvent {
   manual_review_reason?: string;
 }
 
-interface EventStats {
-  pending: number;
-  active: number;
-  rejected: number;
-  todayValidated: number;
-}
-
 const ValidationInterface = () => {
   const [events, setEvents] = useState<PendingEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,7 +56,8 @@ const ValidationInterface = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('date');
-  const [activeTab, setActiveTab] = useState<string>('pending');
+  const [activeTab, setActiveTab] = useState<string>('urgent');
+  const [historyFilter, setHistoryFilter] = useState<'all' | 'active' | 'rejected'>('all');
   const [showDetails, setShowDetails] = useState<PendingEvent | null>(null);
   const [editingEvent, setEditingEvent] = useState<PendingEvent | null>(null);
   const [historyEventId, setHistoryEventId] = useState<string | null>(null);
@@ -78,6 +75,9 @@ const ValidationInterface = () => {
   const EVENTS_PER_PAGE = 10;
   const { toast } = useToast();
 
+  // Utiliser useAdminStats pour les compteurs
+  const { data: stats, isLoading: statsLoading } = useAdminStats();
+
   // State pour modale Manual Review
   const [processManualReview, setProcessManualReview] = useState<PendingEvent | null>(null);
   const [manualEventCount, setManualEventCount] = useState(1);
@@ -91,7 +91,6 @@ const ValidationInterface = () => {
 
   // State pour erreurs scraper
   const [scraperErrors, setScraperErrors] = useState<any[]>([]);
-  const [errorCount, setErrorCount] = useState(0);
   const [loadingErrors, setLoadingErrors] = useState(false);
   const [retryingError, setRetryingError] = useState<string | null>(null);
 
@@ -111,8 +110,6 @@ const ValidationInterface = () => {
 
   // Filtres avancés
   const [searchQuery, setSearchQuery] = useState('');
-  const [priorityFilter, setPriorityFilter] = useState<'all' | 'urgent' | 'normal'>('all');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
   const [accountFilter, setAccountFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
   const [accounts, setAccounts] = useState<string[]>([]);
@@ -144,13 +141,27 @@ const ValidationInterface = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
       setScraperErrors(data || []);
-      setErrorCount((data || []).length);
     } catch (error) {
       console.error('Erreur chargement scraper errors:', error);
     } finally {
       setLoadingErrors(false);
+    }
+  };
+
+  // Mapper le tab vers le status pour la requête
+  const getStatusForTab = (tab: string): string | string[] => {
+    switch (tab) {
+      case 'urgent':
+        return 'manual_review';
+      case 'pending':
+        return 'pending';
+      case 'history':
+        if (historyFilter === 'active') return 'active';
+        if (historyFilter === 'rejected') return 'rejected';
+        return ['active', 'rejected'];
+      default:
+        return 'pending';
     }
   };
 
@@ -194,7 +205,7 @@ const ValidationInterface = () => {
       supabase.removeChannel(eventsChannel);
       supabase.removeChannel(errorsChannel);
     };
-  }, [activeTab]);
+  }, [activeTab, historyFilter]);
 
   const fetchEvents = async (pageNum = 0, append = false, search = '') => {
     try {
@@ -211,11 +222,11 @@ const ValidationInterface = () => {
         query = query.or(`title.ilike.${searchTerm},description.ilike.${searchTerm},location.ilike.${searchTerm},account_username.ilike.${searchTerm}`);
         query = query.neq('status', 'archived');
       } else {
-        // Logique normale par onglet
-        if (activeTab === 'all') {
-          query = query.neq('status', 'archived');
+        const statuses = getStatusForTab(activeTab);
+        if (Array.isArray(statuses)) {
+          query = query.in('status', statuses);
         } else {
-          query = query.eq('status', activeTab);
+          query = query.eq('status', statuses);
         }
       }
 
@@ -296,21 +307,6 @@ const ValidationInterface = () => {
   const onStatusChangeSuccess = async () => {
     await fetchEvents(0, false);
     setSelectedIds(new Set());
-    
-    setTimeout(async () => {
-      const visibleEvents = events.filter(e => 
-        e.status !== 'archived' && 
-        getEventStatus(e) !== 'archived' &&
-        (activeTab === 'all' || e.status === activeTab) &&
-        (filter === 'all' || e.category === filter)
-      );
-      
-      if (visibleEvents.length < 5 && hasMore) {
-        setLoadingMore(true);
-        await fetchEvents(1, true);
-        setLoadingMore(false);
-      }
-    }, 500);
   };
 
   const calculateScore = (event: PendingEvent) => {
@@ -333,7 +329,7 @@ const ValidationInterface = () => {
   const applyAdvancedFilters = (events: PendingEvent[]) => {
     let filtered = events;
 
-    // Recherche full-text
+    // Recherche full-text (déjà géré côté serveur si searchQuery actif)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(e => 
@@ -342,24 +338,6 @@ const ValidationInterface = () => {
         e.account_username?.toLowerCase().includes(query) ||
         e.location?.toLowerCase().includes(query)
       );
-    }
-
-    // Filtre priorité (urgent = manual_review + erreurs)
-    if (priorityFilter === 'urgent') {
-      filtered = filtered.filter(e => 
-        e.status === 'manual_review' || 
-        e.manual_review_reason !== null
-      );
-    } else if (priorityFilter === 'normal') {
-      filtered = filtered.filter(e => 
-        e.status === 'pending' && 
-        !e.manual_review_reason
-      );
-    }
-
-    // Filtre type d'événement
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter(e => e.event_type === typeFilter);
     }
 
     // Filtre compte Instagram
@@ -433,50 +411,33 @@ const ValidationInterface = () => {
 
   const filteredEvents = getFilteredEvents();
 
-  const counts = useMemo(() => {
-    const notArchived = events.filter(e => e.status !== 'archived' && getEventStatus(e) !== 'archived');
-    const today = new Date().toISOString().split('T')[0];
-    const scopedEvents = filter === 'all' ? notArchived : notArchived.filter(e => e.category === filter);
-    
-    return {
-      pending: notArchived.filter(e => e.status === 'pending').length,
-      active: notArchived.filter(e => e.status === 'active').length,
-      rejected: notArchived.filter(e => e.status === 'rejected').length,
-      manualReview: notArchived.filter(e => e.status === 'manual_review').length,
-      todayValidated: notArchived.filter(e => 
-        e.status === 'active' && 
-        e.validated_at && 
-        e.validated_at.startsWith(today)
-      ).length,
-      scopedManualReview: scopedEvents.filter(e => e.status === 'manual_review').length,
-      scopedPending: scopedEvents.filter(e => e.status === 'pending').length,
-      scopedActive: scopedEvents.filter(e => e.status === 'active').length,
-      scopedRejected: scopedEvents.filter(e => e.status === 'rejected').length,
-      scopedAll: scopedEvents.length,
-    };
-  }, [events, filter]);
-
   const resetFilters = () => {
     setSearchQuery('');
-    setPriorityFilter('all');
-    setTypeFilter('all');
     setAccountFilter('all');
     setDateFilter('all');
   };
 
-  const hasActiveFilters = searchQuery || priorityFilter !== 'all' || typeFilter !== 'all' || accountFilter !== 'all' || dateFilter !== 'all';
+  const hasActiveFilters = searchQuery || accountFilter !== 'all' || dateFilter !== 'all';
+
+  // Compteur validés aujourd'hui
+  const todayValidated = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    return events.filter(e => 
+      e.status === 'active' && 
+      e.validated_at && 
+      e.validated_at.startsWith(today)
+    ).length;
+  }, [events]);
 
   // Fonction de retry erreur scraper
   const handleRetryError = async (errorId: string, eventData: any) => {
     setRetryingError(errorId);
     try {
-      // Tenter de sauvegarder l'événement
       const { error: insertError } = await supabase
         .from('events')
         .insert([eventData]);
 
       if (insertError) {
-        // Échec du retry
         await supabase
           .from('scraper_errors')
           .update({
@@ -493,7 +454,6 @@ const ValidationInterface = () => {
           variant: "destructive"
         });
       } else {
-        // Succès du retry
         await supabase
           .from('scraper_errors')
           .update({
@@ -575,7 +535,10 @@ const ValidationInterface = () => {
     }
   };
 
-  if (loading) {
+  // Compteur urgent
+  const urgentCount = (stats?.manualReviewEvents || 0) + (stats?.scraperErrorsCount || 0);
+
+  if (loading && !stats) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <LoadingSpinner size="lg" text="Chargement des événements..." />
@@ -585,31 +548,17 @@ const ValidationInterface = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header avec stats */}
+      {/* Header */}
       <div className="bg-card border-b">
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="flex items-center justify-between mb-6">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-2xl font-bold text-foreground">
                 Validation des Événements
               </h1>
-              <div className="space-y-1">
-                <p className="text-muted-foreground">
-                  Modération complète • {new Date().toLocaleDateString('fr-FR')}
-                </p>
-                {totalCount !== null && (
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className="text-muted-foreground">
-                      {totalCount} événements non archivés
-                    </span>
-                    {counts.pending > 0 && (
-                      <span className="text-orange-600 font-medium">
-                        {counts.pending} en attente de validation
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
+              <p className="text-muted-foreground">
+                Modération complète • {new Date().toLocaleDateString('fr-FR')}
+              </p>
             </div>
             
             <Button
@@ -621,178 +570,73 @@ const ValidationInterface = () => {
             </Button>
           </div>
           
-          {/* Stats rapides */}
-          <div className="grid grid-cols-4 gap-4 mb-6">
-            <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
-              <div className="text-2xl font-bold text-orange-600">{counts.pending}</div>
-              <div className="text-sm text-orange-700">En attente</div>
-            </div>
-            <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-              <div className="text-2xl font-bold text-green-600">{counts.active}</div>
-              <div className="text-sm text-green-700">Validés</div>
-            </div>
-            <div className="bg-red-50 p-3 rounded-lg border border-red-200">
-              <div className="text-2xl font-bold text-red-600">{counts.rejected}</div>
-              <div className="text-sm text-red-700">Rejetés</div>
-            </div>
-            <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
-              <div className="text-2xl font-bold text-purple-600">+{counts.todayValidated}</div>
-              <div className="text-sm text-purple-700">Aujourd'hui</div>
-            </div>
-          </div>
+          {/* Workload KPIs */}
+          <ValidationWorkload
+            stats={stats}
+            isLoading={statsLoading}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            todayValidated={todayValidated}
+          />
+
+          {/* Alerte urgente */}
+          {urgentCount > 0 && activeTab !== 'urgent' && (
+            <Alert variant="destructive" className="mb-4">
+              <Flame className="h-4 w-4" />
+              <AlertTitle>Attention requise</AlertTitle>
+              <AlertDescription className="flex items-center justify-between">
+                <span>
+                  {stats?.scraperErrorsCount ? `${stats.scraperErrorsCount} erreur(s) scraper` : ''}
+                  {stats?.scraperErrorsCount && stats?.manualReviewEvents ? ' • ' : ''}
+                  {stats?.manualReviewEvents ? `${stats.manualReviewEvents} événement(s) à réviser` : ''}
+                </span>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setActiveTab('urgent')}
+                  className="ml-4"
+                >
+                  Traiter maintenant
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Section Filtres Avancés */}
-        <div className="bg-card rounded-lg border p-4 space-y-4 mb-6">
-          <div className="flex items-center gap-2 mb-2">
-            <Search className="w-5 h-5 text-muted-foreground" />
-            <h3 className="font-semibold">Recherche & Filtres</h3>
-            {hasActiveFilters && (
-              <Badge variant="secondary" className="ml-2">Filtres actifs</Badge>
-            )}
-          </div>
-
-          {/* Barre de recherche */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher par titre, description, lieu, compte Instagram..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-            {searchQuery && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                onClick={() => setSearchQuery('')}
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            )}
-          </div>
-
-          {/* Filtres en grille */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            {/* Priorité */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Priorité</label>
-              <Select value={priorityFilter} onValueChange={(v: 'all' | 'urgent' | 'normal') => setPriorityFilter(v)}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Toutes</SelectItem>
-                  <SelectItem value="urgent">🔥 Urgentes (Manual Review)</SelectItem>
-                  <SelectItem value="normal">📥 Normales (Pending)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Type */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Type</label>
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous</SelectItem>
-                  <SelectItem value="single">🎉 Single</SelectItem>
-                  <SelectItem value="program_unparsed">📅 Programme</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Compte Instagram */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Source Instagram</label>
-              <Select value={accountFilter} onValueChange={setAccountFilter}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les comptes</SelectItem>
-                  {accounts.map(account => (
-                    <SelectItem key={account} value={account}>
-                      @{account}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Date événement */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Date événement</label>
-              <Select value={dateFilter} onValueChange={(v: 'all' | 'today' | 'week' | 'month') => setDateFilter(v)}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Toutes</SelectItem>
-                  <SelectItem value="today">Aujourd'hui</SelectItem>
-                  <SelectItem value="week">Cette semaine</SelectItem>
-                  <SelectItem value="month">Ce mois</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Reset + Compteur */}
-          <div className="flex items-center justify-between pt-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={resetFilters}
-              className="h-8"
-              disabled={!hasActiveFilters}
-            >
-              <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
-              Réinitialiser
-            </Button>
-            
-            <Badge variant="secondary" className="h-8 px-3">
-              {filteredEvents.length} résultat{filteredEvents.length > 1 ? 's' : ''}
-            </Badge>
-          </div>
-        </div>
-
-        {/* Onglets par statut */}
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Onglets simplifiés 3 tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="grid w-full grid-cols-6 max-w-4xl">
-            <TabsTrigger value="manual_review" className="text-orange-600">
-              ⚠️ À Réviser ({counts.scopedManualReview})
+          <TabsList className="grid w-full grid-cols-3 max-w-lg">
+            <TabsTrigger 
+              value="urgent" 
+              className="data-[state=active]:bg-red-100 data-[state=active]:text-red-700"
+            >
+              <Flame className="w-4 h-4 mr-1.5" />
+              Urgents ({urgentCount})
             </TabsTrigger>
-            <TabsTrigger value="errors" className="text-red-600">
-              ❌ Erreurs ({errorCount})
+            <TabsTrigger 
+              value="pending"
+              className="data-[state=active]:bg-orange-100 data-[state=active]:text-orange-700"
+            >
+              <Clock className="w-4 h-4 mr-1.5" />
+              À valider ({stats?.pendingEvents || 0})
             </TabsTrigger>
-            <TabsTrigger value="pending">📥 En attente ({counts.scopedPending})</TabsTrigger>
-            <TabsTrigger value="active">✅ Validés ({counts.scopedActive})</TabsTrigger>
-            <TabsTrigger value="rejected">🗑️ Rejetés ({counts.scopedRejected})</TabsTrigger>
-            <TabsTrigger value="all">📋 Tous ({counts.scopedAll})</TabsTrigger>
+            <TabsTrigger 
+              value="history"
+              className="data-[state=active]:bg-muted"
+            >
+              <History className="w-4 h-4 mr-1.5" />
+              Historique
+            </TabsTrigger>
           </TabsList>
 
-          {/* Onglet Erreurs Scraper */}
-          <TabsContent value="errors" className="mt-6">
-            {loadingErrors ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
-              </div>
-            ) : scraperErrors.length === 0 ? (
-              <div className="bg-card rounded-lg border p-12 text-center">
-                <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  Aucune erreur de scraping en attente 🎉
-                </p>
-              </div>
-            ) : (
+          {/* TAB URGENT - Erreurs + Manual Review */}
+          <TabsContent value="urgent" className="mt-6 space-y-6">
+            {/* Section Erreurs Scraper */}
+            {scraperErrors.length > 0 && (
               <div className="space-y-4">
-                {/* Header avec stats et actions */}
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <AlertCircle className="w-5 h-5 text-red-600" />
@@ -815,7 +659,6 @@ const ValidationInterface = () => {
                   </Button>
                 </div>
 
-                {/* Liste des erreurs */}
                 <div className="space-y-3">
                   {scraperErrors.map((error) => {
                     const eventData = error.event_data;
@@ -823,7 +666,6 @@ const ValidationInterface = () => {
                     return (
                       <div key={error.id} className="bg-card border rounded-lg p-4 hover:shadow-md transition-shadow">
                         <div className="flex gap-4">
-                          {/* Image événement */}
                           <div className="flex-shrink-0">
                             {eventData?.image_url ? (
                               <img 
@@ -838,7 +680,6 @@ const ValidationInterface = () => {
                             )}
                           </div>
 
-                          {/* Info événement */}
                           <div className="flex-1 min-w-0">
                             <h3 className="font-semibold truncate">{eventData?.title || 'Sans titre'}</h3>
                             <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
@@ -860,24 +701,14 @@ const ValidationInterface = () => {
                               )}
                             </div>
 
-                            {/* Info erreur */}
                             <div className="bg-red-50 border border-red-200 rounded p-2 mt-3">
                               <p className="text-xs text-red-800">
                                 <strong>Erreur :</strong> {error.error_type} 
                                 {error.error_message && ` - ${error.error_message}`}
                               </p>
-                              {error.batch_number && (
-                                <p className="text-xs text-red-700 mt-1">
-                                  Batch #{error.batch_number}
-                                </p>
-                              )}
-                              <p className="text-xs text-red-600 mt-1">
-                                {new Date(error.created_at).toLocaleString('fr-FR')}
-                              </p>
                             </div>
                           </div>
 
-                          {/* Actions */}
                           <div className="flex flex-col gap-2">
                             <Button
                               size="sm"
@@ -906,247 +737,86 @@ const ValidationInterface = () => {
                             </Button>
                           </div>
                         </div>
-
-                        {/* Tentatives précédentes */}
-                        {error.retry_count > 0 && (
-                          <div className="mt-3 pt-3 border-t text-xs text-muted-foreground">
-                            <p>
-                              {error.retry_count} tentative{error.retry_count > 1 ? 's' : ''} de retry
-                              {error.retry_error && ` - Dernière erreur: ${error.retry_error}`}
-                            </p>
-                          </div>
-                        )}
                       </div>
                     );
                   })}
                 </div>
               </div>
             )}
+
+            {/* Section Manual Review */}
+            {stats?.manualReviewEvents && stats.manualReviewEvents > 0 && (
+              <div className="space-y-4">
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <AlertCircle className="w-5 h-5 text-orange-600" />
+                    <div>
+                      <p className="font-semibold text-orange-900">
+                        {stats.manualReviewEvents} événement{stats.manualReviewEvents > 1 ? 's' : ''} à réviser manuellement
+                      </p>
+                      <p className="text-sm text-orange-700">
+                        Ces événements nécessitent une intervention humaine
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Liste events manual_review */}
+                {renderEventsTable()}
+              </div>
+            )}
+
+            {/* État vide */}
+            {urgentCount === 0 && (
+              <div className="bg-card rounded-lg border p-12 text-center">
+                <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  Aucun élément urgent à traiter 🎉
+                </p>
+              </div>
+            )}
           </TabsContent>
 
-          <TabsContent value={activeTab} className="space-y-4">
-            {/* Contrôles */}
-            <div className="flex flex-wrap gap-4 items-center justify-between bg-card p-4 rounded-lg border">
-              <div className="flex items-center gap-4">
-                {/* Filtres catégories */}
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => setFilter('all')}
-                    variant={filter === 'all' ? 'default' : 'outline'}
-                    size="sm"
-                  >
-                    Tous
-                  </Button>
-                  {WOULI_CATEGORIES.slice(0, 4).map((category) => (
-                    <Button
-                      key={category.id}
-                      onClick={() => setFilter(category.id)}
-                      variant={filter === category.id ? 'default' : 'outline'}
-                      size="sm"
-                    >
-                      {category.icon} {category.name}
-                    </Button>
-                  ))}
-                </div>
-                
-                {/* Tri */}
-                <select 
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="px-3 py-1 border rounded-lg text-sm bg-background"
-                >
-                  <option value="date">Par date event</option>
-                  <option value="score">Par score</option>
-                  <option value="created">Plus récents</option>
-                </select>
-              </div>
-              
-              {/* Actions groupées */}
-              <div className="flex gap-2">
-                {selectedIds.size > 0 && (
-                  <>
-                    <span className="text-purple-600 font-medium px-3 py-2">
-                      {selectedIds.size} sélectionné(s)
-                    </span>
-                    
-                    {activeTab === 'pending' && (
-                      <>
-                        <Button
-                          onClick={() => {
-                            const selectedEvents = filteredEvents.filter(e => selectedIds.has(e.id));
-                            setEnhanceWithAI(selectedEvents);
-                          }}
-                          size="sm"
-                          className="bg-purple-600 hover:bg-purple-700 text-white"
-                        >
-                          <Sparkles className="w-4 h-4 mr-1" />
-                          Améliorer avec l'IA
-                        </Button>
-                        <Button
-                          onClick={() => handleStatusChange(Array.from(selectedIds), 'pending', 'active')}
-                          size="sm"
-                          className="bg-green-600 hover:bg-green-700 text-white"
-                        >
-                          <Check className="w-4 h-4 mr-1" />
-                          Valider
-                        </Button>
-                        <Button
-                          onClick={() => handleStatusChange(Array.from(selectedIds), 'pending', 'rejected')}
-                          size="sm"
-                          variant="destructive"
-                        >
-                          <X className="w-4 h-4 mr-1" />
-                          Rejeter
-                        </Button>
-                      </>
-                    )}
-                    
-                    {activeTab === 'active' && (
-                      <Button
-                        onClick={() => handleStatusChange(Array.from(selectedIds), 'active', 'pending')}
-                        size="sm"
-                        variant="outline"
-                      >
-                        <RotateCcw className="w-4 h-4 mr-1" />
-                        Remettre en attente
-                      </Button>
-                    )}
-                    
-                    {activeTab === 'rejected' && (
-                      <Button
-                        onClick={() => handleStatusChange(Array.from(selectedIds), 'rejected', 'pending')}
-                        size="sm"
-                        variant="outline"
-                      >
-                        <RotateCcw className="w-4 h-4 mr-1" />
-                        Remettre en attente
-                      </Button>
-                    )}
-                  </>
-                )}
-              </div>
+          {/* TAB PENDING - À valider */}
+          <TabsContent value="pending" className="mt-6">
+            {renderFiltersAndTable()}
+          </TabsContent>
+
+          {/* TAB HISTORY - Historique avec sous-filtres */}
+          <TabsContent value="history" className="mt-6">
+            {/* Sous-filtres historique */}
+            <div className="flex gap-2 mb-4">
+              <Button 
+                variant={historyFilter === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setHistoryFilter('all')}
+              >
+                Tous ({(stats?.activeEvents || 0) + (stats?.rejectedEvents || 0)})
+              </Button>
+              <Button 
+                variant={historyFilter === 'active' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setHistoryFilter('active')}
+              >
+                <CheckCircle className="w-4 h-4 mr-1.5" />
+                Validés ({stats?.activeEvents || 0})
+              </Button>
+              <Button 
+                variant={historyFilter === 'rejected' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setHistoryFilter('rejected')}
+              >
+                <X className="w-4 h-4 mr-1.5" />
+                Rejetés ({stats?.rejectedEvents || 0})
+              </Button>
             </div>
 
-            {/* Sélection globale */}
-            {filteredEvents.length > 0 && (
-              <div className="bg-card rounded-lg border p-4">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.size === filteredEvents.length}
-                    onChange={handleSelectAll}
-                    className="w-5 h-5 text-purple-600 rounded"
-                  />
-                  <span className="font-medium">Tout sélectionner ({filteredEvents.length})</span>
-                </label>
-              </div>
-            )}
-
-            {/* Tableau des événements */}
-            {processingId === 'bulk' ? (
-              <div className="text-center py-12">
-                <LoadingSpinner size="lg" text="Traitement en cours..." />
-              </div>
-            ) : filteredEvents.length === 0 ? (
-              <div className="bg-card rounded-lg border p-12 text-center">
-                <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  {hasActiveFilters 
-                    ? "Aucun événement ne correspond aux filtres actifs"
-                    : `Aucun événement ${activeTab === 'all' ? '' : activeTab === 'pending' ? 'en attente' : activeTab === 'active' ? 'validé' : 'rejeté'}`
-                  }
-                </p>
-                {hasActiveFilters && (
-                  <Button variant="outline" onClick={resetFilters} className="mt-4">
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Réinitialiser les filtres
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <>
-                <div className="bg-card rounded-lg border overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-12">
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.size === filteredEvents.length}
-                            onChange={handleSelectAll}
-                            className="w-4 h-4 text-purple-600 rounded"
-                          />
-                        </TableHead>
-                        <TableHead className="min-w-[300px]">Événement</TableHead>
-                        <TableHead className="max-w-[200px]">Description</TableHead>
-                        <TableHead className="text-center w-24">Score</TableHead>
-                        <TableHead className="min-w-[280px]">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredEvents.map((event) => (
-                        <AdminEventTableRow
-                          key={event.id}
-                          event={event}
-                          isSelected={selectedIds.has(event.id)}
-                          onSelect={handleSelect}
-                          onPreview={setShowDetails}
-                          onEdit={setEditingEvent}
-                          onProcessManualReview={setProcessManualReview}
-                          onHistory={(eventId, eventTitle) => {
-                            setHistoryEventId(eventId);
-                            setHistoryEventTitle(eventTitle);
-                          }}
-                          onStatusChange={handleStatusChange}
-                          calculateScore={calculateScore}
-                          getScoreColor={getScoreColor}
-                        />
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-                
-                {/* Bouton "Charger plus" */}
-                {hasMore && (
-                  <div className="flex flex-col items-center gap-2 mt-6">
-                    <Button
-                      onClick={loadMore}
-                      variant="outline"
-                      className="w-full max-w-md h-12"
-                      disabled={loadingMore}
-                    >
-                      {loadingMore ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                          Chargement...
-                        </>
-                      ) : (
-                        `Charger ${EVENTS_PER_PAGE} événements supplémentaires`
-                      )}
-                    </Button>
-                    {totalCount !== null && (
-                      <p className="text-xs text-muted-foreground">
-                        {events.length} / {totalCount} événements chargés
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Message de fin */}
-                {!hasMore && filteredEvents.length > 0 && totalCount !== null && (
-                  <div className="text-center py-4">
-                    <p className="text-sm text-muted-foreground">
-                      ✅ Tous les événements ont été chargés ({totalCount})
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
+            {renderFiltersAndTable()}
           </TabsContent>
         </Tabs>
       </div>
 
-      {/* Preview Modal */}
+      {/* Modales */}
       <Dialog open={!!showDetails} onOpenChange={() => setShowDetails(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           {showDetails && (
@@ -1164,7 +834,6 @@ const ValidationInterface = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal d'édition */}
       {editingEvent && (
         <EventEditModal
           event={editingEvent}
@@ -1176,7 +845,6 @@ const ValidationInterface = () => {
         />
       )}
 
-      {/* Modal historique */}
       {historyEventId && (
         <EventModerationHistory
           eventId={historyEventId}
@@ -1188,7 +856,6 @@ const ValidationInterface = () => {
         />
       )}
 
-      {/* Modal changement de statut */}
       {statusChange.eventIds.length > 0 && (
         <StatusChangeModal
           eventIds={statusChange.eventIds}
@@ -1199,7 +866,6 @@ const ValidationInterface = () => {
         />
       )}
 
-      {/* Modal amélioration IA */}
       {enhanceWithAI.length > 0 && (
         <EnhanceWithAIModal
           events={enhanceWithAI}
@@ -1211,7 +877,7 @@ const ValidationInterface = () => {
         />
       )}
 
-      {/* Modale Manual Review - Création multiple événements */}
+      {/* Modale Manual Review */}
       {processManualReview && (
         <Dialog open={!!processManualReview} onOpenChange={() => setProcessManualReview(null)}>
           <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
@@ -1223,7 +889,6 @@ const ValidationInterface = () => {
             </DialogHeader>
 
             <div className="grid grid-cols-2 gap-6">
-              {/* COLONNE GAUCHE - Info scraping */}
               <div className="space-y-4 border-r pr-6">
                 <div>
                   <h3 className="font-semibold text-sm mb-2">📸 Screenshot Instagram</h3>
@@ -1255,28 +920,18 @@ const ValidationInterface = () => {
                 </div>
 
                 {processManualReview.external_url && (
-                  <div>
-                    <h3 className="font-semibold text-sm mb-2">🔗 Post Instagram</h3>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => window.open(processManualReview.external_url!, '_blank')}
-                    >
-                      <Instagram className="w-4 h-4 mr-2" />
-                      Voir le post original
-                    </Button>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => window.open(processManualReview.external_url!, '_blank')}
+                  >
+                    <Instagram className="w-4 h-4 mr-2" />
+                    Voir le post original
+                  </Button>
                 )}
-
-                <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg text-sm">
-                  <p className="text-blue-800">
-                    <strong>Source :</strong> @{processManualReview.account_username || 'inconnu'}
-                  </p>
-                </div>
               </div>
 
-              {/* COLONNE DROITE - Création événements */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold">Créer les événements</h3>
@@ -1293,7 +948,6 @@ const ValidationInterface = () => {
                   </div>
                 </div>
 
-                {/* Formulaires empilés */}
                 <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
                   {manualEvents.map((evt, idx) => (
                     <div key={idx} className="border rounded-lg p-4 space-y-3 bg-card">
@@ -1391,7 +1045,6 @@ const ValidationInterface = () => {
                   ))}
                 </div>
 
-                {/* Boutons d'action */}
                 <div className="flex gap-2 pt-4 border-t">
                   <Button
                     variant="outline"
@@ -1413,57 +1066,53 @@ const ValidationInterface = () => {
                       }
 
                       try {
-                        const { data: userData } = await supabase.auth.getUser();
-                        const userId = userData.user?.id;
-                        
-                        const eventsToCreate = manualEvents.map(evt => ({
-                          title: evt.title,
-                          description: evt.description,
-                          date: `${evt.date}T${evt.time}:00`,
-                          price: evt.price,
-                          status: 'pending' as const,
-                          event_type: 'program_manual',
-                          category: processManualReview.category as 'a-boire' | 'a-manger' | 'activites' | 'soirees',
-                          location: processManualReview.location,
-                          image_url: processManualReview.image_url,
-                          external_url: processManualReview.external_url,
-                          account_username: processManualReview.account_username,
-                          created_by: userId!
-                        }));
+                        const userId = (await supabase.auth.getUser()).data.user?.id;
+                        for (const evt of manualEvents) {
+                          const { error } = await supabase
+                            .from('events')
+                            .insert([{
+                              title: evt.title,
+                              date: new Date(`${evt.date}T${evt.time}`).toISOString(),
+                              description: evt.description || processManualReview.description,
+                              location: processManualReview.location,
+                              address: processManualReview.address,
+                              category: processManualReview.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
+                              price: evt.price,
+                              image_url: processManualReview.image_url,
+                              external_url: processManualReview.external_url,
+                              account_username: processManualReview.account_username,
+                              status: 'pending',
+                              created_by: userId!,
+                              created_by_type: 'admin' as const
+                            }]);
 
-                        const { error: createError } = await supabase
+                          if (error) throw error;
+                        }
+
+                        await supabase
                           .from('events')
-                          .insert(eventsToCreate);
-
-                        if (createError) throw createError;
-
-                        const { error: archiveError } = await supabase
-                          .from('events')
-                          .update({ status: 'archived' })
+                          .update({ status: 'rejected' })
                           .eq('id', processManualReview.id);
-
-                        if (archiveError) throw archiveError;
 
                         toast({
                           title: "Succès",
-                          description: `${manualEvents.length} événement(s) créé(s) avec succès`
+                          description: `${manualEvents.length} événement(s) créé(s)`
                         });
+
                         setProcessManualReview(null);
-                        setManualEventCount(1);
-                        fetchEvents(0, false);
+                        fetchEvents();
                       } catch (error: any) {
-                        console.error('Erreur création événements:', error);
                         toast({
                           title: "Erreur",
-                          description: "Erreur lors de la création des événements",
+                          description: error.message,
                           variant: "destructive"
                         });
                       }
                     }}
-                    className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                    className="flex-1 bg-green-600 hover:bg-green-700"
                   >
                     <Check className="w-4 h-4 mr-2" />
-                    Créer les {manualEvents.length} événement(s)
+                    Créer {manualEvents.length} événement{manualEvents.length > 1 ? 's' : ''}
                   </Button>
                 </div>
               </div>
@@ -1473,6 +1122,288 @@ const ValidationInterface = () => {
       )}
     </div>
   );
+
+  // Fonction pour afficher les filtres et le tableau
+  function renderFiltersAndTable() {
+    return (
+      <>
+        {/* Section Filtres */}
+        <div className="bg-card rounded-lg border p-4 space-y-4 mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <Search className="w-5 h-5 text-muted-foreground" />
+            <h3 className="font-semibold">Recherche & Filtres</h3>
+            {hasActiveFilters && (
+              <Badge variant="secondary" className="ml-2">Filtres actifs</Badge>
+            )}
+          </div>
+
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Rechercher par titre, description, lieu, compte Instagram..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+            {searchQuery && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                onClick={() => setSearchQuery('')}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Source Instagram</label>
+              <Select value={accountFilter} onValueChange={setAccountFilter}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les comptes</SelectItem>
+                  {accounts.map(account => (
+                    <SelectItem key={account} value={account}>
+                      @{account}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Date événement</label>
+              <Select value={dateFilter} onValueChange={(v: 'all' | 'today' | 'week' | 'month') => setDateFilter(v)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toutes</SelectItem>
+                  <SelectItem value="today">Aujourd'hui</SelectItem>
+                  <SelectItem value="week">Cette semaine</SelectItem>
+                  <SelectItem value="month">Ce mois</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Tri</label>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date">Date événement</SelectItem>
+                  <SelectItem value="created">Date création</SelectItem>
+                  <SelectItem value="score">Score qualité</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={resetFilters}
+              className="h-8"
+              disabled={!hasActiveFilters}
+            >
+              <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+              Réinitialiser
+            </Button>
+            
+            <Badge variant="secondary" className="h-8 px-3">
+              {filteredEvents.length} résultat{filteredEvents.length > 1 ? 's' : ''}
+            </Badge>
+          </div>
+        </div>
+
+        {renderEventsTable()}
+      </>
+    );
+  }
+
+  // Fonction pour afficher le tableau d'événements
+  function renderEventsTable() {
+    return (
+      <>
+        {/* Actions groupées */}
+        {selectedIds.size > 0 && (
+          <div className="bg-card rounded-lg border p-4 mb-4">
+            <div className="flex items-center justify-between">
+              <span className="font-medium">
+                {selectedIds.size} événement(s) sélectionné(s)
+              </span>
+              
+              <div className="flex gap-2">
+                {(activeTab === 'pending' || activeTab === 'urgent') && (
+                  <>
+                    <Button
+                      onClick={() => handleApprove(Array.from(selectedIds))}
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <Check className="w-4 h-4 mr-1" />
+                      Valider
+                    </Button>
+                    <Button
+                      onClick={() => handleReject(Array.from(selectedIds))}
+                      size="sm"
+                      variant="destructive"
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Rejeter
+                    </Button>
+                  </>
+                )}
+                
+                {activeTab === 'history' && historyFilter === 'active' && (
+                  <Button
+                    onClick={() => handleStatusChange(Array.from(selectedIds), 'active', 'pending')}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <RotateCcw className="w-4 h-4 mr-1" />
+                    Remettre en attente
+                  </Button>
+                )}
+                
+                {activeTab === 'history' && historyFilter === 'rejected' && (
+                  <Button
+                    onClick={() => handleStatusChange(Array.from(selectedIds), 'rejected', 'pending')}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <RotateCcw className="w-4 h-4 mr-1" />
+                    Remettre en attente
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Sélection globale */}
+        {filteredEvents.length > 0 && (
+          <div className="bg-card rounded-lg border p-4 mb-4">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedIds.size === filteredEvents.length}
+                onChange={handleSelectAll}
+                className="w-5 h-5 text-purple-600 rounded"
+              />
+              <span className="font-medium">Tout sélectionner ({filteredEvents.length})</span>
+            </label>
+          </div>
+        )}
+
+        {/* Tableau */}
+        {loading ? (
+          <div className="text-center py-12">
+            <LoadingSpinner size="lg" text="Chargement..." />
+          </div>
+        ) : filteredEvents.length === 0 ? (
+          <div className="bg-card rounded-lg border p-12 text-center">
+            <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">
+              {hasActiveFilters 
+                ? "Aucun événement ne correspond aux filtres actifs"
+                : "Aucun événement à afficher"
+              }
+            </p>
+            {hasActiveFilters && (
+              <Button variant="outline" onClick={resetFilters} className="mt-4">
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Réinitialiser les filtres
+              </Button>
+            )}
+          </div>
+        ) : (
+          <>
+            <div className="bg-card rounded-lg border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.size === filteredEvents.length}
+                        onChange={handleSelectAll}
+                        className="w-4 h-4 text-purple-600 rounded"
+                      />
+                    </TableHead>
+                    <TableHead className="min-w-[300px]">Événement</TableHead>
+                    <TableHead className="max-w-[200px]">Description</TableHead>
+                    <TableHead className="text-center w-24">Score</TableHead>
+                    <TableHead className="min-w-[280px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredEvents.map((event) => (
+                    <AdminEventTableRow
+                      key={event.id}
+                      event={event}
+                      isSelected={selectedIds.has(event.id)}
+                      onSelect={handleSelect}
+                      onPreview={setShowDetails}
+                      onEdit={setEditingEvent}
+                      onProcessManualReview={setProcessManualReview}
+                      onHistory={(eventId, eventTitle) => {
+                        setHistoryEventId(eventId);
+                        setHistoryEventTitle(eventTitle);
+                      }}
+                      onStatusChange={handleStatusChange}
+                      calculateScore={calculateScore}
+                      getScoreColor={getScoreColor}
+                    />
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            
+            {hasMore && (
+              <div className="flex flex-col items-center gap-2 mt-6">
+                <Button
+                  onClick={loadMore}
+                  variant="outline"
+                  className="w-full max-w-md h-12"
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      Chargement...
+                    </>
+                  ) : (
+                    `Charger ${EVENTS_PER_PAGE} événements supplémentaires`
+                  )}
+                </Button>
+                {totalCount !== null && (
+                  <p className="text-xs text-muted-foreground">
+                    {events.length} / {totalCount} événements chargés
+                  </p>
+                )}
+              </div>
+            )}
+
+            {!hasMore && filteredEvents.length > 0 && totalCount !== null && (
+              <div className="text-center py-4">
+                <p className="text-sm text-muted-foreground">
+                  ✅ Tous les événements ont été chargés ({totalCount})
+                </p>
+              </div>
+            )}
+          </>
+        )}
+      </>
+    );
+  }
 };
 
 export default ValidationInterface;
