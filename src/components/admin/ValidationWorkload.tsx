@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, Clock, CheckCircle, Flame, TrendingUp } from 'lucide-react';
+import { AlertCircle, Clock, CheckCircle, Flame, List } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface WorkloadCardProps {
@@ -69,17 +69,13 @@ interface ValidationWorkloadProps {
   isLoading: boolean;
   activeTab: string;
   onTabChange: (tab: string) => void;
-  todayValidated?: number;
-  showRejected?: boolean;
 }
 
 export const ValidationWorkload = ({
   stats,
   isLoading,
   activeTab,
-  onTabChange,
-  todayValidated = 0,
-  showRejected = true
+  onTabChange
 }: ValidationWorkloadProps) => {
   if (isLoading) {
     return (
@@ -92,6 +88,7 @@ export const ValidationWorkload = ({
   }
 
   const urgentCount = (stats?.manualReviewEvents || 0) + (stats?.scraperErrorsCount || 0);
+  const totalCount = (stats?.pendingEvents || 0) + (stats?.activeEvents || 0) + (stats?.rejectedEvents || 0) + urgentCount;
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
@@ -119,21 +116,21 @@ export const ValidationWorkload = ({
         onClick={() => onTabChange('active')}
         isActive={activeTab === 'active'}
       />
-      {showRejected && (
-        <WorkloadCard
-          label="Rejetés"
-          count={stats?.rejectedEvents || 0}
-          icon={<AlertCircle className="w-5 h-5 text-gray-500" />}
-          variant="info"
-          onClick={() => onTabChange('rejected')}
-          isActive={activeTab === 'rejected'}
-        />
-      )}
       <WorkloadCard
-        label="Aujourd'hui"
-        count={todayValidated}
-        icon={<TrendingUp className="w-5 h-5 text-blue-500" />}
+        label="Rejetés"
+        count={stats?.rejectedEvents || 0}
+        icon={<AlertCircle className="w-5 h-5 text-gray-500" />}
         variant="info"
+        onClick={() => onTabChange('rejected')}
+        isActive={activeTab === 'rejected'}
+      />
+      <WorkloadCard
+        label="Tous"
+        count={totalCount}
+        icon={<List className="w-5 h-5 text-blue-500" />}
+        variant="info"
+        onClick={() => onTabChange('all')}
+        isActive={activeTab === 'all'}
       />
     </div>
   );
