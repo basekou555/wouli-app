@@ -123,11 +123,12 @@ export const useAdminStats = () => {
         .select('*', { count: 'exact', head: true })
         .eq('retry_status', 'pending');
 
-      // Compter les rejetés
+      // Compter les rejetés à venir (comme pour les actifs)
       const { count: rejectedEvents } = await supabase
         .from('events')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'rejected');
+        .eq('status', 'rejected')
+        .gte('date', now);
 
       // Récupérer l'activité récente
       const { data: recentActivity } = await supabase

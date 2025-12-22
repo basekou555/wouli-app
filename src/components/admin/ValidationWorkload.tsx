@@ -70,6 +70,7 @@ interface ValidationWorkloadProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   todayValidated?: number;
+  showRejected?: boolean;
 }
 
 export const ValidationWorkload = ({
@@ -77,13 +78,14 @@ export const ValidationWorkload = ({
   isLoading,
   activeTab,
   onTabChange,
-  todayValidated = 0
+  todayValidated = 0,
+  showRejected = true
 }: ValidationWorkloadProps) => {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-24 rounded-lg" />
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <Skeleton key={i} className="h-20 rounded-lg" />
         ))}
       </div>
     );
@@ -92,11 +94,11 @@ export const ValidationWorkload = ({
   const urgentCount = (stats?.manualReviewEvents || 0) + (stats?.scraperErrorsCount || 0);
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
       <WorkloadCard
         label="Urgents"
         count={urgentCount}
-        icon={<Flame className="w-6 h-6 text-red-500" />}
+        icon={<Flame className="w-5 h-5 text-red-500" />}
         variant="danger"
         onClick={() => onTabChange('urgent')}
         isActive={activeTab === 'urgent'}
@@ -104,7 +106,7 @@ export const ValidationWorkload = ({
       <WorkloadCard
         label="À valider"
         count={stats?.pendingEvents || 0}
-        icon={<Clock className="w-6 h-6 text-orange-500" />}
+        icon={<Clock className="w-5 h-5 text-orange-500" />}
         variant="warning"
         onClick={() => onTabChange('pending')}
         isActive={activeTab === 'pending'}
@@ -112,15 +114,25 @@ export const ValidationWorkload = ({
       <WorkloadCard
         label="Actifs"
         count={stats?.activeEvents || 0}
-        icon={<CheckCircle className="w-6 h-6 text-green-500" />}
+        icon={<CheckCircle className="w-5 h-5 text-green-500" />}
         variant="success"
-        onClick={() => onTabChange('history')}
-        isActive={activeTab === 'history'}
+        onClick={() => onTabChange('active')}
+        isActive={activeTab === 'active'}
       />
+      {showRejected && (
+        <WorkloadCard
+          label="Rejetés"
+          count={stats?.rejectedEvents || 0}
+          icon={<AlertCircle className="w-5 h-5 text-gray-500" />}
+          variant="info"
+          onClick={() => onTabChange('rejected')}
+          isActive={activeTab === 'rejected'}
+        />
+      )}
       <WorkloadCard
         label="Aujourd'hui"
         count={todayValidated}
-        icon={<TrendingUp className="w-6 h-6 text-blue-500" />}
+        icon={<TrendingUp className="w-5 h-5 text-blue-500" />}
         variant="info"
       />
     </div>
