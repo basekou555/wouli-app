@@ -9,6 +9,8 @@ import { motion } from 'framer-motion';
 import { MenuDrawer } from '@/components/MenuDrawer';
 import { FiltersDrawer } from '@/components/FiltersDrawer';
 import { InstallPrompt } from '@/components/InstallPrompt';
+import { Menu, Filter } from 'lucide-react';
+import { useIsPWA } from '@/hooks/useIsPWA';
 
 const UserApp = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -98,6 +100,11 @@ const UserApp = () => {
     return events;
   }, [allEvents, selectedCategory, selectedPrice, selectedTime]);
 
+  const isPWA = useIsPWA();
+  
+  // Hauteur du header fixe
+  const HEADER_HEIGHT = 56; // h-14 = 3.5rem = 56px
+
   // Scroll programmatique vers un event
   const scrollToEvent = useCallback((targetIndex: number) => {
     if (!containerRef.current) return;
@@ -106,7 +113,8 @@ const UserApp = () => {
     if (targetIndex < 0 || targetIndex > filteredEvents.length) return;
     
     const container = containerRef.current;
-    const targetY = targetIndex * window.innerHeight;
+    const cardHeight = container.clientHeight; // Hauteur visible du container (sans header)
+    const targetY = targetIndex * cardHeight;
     
     container.scrollTo({
       top: targetY,
@@ -128,8 +136,8 @@ const UserApp = () => {
       
       scrollTimeout = setTimeout(() => {
         const scrollTop = container.scrollTop;
-        const screenHeight = window.innerHeight;
-        const currentIndex = Math.round(scrollTop / screenHeight);
+        const cardHeight = container.clientHeight;
+        const currentIndex = Math.round(scrollTop / cardHeight);
         
         if (currentIndex !== currentScrollIndex && currentIndex < filteredEvents.length) {
           setCurrentScrollIndex(currentIndex);
@@ -302,18 +310,42 @@ const UserApp = () => {
   }
 
   return (
-    <div className="h-screen bg-background overflow-hidden">
+    <div className="h-screen bg-background overflow-hidden flex flex-col">
+      {/* Header fixe - toujours visible */}
+      <header 
+        className="flex-shrink-0 h-14 px-4 flex items-center justify-between bg-card border-b border-border z-50"
+        style={{ paddingTop: isPWA ? 'env(safe-area-inset-top)' : undefined }}
+      >
+        <button
+          onClick={() => setIsMenuOpen(true)}
+          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-accent transition-colors"
+          aria-label="Menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+        
+        <span className="font-bold text-lg tracking-wide">WOULI</span>
+        
+        <button
+          onClick={() => setIsFiltersOpen(true)}
+          className="px-3 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors flex items-center gap-1"
+        >
+          <Filter className="w-4 h-4" />
+          Filtres
+        </button>
+      </header>
+
       {/* Container avec Scroll Snap TikTok-style */}
       <div 
         ref={containerRef}
-        className="h-full overflow-y-scroll snap-y-mandatory scroll-smooth scrollbar-hide"
+        className="flex-1 overflow-y-scroll snap-y-mandatory scroll-smooth scrollbar-hide"
       >
         {filteredEvents.length > 0 ? (
           <>
             {filteredEvents.map((event, index) => (
               <div 
                 key={event.id}
-                className="h-screen snap-start snap-always"
+                className="h-full snap-start snap-always"
                 data-index={index}
               >
                 <EventCard
@@ -324,9 +356,6 @@ const UserApp = () => {
                   onLike={() => handleLike(event.id, index)}
                   onParticipate={() => handleParticipate(event.id, index)}
                   onShare={() => handleShare(event.id)}
-                  onMenuClick={() => setIsMenuOpen(true)}
-                  onSearchClick={() => navigate('/explore')}
-                  onFilterClick={() => setIsFiltersOpen(true)}
                   onEstablishmentClick={() => handleEstablishmentClick(event.id)}
                   onMapClick={() => handleMapClick(event.id)}
                 />
@@ -334,7 +363,7 @@ const UserApp = () => {
             ))}
             
             {/* Écran de fin */}
-            <div className="h-screen snap-start snap-always flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 p-8">
+            <div className="h-full snap-start snap-always flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 p-8">
               <motion.div 
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -371,7 +400,7 @@ const UserApp = () => {
             </div>
           </>
         ) : (
-          <div className="h-screen flex items-center justify-center">
+          <div className="h-full flex items-center justify-center">
             <div className="text-center p-8 space-y-4">
               <p className="text-muted-foreground mb-4">
                 {hasActiveFilters 
