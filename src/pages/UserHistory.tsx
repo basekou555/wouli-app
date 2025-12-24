@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,6 @@ import { PageSkeleton } from '../components/LoadingSkeleton';
 import { UserMemories } from '../components/memories/UserMemories';
 import { UnifiedEvent } from '@/types/unified';
 import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
-
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
   return new Intl.DateTimeFormat('fr-FR', {
@@ -22,30 +20,28 @@ const formatDate = (dateString: string) => {
     minute: '2-digit'
   }).format(date);
 };
-
 const UserHistory = () => {
-  const { likedEvents, participatingEvents, loading, removeLikedEvent, removeParticipation } = useUserHistory();
-
-  const EventCard = ({ event, onRemove, removeText, removeIcon }: {
+  const {
+    likedEvents,
+    participatingEvents,
+    loading,
+    removeLikedEvent,
+    removeParticipation
+  } = useUserHistory();
+  const EventCard = ({
+    event,
+    onRemove,
+    removeText,
+    removeIcon
+  }: {
     event: UnifiedEvent;
     onRemove: (eventId: string) => void;
     removeText: string;
     removeIcon: React.ReactNode;
-  }) => (
-    <Card className="overflow-hidden">
+  }) => <Card className="overflow-hidden">
       <div className="relative h-48">
-        <img
-          src={getProxiedImageUrl(event.image_url) || `https://picsum.photos/400/200?random=${event.id}`}
-          alt={event.title}
-          className="w-full h-full object-cover"
-          onError={handleImageError}
-        />
-        <Button
-          variant="destructive"
-          size="icon"
-          className="absolute top-2 right-2 h-8 w-8"
-          onClick={() => onRemove(event.id)}
-        >
+        <img src={getProxiedImageUrl(event.image_url) || `https://picsum.photos/400/200?random=${event.id}`} alt={event.title} className="w-full h-full object-cover" onError={handleImageError} />
+        <Button variant="destructive" size="icon" className="absolute top-2 right-2 h-8 w-8" onClick={() => onRemove(event.id)}>
           {removeIcon}
         </Button>
       </div>
@@ -76,18 +72,10 @@ const UserHistory = () => {
           </Button>
         </div>
       </CardContent>
-    </Card>
-  );
-
+    </Card>;
   if (loading) return <PageSkeleton />;
-
-  return (
-    <div className="min-h-screen bg-background pb-20">
-      <PageHeader 
-        title="Mes Événements" 
-        subtitle="Gérez vos favoris, participations et souvenirs"
-        showBack
-      />
+  return <div className="min-h-screen bg-background pb-20">
+      <PageHeader title="Mes Événements" subtitle="Gérez vos favoris, participations et souvenirs" showBack />
       
       <div className="px-4 py-6 max-w-2xl mx-auto space-y-6">
         <Tabs defaultValue="liked" className="w-full">
@@ -107,53 +95,29 @@ const UserHistory = () => {
           </TabsList>
 
           <TabsContent value="liked" className="mt-6">
-            {likedEvents.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                {likedEvents.map((event) => (
-                  <EventCard
-                    key={event.id}
-                    event={event}
-                    onRemove={removeLikedEvent}
-                    removeText="Retirer des favoris"
-                    removeIcon={<X className="h-4 w-4" />}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
+            {likedEvents.length > 0 ? <div className="grid gap-4 md:grid-cols-2">
+                {likedEvents.map(event => <EventCard key={event.id} event={event} onRemove={removeLikedEvent} removeText="Retirer des favoris" removeIcon={<X className="h-4 w-4" />} />)}
+              </div> : <div className="text-center py-12">
                 <Heart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium text-foreground">Aucun favori</h3>
                 <p className="text-muted-foreground mt-2">Les événements que vous aimez apparaîtront ici</p>
                 <Link to="/app">
                   <Button className="mt-4">Découvrir des événements</Button>
                 </Link>
-              </div>
-            )}
+              </div>}
           </TabsContent>
 
           <TabsContent value="participating" className="mt-6">
-            {participatingEvents.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                {participatingEvents.map((event) => (
-                  <EventCard
-                    key={event.id}
-                    event={event}
-                    onRemove={removeParticipation}
-                    removeText="Annuler participation"
-                    removeIcon={<Trash2 className="h-4 w-4" />}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
+            {participatingEvents.length > 0 ? <div className="grid gap-4 md:grid-cols-2">
+                {participatingEvents.map(event => <EventCard key={event.id} event={event} onRemove={removeParticipation} removeText="Annuler participation" removeIcon={<Trash2 className="h-4 w-4" />} />)}
+              </div> : <div className="text-center py-12">
                 <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium text-foreground">Aucune participation</h3>
                 <p className="text-muted-foreground mt-2">Les événements auxquels vous participez apparaîtront ici</p>
                 <Link to="/app">
                   <Button className="mt-4">Rejoindre des événements</Button>
                 </Link>
-              </div>
-            )}
+              </div>}
           </TabsContent>
 
           <TabsContent value="memories" className="mt-6">
@@ -162,9 +126,7 @@ const UserHistory = () => {
         </Tabs>
       </div>
       
-      <BottomNavigation />
-    </div>
-  );
+      
+    </div>;
 };
-
 export default UserHistory;
