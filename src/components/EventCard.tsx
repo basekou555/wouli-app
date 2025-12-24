@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { UnifiedEvent } from '@/types/unified';
-import { Menu, Filter, X, Heart, Share2, Check } from 'lucide-react';
+import { X, Heart, Share2, Check } from 'lucide-react';
 import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
 import { getSocialProofText, getPriceInfo, formatEventDateTime } from '@/utils/eventCardHelpers';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,9 +15,6 @@ interface EventCardProps {
   onLike: () => void;
   onParticipate: () => void;
   onShare?: () => void;
-  onMenuClick?: () => void;
-  onSearchClick?: () => void;
-  onFilterClick?: () => void;
   onEstablishmentClick?: () => void;
   onMapClick?: () => void;
 }
@@ -91,14 +88,10 @@ const ParticipateButton: React.FC<{ onClick: () => void }> = ({ onClick }) => {
 
 const EventCard: React.FC<EventCardProps> = ({
   event,
-  isFirstEvent,
-  onBack,
   onDislike,
   onLike,
   onParticipate,
   onShare,
-  onMenuClick,
-  onFilterClick,
   onEstablishmentClick,
   onMapClick
 }) => {
@@ -108,33 +101,7 @@ const EventCard: React.FC<EventCardProps> = ({
   const isPWA = useIsPWA();
 
   return (
-    <div className={cn(
-      "w-full bg-background flex flex-col",
-      isPWA ? "h-screen" : "h-[calc(100vh-56px)]"
-    )}>
-      {/* Header fixe */}
-      <header 
-        className="flex-shrink-0 h-14 px-4 flex items-center justify-between bg-card border-b border-border"
-        style={{ paddingTop: 'env(safe-area-inset-top)' }}
-      >
-        <button
-          onClick={onMenuClick}
-          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-accent transition-colors"
-          aria-label="Menu"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
-        
-        <span className="font-bold text-lg tracking-wide">WOULI</span>
-        
-        <button
-          onClick={onFilterClick}
-          className="px-3 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors flex items-center gap-1"
-        >
-          <Filter className="w-4 h-4" />
-          Filtres
-        </button>
-      </header>
+    <div className="w-full h-full bg-background flex flex-col">
 
       {/* Contenu sans scroll - flexbox */}
       <div 
