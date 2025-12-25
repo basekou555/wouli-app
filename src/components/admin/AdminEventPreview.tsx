@@ -1,11 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { PendingEvent } from '@/hooks/utils/adminEventMappers';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Edit, History, BarChart3, X, Calendar, MapPin, Euro, Heart, Share2, Users, ExternalLink } from 'lucide-react';
+import { Edit, History, BarChart3, X, Calendar, MapPin, Euro, Heart, Share2, Users, ExternalLink, Check } from 'lucide-react';
 import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
 import { getCategoryById } from '@/data/wouliCategories';
+import { getFocusClass, ImageFocusPosition, focusPositionLabels } from '@/utils/imageHelpers';
+import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface AdminEventPreviewProps {
   event: PendingEvent;
@@ -13,6 +17,7 @@ interface AdminEventPreviewProps {
   onHistory?: (eventId: string, eventTitle: string) => void;
   onStats?: (eventId: string) => void;
   onClose: () => void;
+  onFocusChange?: (eventId: string, focus: ImageFocusPosition) => void;
 }
 
 export const AdminEventPreview: React.FC<AdminEventPreviewProps> = ({
@@ -20,9 +25,36 @@ export const AdminEventPreview: React.FC<AdminEventPreviewProps> = ({
   onEdit,
   onHistory,
   onStats,
-  onClose
+  onClose,
+  onFocusChange
 }) => {
   const category = getCategoryById(event.category);
+  const [selectedFocus, setSelectedFocus] = useState<ImageFocusPosition>(
+    (event as any).image_focus_position || 'center'
+  );
+  const [isSavingFocus, setIsSavingFocus] = useState(false);
+
+  const handleFocusChange = async (focus: ImageFocusPosition) => {
+    setSelectedFocus(focus);
+    setIsSavingFocus(true);
+    
+    try {
+      const { error } = await supabase
+        .from('events')
+        .update({ image_focus_position: focus })
+        .eq('id', event.id);
+      
+      if (error) throw error;
+      
+      toast.success(`Focus image mis à jour: ${focusPositionLabels[focus].label}`);
+      onFocusChange?.(event.id, focus);
+    } catch (error) {
+      console.error('Error updating focus:', error);
+      toast.error('Erreur lors de la mise à jour du focus');
+    } finally {
+      setIsSavingFocus(false);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, any> = {
@@ -98,7 +130,7 @@ export const AdminEventPreview: React.FC<AdminEventPreviewProps> = ({
               <img
                 src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/400/500?random=event"}
                 alt={event.title}
-                className="w-full h-full object-cover"
+                className={cn("w-full h-full object-cover", getFocusClass(selectedFocus))}
                 onError={handleImageError}
               />
               
@@ -179,6 +211,37 @@ export const AdminEventPreview: React.FC<AdminEventPreviewProps> = ({
             <div className="w-32 h-1 bg-gray-300 rounded-full" />
           </div>
         </div>
+      </div>
+
+      {/* Focus Position Selector */}
+      <div className="bg-card border rounded-lg p-4">
+        <h4 className="text-sm font-semibold text-foreground mb-3">
+          Zone de focus de l'image
+        </h4>
+        <p className="text-xs text-muted-foreground mb-3">
+          Sélectionne la zone de l'affiche à afficher en priorité dans le crop
+        </p>
+        <div className="flex gap-2">
+          {(['top', 'center', 'bottom'] as ImageFocusPosition[]).map((focus) => (
+            <button
+              key={focus}
+              onClick={() => handleFocusChange(focus)}
+              disabled={isSavingFocus}
+              className={cn(
+                "flex-1 py-2 px-3 rounded-lg border-2 transition-all flex flex-col items-center gap-1",
+                selectedFocus === focus
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border hover:border-primary/50 text-muted-foreground"
+              )}
+            >
+              <span className="text-lg">{focusPositionLabels[focus].icon}</span>
+              <span className="text-xs font-medium">{focusPositionLabels[focus].label}</span>
+            </button>
+          ))}
+        </div>
+        {isSavingFocus && (
+          <p className="text-xs text-muted-foreground text-center mt-2">Enregistrement...</p>
+        )}
       </div>
 
       {/* Admin Actions */}

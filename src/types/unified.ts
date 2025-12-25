@@ -33,6 +33,9 @@ export interface UnifiedEvent extends BaseEvent {
   
   // Business metrics
   conversion_rate?: number;
+  
+  // Image focus position for cropping
+  image_focus_position?: 'top' | 'center' | 'bottom';
 }
 
 export type EventSource = 'user' | 'business' | 'all';
