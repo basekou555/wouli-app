@@ -12,6 +12,8 @@ export interface BaseEvent {
   participants: number;
   created_at?: string;
   updated_at?: string;
+  // Image focus position for cropping
+  image_focus_position?: 'top' | 'center' | 'bottom';
 }
 
 export interface UserEvent extends BaseEvent {

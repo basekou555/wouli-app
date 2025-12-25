@@ -3,6 +3,7 @@ import { UnifiedEvent } from '@/types/unified';
 import { X, Heart, Share2, Check } from 'lucide-react';
 import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
 import { getSocialProofText, getPriceInfo, formatEventDateTime } from '@/utils/eventCardHelpers';
+import { getFocusClass } from '@/utils/imageHelpers';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useIsPWA } from '@/hooks/useIsPWA';
@@ -97,6 +98,7 @@ const EventCard: React.FC<EventCardProps> = ({
 }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const isPWA = useIsPWA();
 
@@ -108,8 +110,11 @@ const EventCard: React.FC<EventCardProps> = ({
         ref={containerRef}
         className="flex-1 flex flex-col overflow-hidden min-h-0"
       >
-        {/* Image - prend l'espace flexible restant */}
-        <div className="relative flex-1 min-h-0">
+        {/* Image - prend l'espace flexible restant - cliquable pour fullscreen */}
+        <div 
+          className="relative flex-1 min-h-0 cursor-pointer"
+          onClick={() => setShowImageModal(true)}
+        >
           {!imageLoaded && (
             <div className="absolute inset-0 bg-muted animate-pulse" />
           )}
@@ -118,6 +123,7 @@ const EventCard: React.FC<EventCardProps> = ({
             alt={event.title}
             className={cn(
               "w-full h-full object-cover transition-opacity duration-300",
+              getFocusClass(event.image_focus_position),
               imageLoaded ? "opacity-100" : "opacity-0"
             )}
             onLoad={() => setImageLoaded(true)}
@@ -351,6 +357,34 @@ const EventCard: React.FC<EventCardProps> = ({
                   )}
                 </div>
               </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Modal Fullscreen Image */}
+      <AnimatePresence>
+        {showImageModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowImageModal(false)}
+              className="fixed inset-0 bg-black z-50 flex items-center justify-center"
+            >
+              <img
+                src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/400/600?random=event"}
+                alt={event.title}
+                className="max-w-full max-h-full object-contain"
+                onError={handleImageError}
+              />
+              <button
+                onClick={() => setShowImageModal(false)}
+                className="absolute top-4 right-4 p-3 bg-white/20 hover:bg-white/30 backdrop-blur rounded-full transition-colors"
+              >
+                <X className="w-6 h-6 text-white" />
+              </button>
             </motion.div>
           </>
         )}
