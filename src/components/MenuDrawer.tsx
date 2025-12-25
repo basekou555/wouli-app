@@ -96,7 +96,7 @@ export const MenuDrawer: React.FC<MenuDrawerProps> = ({ isOpen, onClose }) => {
             <nav className="flex-1 overflow-y-auto p-4 space-y-1">
               {/* Section Découvrir */}
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-2">
-                Découvrir
+                Événements
               </p>
               
               <button
