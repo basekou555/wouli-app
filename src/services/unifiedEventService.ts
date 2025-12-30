@@ -48,8 +48,109 @@ const enrichEventsWithSocialData = async (events: UnifiedEvent[]): Promise<Unifi
   return enrichedEvents;
 };
 
+export interface PaginatedResult<T> {
+  data: T[];
+  hasMore: boolean;
+  totalCount: number;
+}
+
+const mapEventToUnified = (event: any, configMap: Map<string, string>): UnifiedEvent => ({
+  id: event.id,
+  title: event.title,
+  description: event.description,
+  date: event.date,
+  location: event.location,
+  category: event.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
+  image_url: event.image_url,
+  views: event.views || 0,
+  likes: event.likes || 0,
+  participants: event.participants || 0,
+  created_at: event.created_at,
+  updated_at: event.updated_at,
+  source: (event.created_by_type === 'business' ? 'business' : 'user') as 'user' | 'business',
+  organizer: event.created_by_type === 'business' ? 
+    (configMap.get(event.created_by) || 'Établissement') : 
+    'Utilisateur',
+  organizer_type: event.created_by_type as 'user' | 'business',
+  venue: undefined,
+  time: undefined,
+  event_type: event.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
+  price_text: event.price ? event.price.toString() : undefined,
+  end_date: event.end_date,
+  max_participants: event.max_participants,
+  address: event.address,
+  tags: event.tags,
+  external_url: event.external_url
+} as UnifiedEvent);
+
+export const fetchAllEventsPaginated = async (
+  page: number = 0, 
+  pageSize: number = 10
+): Promise<PaginatedResult<UnifiedEvent>> => {
+  const from = page * pageSize;
+  const to = from + pageSize - 1;
+
+  // Get total count first
+  const { count, error: countError } = await supabase
+    .from('active_events')
+    .select('*', { count: 'exact', head: true });
+
+  if (countError) {
+    console.warn('Error counting events:', countError);
+    return { data: [], hasMore: false, totalCount: 0 };
+  }
+
+  const totalCount = count || 0;
+
+  // Fetch paginated data
+  const { data: allEvents, error } = await supabase
+    .from('active_events')
+    .select('*')
+    .order('date', { ascending: true })
+    .range(from, to);
+
+  if (error) {
+    console.warn('Error fetching events:', error);
+    return { data: [], hasMore: false, totalCount };
+  }
+
+  if (!allEvents || allEvents.length === 0) {
+    return { data: [], hasMore: false, totalCount };
+  }
+
+  // Get business configs for organizer names
+  const businessUserIds = [...new Set(
+    allEvents
+      .filter(event => event.created_by_type === 'business')
+      .map(event => event.created_by)
+  )];
+
+  let configMap = new Map<string, string>();
+  if (businessUserIds.length > 0) {
+    const { data: businessConfigs } = await supabase
+      .from('business_configs')
+      .select('user_id, client_name')
+      .in('user_id', businessUserIds);
+    
+    configMap = new Map(
+      businessConfigs?.map(config => [config.user_id, config.client_name]) || []
+    );
+  }
+
+  const unifiedEvents = allEvents.map(event => mapEventToUnified(event, configMap));
+
+  // Enrichir avec les données sociales
+  const enrichedEvents = await enrichEventsWithSocialData(unifiedEvents);
+
+  return {
+    data: enrichedEvents,
+    hasMore: from + allEvents.length < totalCount,
+    totalCount
+  };
+};
+
+// Fonction legacy pour compatibilité
 export const fetchAllEvents = async (): Promise<UnifiedEvent[]> => {
-  // Utiliser la vue active_events pour récupérer seulement les événements actifs et futurs
   const { data: allEvents, error } = await supabase
     .from('active_events')
     .select('*')
@@ -62,14 +163,13 @@ export const fetchAllEvents = async (): Promise<UnifiedEvent[]> => {
 
   if (!allEvents) return [];
 
-  // Get business configs for organizer names
   const businessUserIds = [...new Set(
     allEvents
       .filter(event => event.created_by_type === 'business')
       .map(event => event.created_by)
   )];
 
-  let configMap = new Map();
+  let configMap = new Map<string, string>();
   if (businessUserIds.length > 0) {
     const { data: businessConfigs } = await supabase
       .from('business_configs')
@@ -81,36 +181,8 @@ export const fetchAllEvents = async (): Promise<UnifiedEvent[]> => {
     );
   }
 
-  const unifiedEvents = allEvents.map(event => ({
-    id: event.id,
-    title: event.title,
-    description: event.description,
-    date: event.date,
-    location: event.location,
-    category: event.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
-    image_url: event.image_url,
-    views: event.views || 0,
-    likes: event.likes || 0,
-    participants: event.participants || 0,
-    created_at: event.created_at,
-    updated_at: event.updated_at,
-    source: (event.created_by_type === 'business' ? 'business' : 'user') as 'user' | 'business',
-    organizer: event.created_by_type === 'business' ? 
-      (configMap.get(event.created_by) || 'Établissement') : 
-      'Utilisateur',
-    organizer_type: event.created_by_type as 'user' | 'business',
-    venue: undefined,
-    time: undefined,
-    event_type: event.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
-    price_text: event.price ? event.price.toString() : undefined,
-    end_date: event.end_date,
-    max_participants: event.max_participants,
-    address: event.address,
-    tags: event.tags,
-    external_url: event.external_url
-  } as UnifiedEvent));
+  const unifiedEvents = allEvents.map(event => mapEventToUnified(event, configMap));
 
-  // Enrichir avec les données sociales
   return await enrichEventsWithSocialData(unifiedEvents);
 };
 
