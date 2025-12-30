@@ -2,14 +2,14 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from 'react-router-dom';
-import { useAllEvents } from '@/hooks/useAllEvents';
+import { usePaginatedEvents } from '@/hooks/usePaginatedEvents';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
 import EventCard from '@/components/EventCard';
 import { motion } from 'framer-motion';
 import { MenuDrawer } from '@/components/MenuDrawer';
 import { FiltersDrawer } from '@/components/FiltersDrawer';
 import { InstallPrompt } from '@/components/InstallPrompt';
-import { Menu, Filter } from 'lucide-react';
+import { Menu, Filter, Loader2 } from 'lucide-react';
 import { useIsPWA } from '@/hooks/useIsPWA';
 
 const UserApp = () => {
@@ -34,10 +34,13 @@ const UserApp = () => {
   const {
     events: allEvents,
     loading,
+    loadingMore,
+    hasMore,
+    loadMore,
     likeEvent: handleLikeEvent,
     participateEvent: handleParticipateEvent,
     incrementViews: handleIncrementViews
-  } = useAllEvents();
+  } = usePaginatedEvents();
 
   // Filter events based on all criteria
   const filteredEvents = useMemo(() => {
@@ -124,7 +127,7 @@ const UserApp = () => {
     setCurrentScrollIndex(targetIndex);
   }, [filteredEvents.length]);
 
-  // Tracking du scroll pour détecter l'event visible
+  // Tracking du scroll pour détecter l'event visible + charger plus
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -149,6 +152,11 @@ const UserApp = () => {
             handleIncrementViews(newEvent.id);
           }
         }
+
+        // Charger plus quand on approche de la fin (3 events avant la fin)
+        if (hasMore && !loadingMore && currentIndex >= filteredEvents.length - 3) {
+          loadMore();
+        }
       }, 150);
     };
     
@@ -158,7 +166,7 @@ const UserApp = () => {
       container.removeEventListener('scroll', handleScroll);
       clearTimeout(scrollTimeout);
     };
-  }, [currentScrollIndex, filteredEvents, viewedEventIds, handleIncrementViews]);
+  }, [currentScrollIndex, filteredEvents, viewedEventIds, handleIncrementViews, hasMore, loadingMore, loadMore]);
 
   // Incrémenter les vues du premier event au chargement
   useEffect(() => {
@@ -362,42 +370,54 @@ const UserApp = () => {
               </div>
             ))}
             
-            {/* Écran de fin */}
-            <div className="h-full snap-start snap-always flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 p-8">
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3 }}
-                className="text-center text-white space-y-6"
-              >
-                <span className="text-6xl">🎉</span>
-                <h2 className="text-3xl font-bold">C'est tout pour aujourd'hui !</h2>
-                <p className="text-white/80 max-w-xs mx-auto">
-                  {hasActiveFilters 
-                    ? "Essaie d'élargir tes filtres pour voir plus d'événements !"
-                    : "Plus d'événements à découvrir. Reviens demain pour de nouvelles sorties !"}
-                </p>
-                
-                <div className="flex flex-col gap-3">
-                  {hasActiveFilters && (
-                    <Button
-                      onClick={handleResetFilters}
-                      variant="secondary"
-                      className="px-6 py-3 bg-white/20 text-white rounded-full font-semibold hover:bg-white/30 transition-colors"
-                    >
-                      Réinitialiser les filtres
-                    </Button>
-                  )}
-                  <Button
-                    onClick={() => scrollToEvent(0)}
-                    variant="secondary"
-                    className="px-6 py-3 bg-white text-purple-600 rounded-full font-semibold hover:scale-105 transition-transform"
-                  >
-                    ← Revoir depuis le début
-                  </Button>
+            {/* Loading indicator when loading more */}
+            {loadingMore && (
+              <div className="h-full snap-start snap-always flex items-center justify-center bg-background">
+                <div className="text-center space-y-4">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+                  <p className="text-muted-foreground">Chargement...</p>
                 </div>
-              </motion.div>
-            </div>
+              </div>
+            )}
+            
+            {/* Écran de fin - seulement si pas de hasMore */}
+            {!hasMore && (
+              <div className="h-full snap-start snap-always flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 p-8">
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3 }}
+                  className="text-center text-white space-y-6"
+                >
+                  <span className="text-6xl">🎉</span>
+                  <h2 className="text-3xl font-bold">C'est tout pour aujourd'hui !</h2>
+                  <p className="text-white/80 max-w-xs mx-auto">
+                    {hasActiveFilters 
+                      ? "Essaie d'élargir tes filtres pour voir plus d'événements !"
+                      : "Plus d'événements à découvrir. Reviens demain pour de nouvelles sorties !"}
+                  </p>
+                  
+                  <div className="flex flex-col gap-3">
+                    {hasActiveFilters && (
+                      <Button
+                        onClick={handleResetFilters}
+                        variant="secondary"
+                        className="px-6 py-3 bg-white/20 text-white rounded-full font-semibold hover:bg-white/30 transition-colors"
+                      >
+                        Réinitialiser les filtres
+                      </Button>
+                    )}
+                    <Button
+                      onClick={() => scrollToEvent(0)}
+                      variant="secondary"
+                      className="px-6 py-3 bg-white text-purple-600 rounded-full font-semibold hover:scale-105 transition-transform"
+                    >
+                      ← Revoir depuis le début
+                    </Button>
+                  </div>
+                </motion.div>
+              </div>
+            )}
           </>
         ) : (
           <div className="h-full flex items-center justify-center">

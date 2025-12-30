@@ -1,6 +1,5 @@
-
-import React, { useState } from 'react';
-import { useAllEvents } from '@/hooks/useAllEvents';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { usePaginatedEvents } from '@/hooks/usePaginatedEvents';
 import { useSearchFilters } from '@/hooks/useSearchFilters';
 import { useEventInteractions } from '@/hooks/useEventInteractions';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
@@ -8,15 +7,23 @@ import SearchResults from '@/components/search/SearchResults';
 import MenuDrawer from '@/components/MenuDrawer';
 import FiltersDrawer from '@/components/FiltersDrawer';
 import { Input } from '@/components/ui/input';
-import { Menu, Search as SearchIcon, SlidersHorizontal } from 'lucide-react';
+import { Menu, Search as SearchIcon, SlidersHorizontal, Loader2 } from 'lucide-react';
 
 const Explore = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [selectedPrice, setSelectedPrice] = useState('all');
   const [selectedTime, setSelectedTime] = useState('all');
+  
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const { events: allEvents, loading } = useAllEvents();
+  const { 
+    events: allEvents, 
+    loading, 
+    loadingMore, 
+    hasMore, 
+    loadMore 
+  } = usePaginatedEvents();
   
   const {
     searchTerm,
@@ -35,6 +42,27 @@ const Explore = () => {
     handleLike,
     handleParticipate
   } = useEventInteractions(allEvents);
+
+  // Infinite scroll detection
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      
+      // Load more when user is 200px from the bottom
+      if (scrollHeight - scrollTop - clientHeight < 200 && hasMore && !loadingMore) {
+        loadMore();
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+    };
+  }, [hasMore, loadingMore, loadMore]);
 
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category === 'all' ? null : category);
@@ -88,8 +116,11 @@ const Explore = () => {
         </div>
       </header>
 
-      {/* Résultats scrollables */}
-      <div className="flex-1 overflow-y-auto">
+      {/* Résultats scrollables avec infinite scroll */}
+      <div 
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto"
+      >
         <SearchResults
           events={filteredEvents}
           searchTerm={searchTerm}
@@ -101,6 +132,21 @@ const Explore = () => {
           onParticipate={handleParticipate}
           onClearFilters={handleResetFilters}
         />
+        
+        {/* Loading indicator */}
+        {loadingMore && (
+          <div className="flex items-center justify-center py-6">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            <span className="ml-2 text-muted-foreground text-sm">Chargement...</span>
+          </div>
+        )}
+        
+        {/* End of list indicator */}
+        {!hasMore && filteredEvents.length > 0 && (
+          <div className="text-center py-6 text-muted-foreground text-sm">
+            Tous les événements ont été chargés
+          </div>
+        )}
       </div>
 
       {/* Drawers */}
