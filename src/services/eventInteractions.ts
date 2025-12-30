@@ -109,22 +109,50 @@ export const eventInteractions = {
           .select('id')
           .eq('event_id', eventId)
           .eq('user_id', userId)
-          .single(),
+          .maybeSingle(),
         supabase
           .from('event_participants')
           .select('id')
           .eq('event_id', eventId)
           .eq('user_id', userId)
-          .single()
+          .maybeSingle()
       ]);
 
       return {
-        hasLiked: !likesResponse.error,
-        hasParticipated: !participantsResponse.error
+        hasLiked: !!likesResponse.data,
+        hasParticipated: !!participantsResponse.data
       };
     } catch (error) {
       console.error('Erreur lors de la récupération du statut:', error);
       return { hasLiked: false, hasParticipated: false };
+    }
+  },
+
+  // Tracker une vue d'événement
+  async trackEventView(eventId: string, userId: string, source: string = 'app'): Promise<boolean> {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      const { error } = await supabase
+        .from('user_event_views')
+        .insert({ 
+          event_id: eventId, 
+          user_id: userId, 
+          source,
+          view_date: today
+        });
+
+      if (error) {
+        // Ignore duplicate key error (already viewed today)
+        if (error.code === '23505') {
+          return true;
+        }
+        throw error;
+      }
+      return true;
+    } catch (error) {
+      console.error('Erreur lors du tracking de vue:', error);
+      return false;
     }
   }
 };

@@ -338,6 +338,39 @@ export type Database = {
         }
         Relationships: []
       }
+      event_memories: {
+        Row: {
+          created_at: string | null
+          event_id: string
+          id: string
+          note: string | null
+          photo_url: string | null
+          rating: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          event_id: string
+          id?: string
+          note?: string | null
+          photo_url?: string | null
+          rating?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          event_id?: string
+          id?: string
+          note?: string | null
+          photo_url?: string | null
+          rating?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       event_participants: {
         Row: {
           created_at: string
@@ -781,6 +814,33 @@ export type Database = {
           programs_detected?: number | null
           programs_parsed?: number | null
           total_posts_analyzed?: number | null
+        }
+        Relationships: []
+      }
+      user_event_views: {
+        Row: {
+          event_id: string
+          id: string
+          source: string | null
+          user_id: string
+          view_date: string | null
+          viewed_at: string | null
+        }
+        Insert: {
+          event_id: string
+          id?: string
+          source?: string | null
+          user_id: string
+          view_date?: string | null
+          viewed_at?: string | null
+        }
+        Update: {
+          event_id?: string
+          id?: string
+          source?: string | null
+          user_id?: string
+          view_date?: string | null
+          viewed_at?: string | null
         }
         Relationships: []
       }
