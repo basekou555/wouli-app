@@ -18,6 +18,7 @@ interface SearchResultsProps {
   onLike: (eventId: string) => void;
   onParticipate: (eventId: string) => void;
   onClearFilters: () => void;
+  totalActiveCount?: number;
 }
 
 const SearchResults: React.FC<SearchResultsProps> = ({
@@ -29,7 +30,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   participatingEvents,
   onLike,
   onParticipate,
-  onClearFilters
+  onClearFilters,
+  totalActiveCount
 }) => {
   const navigate = useNavigate();
   const hasActiveFilters = searchTerm || selectedCategory || selectedDate !== 'all';
@@ -50,11 +52,13 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     }
   };
 
+  const displayCount = totalActiveCount ?? events.length;
+
   return (
     <div className="p-4">
       <div className="mb-4 flex justify-between items-center">
         <p className="text-muted-foreground text-sm">
-          {events.length} événement{events.length !== 1 ? 's' : ''} trouvé{events.length !== 1 ? 's' : ''}
+          {displayCount} événement{displayCount !== 1 ? 's' : ''} à venir
         </p>
         {hasActiveFilters && (
           <Badge variant="secondary" className="bg-primary/10 text-primary">

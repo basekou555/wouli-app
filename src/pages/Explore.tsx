@@ -22,7 +22,8 @@ const Explore = () => {
     loading, 
     loadingMore, 
     hasMore, 
-    loadMore 
+    loadMore,
+    totalCount 
   } = usePaginatedEvents();
   
   const {
@@ -131,6 +132,7 @@ const Explore = () => {
           onLike={handleLike}
           onParticipate={handleParticipate}
           onClearFilters={handleResetFilters}
+          totalActiveCount={totalCount}
         />
         
         {/* Loading indicator */}
