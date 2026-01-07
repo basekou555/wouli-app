@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search as SearchIcon } from 'lucide-react';
 import { UnifiedEvent } from '@/types/unified';
 import WouliEventCard from '../cards/WouliEventCard';
+import { RecommendationBadges } from '../cards/RecommendationBadge';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
@@ -19,6 +20,8 @@ interface SearchResultsProps {
   onParticipate: (eventId: string) => void;
   onClearFilters: () => void;
   totalActiveCount?: number;
+  getBadgesForEvent?: (eventId: string) => string[];
+  showRecommendationBadges?: boolean;
 }
 
 const SearchResults: React.FC<SearchResultsProps> = ({
@@ -31,7 +34,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   onLike,
   onParticipate,
   onClearFilters,
-  totalActiveCount
+  totalActiveCount,
+  getBadgesForEvent,
+  showRecommendationBadges = false
 }) => {
   const navigate = useNavigate();
   const hasActiveFilters = searchTerm || selectedCategory || selectedDate !== 'all';
@@ -69,26 +74,36 @@ const SearchResults: React.FC<SearchResultsProps> = ({
 
       {events.length > 0 ? (
         <div className="space-y-4">
-          {events.map((event, index) => (
-            <motion.div
-              key={event.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-            >
-              <WouliEventCard
-                event={event}
-                variant="list"
-                isLiked={likedEvents.includes(event.id)}
-                isParticipating={participatingEvents.includes(event.id)}
-                onLike={() => onLike(event.id)}
-                onParticipate={() => onParticipate(event.id)}
-                onShare={() => handleShare(event)}
-                onCardClick={() => handleCardClick(event.id)}
-                className="w-full"
-              />
-            </motion.div>
-          ))}
+          {events.map((event, index) => {
+            const badges = showRecommendationBadges && getBadgesForEvent 
+              ? getBadgesForEvent(event.id) 
+              : [];
+            
+            return (
+              <motion.div
+                key={event.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                {/* Recommendation badges above the card */}
+                {badges.length > 0 && (
+                  <RecommendationBadges badges={badges} className="mb-2" />
+                )}
+                <WouliEventCard
+                  event={event}
+                  variant="list"
+                  isLiked={likedEvents.includes(event.id)}
+                  isParticipating={participatingEvents.includes(event.id)}
+                  onLike={() => onLike(event.id)}
+                  onParticipate={() => onParticipate(event.id)}
+                  onShare={() => handleShare(event)}
+                  onCardClick={() => handleCardClick(event.id)}
+                  className="w-full"
+                />
+              </motion.div>
+            );
+          })}
         </div>
       ) : (
         <motion.div 

@@ -1,11 +1,13 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { usePaginatedEvents } from '@/hooks/usePaginatedEvents';
 import { useSearchFilters } from '@/hooks/useSearchFilters';
 import { useEventInteractions } from '@/hooks/useEventInteractions';
+import { useRecommendedFeed } from '@/hooks/useRecommendedFeed';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
 import SearchResults from '@/components/search/SearchResults';
 import MenuDrawer from '@/components/MenuDrawer';
 import FiltersDrawer from '@/components/FiltersDrawer';
+import FeedModeToggle from '@/components/FeedModeToggle';
 import { Input } from '@/components/ui/input';
 import { Menu, Search as SearchIcon, SlidersHorizontal, Loader2 } from 'lucide-react';
 
@@ -25,6 +27,14 @@ const Explore = () => {
     loadMore,
     totalCount 
   } = usePaginatedEvents();
+
+  // Recommendation feed integration
+  const {
+    recommendedEvents,
+    feedMode,
+    setFeedMode,
+    getBadgesForEvent
+  } = useRecommendedFeed(allEvents);
   
   const {
     searchTerm,
@@ -33,9 +43,9 @@ const Explore = () => {
     setSelectedCategory,
     selectedDate,
     setSelectedDate,
-    filteredEvents,
+    filteredEvents: baseFilteredEvents,
     clearFilters
-  } = useSearchFilters(allEvents);
+  } = useSearchFilters(feedMode === 'recommended' ? recommendedEvents : allEvents);
 
   const {
     likedEvents,
@@ -83,7 +93,7 @@ const Explore = () => {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header style App avec recherche */}
       <header className="flex-shrink-0 bg-card border-b border-border sticky top-0 z-40">
-        {/* Ligne 1 : Menu + WOULI + Filtres */}
+        {/* Ligne 1 : Menu + Toggle + Filtres */}
         <div className="h-14 px-4 flex items-center justify-between">
           <button 
             onClick={() => setIsMenuOpen(true)}
@@ -92,7 +102,11 @@ const Explore = () => {
             <Menu className="w-5 h-5 text-foreground" />
           </button>
           
-          <span className="font-bold text-lg tracking-wide text-foreground">WOULI</span>
+          {/* Feed Mode Toggle */}
+          <FeedModeToggle 
+            mode={feedMode} 
+            onModeChange={setFeedMode}
+          />
           
           <button
             onClick={() => setIsFiltersOpen(true)}
@@ -123,7 +137,7 @@ const Explore = () => {
         className="flex-1 overflow-y-auto"
       >
         <SearchResults
-          events={filteredEvents}
+          events={baseFilteredEvents}
           searchTerm={searchTerm}
           selectedCategory={selectedCategory}
           selectedDate={selectedDate}
@@ -133,6 +147,8 @@ const Explore = () => {
           onParticipate={handleParticipate}
           onClearFilters={handleResetFilters}
           totalActiveCount={totalCount}
+          getBadgesForEvent={getBadgesForEvent}
+          showRecommendationBadges={feedMode === 'recommended'}
         />
         
         {/* Loading indicator */}
@@ -144,7 +160,7 @@ const Explore = () => {
         )}
         
         {/* End of list indicator */}
-        {!hasMore && filteredEvents.length > 0 && (
+        {!hasMore && baseFilteredEvents.length > 0 && (
           <div className="text-center py-6 text-muted-foreground text-sm">
             Tous les événements ont été chargés
           </div>
