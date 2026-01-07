@@ -1,21 +1,32 @@
 import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOnboardingCheck } from '@/hooks/useOnboarding';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireBusiness?: boolean;
   requireUser?: boolean;
+  skipOnboardingCheck?: boolean;
 }
 
-const ProtectedRoute = ({ children, requireBusiness = false, requireUser = false }: ProtectedRouteProps) => {
+const ProtectedRoute = ({ 
+  children, 
+  requireBusiness = false, 
+  requireUser = false,
+  skipOnboardingCheck = false 
+}: ProtectedRouteProps) => {
   const { user, userType, loading, isBusinessUser } = useAuth();
+  const { needsOnboarding, isChecking } = useOnboardingCheck();
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Check if current route is onboarding (to avoid redirect loop)
+  const isOnboardingRoute = location.pathname === '/onboarding';
+
   useEffect(() => {
-    if (loading) return;
+    if (loading || isChecking) return;
 
     // If not authenticated at all, redirect to auth
     if (!user) {
@@ -43,9 +54,35 @@ const ProtectedRoute = ({ children, requireBusiness = false, requireUser = false
       navigate('/business', { replace: true });
       return;
     }
-  }, [user, userType, loading, requireBusiness, requireUser, navigate, location.pathname, isBusinessUser]);
 
-  if (loading) {
+    // Check onboarding for regular users only
+    // Skip if: business user, admin, on onboarding route, or skipOnboardingCheck is true
+    if (
+      !skipOnboardingCheck && 
+      !isOnboardingRoute && 
+      !isBusinessUser && 
+      userType !== 'admin' && 
+      needsOnboarding === true
+    ) {
+      navigate('/onboarding', { replace: true });
+      return;
+    }
+  }, [
+    user, 
+    userType, 
+    loading, 
+    requireBusiness, 
+    requireUser, 
+    navigate, 
+    location.pathname, 
+    isBusinessUser,
+    needsOnboarding,
+    isChecking,
+    isOnboardingRoute,
+    skipOnboardingCheck
+  ]);
+
+  if (loading || isChecking) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <LoadingSpinner size="lg" text="Vérification des autorisations..." />
@@ -62,6 +99,17 @@ const ProtectedRoute = ({ children, requireBusiness = false, requireUser = false
   }
 
   if (requireUser && isBusinessUser) {
+    return null; // Will redirect via useEffect
+  }
+
+  // Check onboarding redirect
+  if (
+    !skipOnboardingCheck && 
+    !isOnboardingRoute && 
+    !isBusinessUser && 
+    userType !== 'admin' && 
+    needsOnboarding === true
+  ) {
     return null; // Will redirect via useEffect
   }
 
