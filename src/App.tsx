@@ -28,6 +28,7 @@ import UserProfileView from "./pages/UserProfileView";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminValidationPage from "./pages/AdminValidationPage";
 import ScraperControl from "./pages/ScraperControl";
+import Onboarding from "./pages/Onboarding";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AuthRedirect from "./components/AuthRedirect";
 import { AdminRoute } from "./components/AdminRoute";
@@ -59,6 +60,11 @@ function AppContent() {
                   <AuthRedirect>
                     <BusinessSignup />
                   </AuthRedirect>
+                } />
+                <Route path="/onboarding" element={
+                  <ProtectedRoute>
+                    <Onboarding />
+                  </ProtectedRoute>
                 } />
                 
                 {/* User Routes */}
