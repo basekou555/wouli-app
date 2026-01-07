@@ -317,6 +317,63 @@ export type Database = {
         }
         Relationships: []
       }
+      event_interactions: {
+        Row: {
+          action: string
+          created_at: string | null
+          device_type: string | null
+          duration_ms: number | null
+          event_id: string | null
+          event_snapshot: Json | null
+          id: string
+          position_in_session: number | null
+          session_id: string
+          signal_interpretation: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          device_type?: string | null
+          duration_ms?: number | null
+          event_id?: string | null
+          event_snapshot?: Json | null
+          id?: string
+          position_in_session?: number | null
+          session_id: string
+          signal_interpretation?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          device_type?: string | null
+          duration_ms?: number | null
+          event_id?: string | null
+          event_snapshot?: Json | null
+          id?: string
+          position_in_session?: number | null
+          session_id?: string
+          signal_interpretation?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_interactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_interactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_likes: {
         Row: {
           created_at: string
@@ -655,6 +712,63 @@ export type Database = {
         }
         Relationships: []
       }
+      recommendation_results: {
+        Row: {
+          algorithm_version: string | null
+          created_at: string | null
+          events_liked: string[] | null
+          events_participated: string[] | null
+          generation_context: Json | null
+          generation_time_ms: number | null
+          id: string
+          recommended_events: Json | null
+          session_id: string
+          total_events_scored: number | null
+          user_id: string
+        }
+        Insert: {
+          algorithm_version?: string | null
+          created_at?: string | null
+          events_liked?: string[] | null
+          events_participated?: string[] | null
+          generation_context?: Json | null
+          generation_time_ms?: number | null
+          id?: string
+          recommended_events?: Json | null
+          session_id: string
+          total_events_scored?: number | null
+          user_id: string
+        }
+        Update: {
+          algorithm_version?: string | null
+          created_at?: string | null
+          events_liked?: string[] | null
+          events_participated?: string[] | null
+          generation_context?: Json | null
+          generation_time_ms?: number | null
+          id?: string
+          recommended_events?: Json | null
+          session_id?: string
+          total_events_scored?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recommendation_results_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recommendation_results_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scraper_errors: {
         Row: {
           account_username: string | null
@@ -843,6 +957,135 @@ export type Database = {
           viewed_at?: string | null
         }
         Relationships: []
+      }
+      user_preference_cache: {
+        Row: {
+          calculation_version: string | null
+          category_affinity: Json | null
+          event_scores: Json | null
+          friend_events: string[] | null
+          updated_at: string | null
+          user_id: string
+          valid_until: string | null
+        }
+        Insert: {
+          calculation_version?: string | null
+          category_affinity?: Json | null
+          event_scores?: Json | null
+          friend_events?: string[] | null
+          updated_at?: string | null
+          user_id: string
+          valid_until?: string | null
+        }
+        Update: {
+          calculation_version?: string | null
+          category_affinity?: Json | null
+          event_scores?: Json | null
+          friend_events?: string[] | null
+          updated_at?: string | null
+          user_id?: string
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_preference_cache_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_preference_cache_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_preferences: {
+        Row: {
+          avg_decision_time: number | null
+          category_scores: Json | null
+          created_at: string | null
+          discovery_rate: number | null
+          distance_preference: number | null
+          keyword_scores: Json | null
+          last_calculated_at: string | null
+          like_rate: number | null
+          onboarding_completed: boolean | null
+          onboarding_completed_at: string | null
+          preferred_days: string[] | null
+          preferred_times: number[] | null
+          price_sensitivity: number | null
+          selected_keywords: string[]
+          social_influence: number | null
+          spontaneity: number | null
+          total_interactions: number | null
+          updated_at: string | null
+          user_id: string
+          user_name: string | null
+        }
+        Insert: {
+          avg_decision_time?: number | null
+          category_scores?: Json | null
+          created_at?: string | null
+          discovery_rate?: number | null
+          distance_preference?: number | null
+          keyword_scores?: Json | null
+          last_calculated_at?: string | null
+          like_rate?: number | null
+          onboarding_completed?: boolean | null
+          onboarding_completed_at?: string | null
+          preferred_days?: string[] | null
+          preferred_times?: number[] | null
+          price_sensitivity?: number | null
+          selected_keywords?: string[]
+          social_influence?: number | null
+          spontaneity?: number | null
+          total_interactions?: number | null
+          updated_at?: string | null
+          user_id: string
+          user_name?: string | null
+        }
+        Update: {
+          avg_decision_time?: number | null
+          category_scores?: Json | null
+          created_at?: string | null
+          discovery_rate?: number | null
+          distance_preference?: number | null
+          keyword_scores?: Json | null
+          last_calculated_at?: string | null
+          like_rate?: number | null
+          onboarding_completed?: boolean | null
+          onboarding_completed_at?: string | null
+          preferred_days?: string[] | null
+          preferred_times?: number[] | null
+          price_sensitivity?: number | null
+          selected_keywords?: string[]
+          social_influence?: number | null
+          spontaneity?: number | null
+          total_interactions?: number | null
+          updated_at?: string | null
+          user_id?: string
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
