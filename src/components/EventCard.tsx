@@ -7,6 +7,7 @@ import { getFocusClass } from '@/utils/imageHelpers';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useIsPWA } from '@/hooks/useIsPWA';
+import { useSmartTracking, type InteractionAction } from '@/hooks/useSmartTracking';
 
 interface EventCardProps {
   event: UnifiedEvent;
@@ -101,6 +102,62 @@ const EventCard: React.FC<EventCardProps> = ({
   const [showImageModal, setShowImageModal] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const isPWA = useIsPWA();
+  
+  // Smart Tracking Integration
+  const { startViewTracking, stopViewTracking, trackInteraction } = useSmartTracking();
+  const hasTrackedView = useRef(false);
+
+  // Start tracking when card becomes visible
+  useEffect(() => {
+    if (event?.id && !hasTrackedView.current) {
+      startViewTracking(event.id);
+      hasTrackedView.current = true;
+    }
+
+    return () => {
+      if (event?.id && hasTrackedView.current) {
+        stopViewTracking(event.id);
+      }
+    };
+  }, [event?.id, startViewTracking, stopViewTracking]);
+
+  // Wrapped handlers with tracking
+  const handleDislike = () => {
+    if (event?.id) {
+      const result = trackInteraction(event.id, 'dislike', event);
+      if (process.env.NODE_ENV === 'development' && result) {
+        console.log(`⏱️ Dislike tracked: ${result.duration}ms (${result.signal})`);
+      }
+    }
+    onDislike();
+  };
+
+  const handleLike = () => {
+    if (event?.id) {
+      const result = trackInteraction(event.id, 'like', event);
+      if (process.env.NODE_ENV === 'development' && result) {
+        console.log(`⏱️ Like tracked: ${result.duration}ms (${result.signal})`);
+      }
+    }
+    onLike();
+  };
+
+  const handleParticipate = () => {
+    if (event?.id) {
+      const result = trackInteraction(event.id, 'participate', event);
+      if (process.env.NODE_ENV === 'development' && result) {
+        console.log(`⏱️ Participate tracked: ${result.duration}ms (${result.signal})`);
+      }
+    }
+    onParticipate();
+  };
+
+  const handleShare = () => {
+    if (event?.id) {
+      trackInteraction(event.id, 'share', event);
+    }
+    onShare?.();
+  };
 
   return (
     <div className="w-full h-full bg-background flex flex-col">
@@ -210,7 +267,7 @@ const EventCard: React.FC<EventCardProps> = ({
           {/* Dislike */}
           <motion.button
             whileTap={{ scale: 0.9 }}
-            onClick={onDislike}
+            onClick={handleDislike}
             className="flex-1 h-11 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
             aria-label="Passer"
           >
@@ -218,12 +275,12 @@ const EventCard: React.FC<EventCardProps> = ({
           </motion.button>
 
           {/* Participer */}
-          <ParticipateButton onClick={onParticipate} />
+          <ParticipateButton onClick={handleParticipate} />
 
           {/* Like */}
           <motion.button
             whileTap={{ scale: 0.9 }}
-            onClick={onLike}
+            onClick={handleLike}
             className="flex-1 h-11 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
             aria-label="J'aime"
           >
@@ -232,7 +289,7 @@ const EventCard: React.FC<EventCardProps> = ({
 
           {/* Partager */}
           <button
-            onClick={onShare}
+            onClick={handleShare}
             className="flex-1 h-11 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
             aria-label="Partager"
           >
