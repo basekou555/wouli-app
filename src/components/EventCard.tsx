@@ -124,30 +124,21 @@ const EventCard: React.FC<EventCardProps> = ({
   // Wrapped handlers with tracking
   const handleDislike = () => {
     if (event?.id) {
-      const result = trackInteraction(event.id, 'dislike', event);
-      if (process.env.NODE_ENV === 'development' && result) {
-        console.log(`⏱️ Dislike tracked: ${result.duration}ms (${result.signal})`);
-      }
+      trackInteraction(event.id, 'dislike', event);
     }
     onDislike();
   };
 
   const handleLike = () => {
     if (event?.id) {
-      const result = trackInteraction(event.id, 'like', event);
-      if (process.env.NODE_ENV === 'development' && result) {
-        console.log(`⏱️ Like tracked: ${result.duration}ms (${result.signal})`);
-      }
+      trackInteraction(event.id, 'like', event);
     }
     onLike();
   };
 
   const handleParticipate = () => {
     if (event?.id) {
-      const result = trackInteraction(event.id, 'participate', event);
-      if (process.env.NODE_ENV === 'development' && result) {
-        console.log(`⏱️ Participate tracked: ${result.duration}ms (${result.signal})`);
-      }
+      trackInteraction(event.id, 'participate', event);
     }
     onParticipate();
   };
