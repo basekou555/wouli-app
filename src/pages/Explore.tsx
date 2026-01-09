@@ -14,8 +14,6 @@ import { Menu, Search as SearchIcon, SlidersHorizontal, Loader2 } from 'lucide-r
 const Explore = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  const [selectedPrice, setSelectedPrice] = useState('all');
-  const [selectedTime, setSelectedTime] = useState('all');
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -36,13 +34,16 @@ const Explore = () => {
     getBadgesForEvent
   } = useRecommendedFeed(allEvents);
   
+  // Search and filters - now includes price and time
   const {
     searchTerm,
     setSearchTerm,
     selectedCategory,
     setSelectedCategory,
-    selectedDate,
-    setSelectedDate,
+    selectedPrice,
+    setSelectedPrice,
+    selectedTime,
+    setSelectedTime,
     filteredEvents: baseFilteredEvents,
     clearFilters
   } = useSearchFilters(feedMode === 'recommended' ? recommendedEvents : allEvents);
@@ -81,8 +82,6 @@ const Explore = () => {
 
   const handleResetFilters = () => {
     clearFilters();
-    setSelectedPrice('all');
-    setSelectedTime('all');
   };
 
   if (loading) {
@@ -140,7 +139,7 @@ const Explore = () => {
           events={baseFilteredEvents}
           searchTerm={searchTerm}
           selectedCategory={selectedCategory}
-          selectedDate={selectedDate}
+          selectedDate={selectedTime}
           likedEvents={likedEvents}
           participatingEvents={participatingEvents}
           onLike={handleLike}
