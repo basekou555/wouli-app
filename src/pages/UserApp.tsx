@@ -1,19 +1,21 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from 'react-router-dom';
 import { usePaginatedEvents } from '@/hooks/usePaginatedEvents';
+import { useRecommendedFeed } from '@/hooks/useRecommendedFeed';
+import { useSearchFilters } from '@/hooks/useSearchFilters';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
 import EventCard from '@/components/EventCard';
 import { motion } from 'framer-motion';
 import { MenuDrawer } from '@/components/MenuDrawer';
 import { FiltersDrawer } from '@/components/FiltersDrawer';
 import { InstallPrompt } from '@/components/InstallPrompt';
-import { Menu, Filter, Loader2 } from 'lucide-react';
+import FeedModeToggle from '@/components/FeedModeToggle';
+import { Menu, Loader2, SlidersHorizontal } from 'lucide-react';
 import { useIsPWA } from '@/hooks/useIsPWA';
 
 const UserApp = () => {
-  const [selectedCategory, setSelectedCategory] = useState('all');
   const [likedEvents, setLikedEvents] = useState<Set<string>>(new Set());
   const [participatingEvents, setParticipatingEvents] = useState<Set<string>>(new Set());
   const [viewedEventIds, setViewedEventIds] = useState<Set<string>>(new Set());
@@ -22,10 +24,6 @@ const UserApp = () => {
   // Drawer states
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  
-  // Filter states
-  const [selectedPrice, setSelectedPrice] = useState('all');
-  const [selectedTime, setSelectedTime] = useState('all');
   
   const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -42,66 +40,27 @@ const UserApp = () => {
     incrementViews: handleIncrementViews
   } = usePaginatedEvents();
 
-  // Filter events based on all criteria
-  const filteredEvents = useMemo(() => {
-    let events = allEvents;
+  // Recommendation engine integration
+  const {
+    recommendedEvents,
+    feedMode,
+    setFeedMode,
+    getBadgesForEvent
+  } = useRecommendedFeed(allEvents);
 
-    // Filter by category
-    if (selectedCategory !== 'all') {
-      events = events.filter(e => e.category === selectedCategory);
-    }
-
-    // Filter by price
-    if (selectedPrice !== 'all') {
-      events = events.filter(e => {
-        const priceText = e.price_text || '0';
-        const price = parseFloat(priceText.replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
-        const isFree = price === 0 || priceText.toLowerCase().includes('gratuit');
-        
-        switch (selectedPrice) {
-          case 'free':
-            return isFree;
-          case 'cheap':
-            return !isFree && price < 15;
-          case 'medium':
-            return price >= 15 && price <= 30;
-          case 'expensive':
-            return price > 30;
-          default:
-            return true;
-        }
-      });
-    }
-
-    // Filter by time
-    if (selectedTime !== 'all') {
-      const now = new Date();
-      events = events.filter(e => {
-        const eventDate = new Date(e.date);
-        switch (selectedTime) {
-          case 'now':
-            // Events in the next 2 hours
-            const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-            return eventDate >= now && eventDate <= twoHoursFromNow;
-          case 'tonight':
-            // Events today
-            return eventDate.toDateString() === now.toDateString();
-          case 'tomorrow':
-            const tomorrow = new Date(now);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            return eventDate.toDateString() === tomorrow.toDateString();
-          case 'weekend':
-            const dayOfWeek = eventDate.getDay();
-            // Friday, Saturday, Sunday
-            return dayOfWeek === 5 || dayOfWeek === 6 || dayOfWeek === 0;
-          default:
-            return true;
-        }
-      });
-    }
-
-    return events;
-  }, [allEvents, selectedCategory, selectedPrice, selectedTime]);
+  // Unified filters - uses recommended or all events based on mode
+  const baseEvents = feedMode === 'recommended' ? recommendedEvents : allEvents;
+  const {
+    selectedCategory,
+    setSelectedCategory,
+    selectedPrice,
+    setSelectedPrice,
+    selectedTime,
+    setSelectedTime,
+    filteredEvents,
+    clearFilters,
+    hasActiveFilters
+  } = useSearchFilters(baseEvents);
 
   const isPWA = useIsPWA();
   
@@ -177,7 +136,7 @@ const UserApp = () => {
   }, [filteredEvents, viewedEventIds, handleIncrementViews]);
   
   const handleCategoryChange = (categoryId: string) => {
-    setSelectedCategory(categoryId);
+    setSelectedCategory(categoryId === 'all' ? null : categoryId);
     setCurrentScrollIndex(0);
     if (containerRef.current) {
       containerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
@@ -185,9 +144,7 @@ const UserApp = () => {
   };
 
   const handleResetFilters = () => {
-    setSelectedCategory('all');
-    setSelectedPrice('all');
-    setSelectedTime('all');
+    clearFilters();
     setCurrentScrollIndex(0);
     if (containerRef.current) {
       containerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
@@ -310,9 +267,6 @@ const UserApp = () => {
     }
   }, [filteredEvents, toast]);
 
-  // Check if filters are active (for UI feedback)
-  const hasActiveFilters = selectedCategory !== 'all' || selectedPrice !== 'all' || selectedTime !== 'all';
-
   if (loading) {
     return <PageSkeleton />;
   }
@@ -332,13 +286,17 @@ const UserApp = () => {
           <Menu className="w-5 h-5" />
         </button>
         
-        <span className="font-bold text-lg tracking-wide">WOULI</span>
+        {/* Feed Mode Toggle - replaces "WOULI" text */}
+        <FeedModeToggle 
+          mode={feedMode} 
+          onModeChange={setFeedMode}
+        />
         
         <button
           onClick={() => setIsFiltersOpen(true)}
           className="px-3 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors flex items-center gap-1"
         >
-          <Filter className="w-4 h-4" />
+          <SlidersHorizontal className="w-4 h-4" />
           Filtres
         </button>
       </header>
@@ -454,7 +412,7 @@ const UserApp = () => {
       <FiltersDrawer
         isOpen={isFiltersOpen}
         onClose={() => setIsFiltersOpen(false)}
-        selectedCategory={selectedCategory}
+        selectedCategory={selectedCategory || 'all'}
         onCategoryChange={handleCategoryChange}
         selectedPrice={selectedPrice}
         onPriceChange={setSelectedPrice}
