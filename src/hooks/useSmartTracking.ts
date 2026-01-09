@@ -18,22 +18,6 @@ export type SignalInterpretation =
 
 export type InteractionAction = 'view' | 'like' | 'dislike' | 'participate' | 'share' | 'skip';
 
-interface TrackedInteraction {
-  event_id: string;
-  action: InteractionAction;
-  duration_ms: number;
-  signal_interpretation: SignalInterpretation;
-  position_in_session: number;
-  device_type: string;
-  event_snapshot: {
-    title: string;
-    category: string;
-    tags?: string[];
-    price?: number;
-    location: string;
-  };
-  created_at: string;
-}
 
 interface SessionMetrics {
   total_views: number;
@@ -90,7 +74,6 @@ export const useSmartTracking = () => {
   
   // Tracking state
   const viewStartTimes = useRef<Map<string, number>>(new Map());
-  const interactionBuffer = useRef<TrackedInteraction[]>([]);
   const positionCounter = useRef(0);
   
   // Session metrics
@@ -120,13 +103,16 @@ export const useSmartTracking = () => {
     viewStartTimes.current.delete(eventId);
   }, []);
 
-  // Track une interaction avec calcul de durée et interprétation
-  const trackInteraction = useCallback((
+  // Track une interaction avec calcul de durée et interprétation - FLUSH DIRECT
+  const trackInteraction = useCallback(async (
     eventId: string,
     action: InteractionAction,
     event: UnifiedEvent
   ) => {
-    if (!user) return;
+    if (!user) {
+      console.log('⚠️ No user - skipping tracking');
+      return;
+    }
 
     const viewStartTime = viewStartTimes.current.get(eventId);
     const duration = viewStartTime ? Date.now() - viewStartTime : 0;
@@ -137,9 +123,14 @@ export const useSmartTracking = () => {
     if (action === 'dislike' || action === 'skip') sessionMetrics.current.dislikes++;
     if (action === 'participate') sessionMetrics.current.participates++;
     if (duration > 0) sessionMetrics.current.decisionTimes.push(duration);
+    
+    viewStartTimes.current.delete(eventId);
 
-    const interaction: TrackedInteraction = {
+    // FLUSH DIRECT - Pas de buffer
+    const record = {
+      user_id: user.id,
       event_id: eventId,
+      session_id: sessionId,
       action,
       duration_ms: duration,
       signal_interpretation: signal,
@@ -151,61 +142,51 @@ export const useSmartTracking = () => {
         tags: event.tags,
         price: event.price_text ? parseFloat(String(event.price_text).replace(/[^0-9.]/g, '')) || undefined : undefined,
         location: event.location
-      },
-      created_at: new Date().toISOString()
+      }
     };
 
-    interactionBuffer.current.push(interaction);
-    viewStartTimes.current.delete(eventId);
+    console.log('📤 Inserting interaction:', { eventId, action, signal, userId: user.id });
+    
+    const { data, error } = await supabase
+      .from('event_interactions')
+      .insert(record)
+      .select();
 
-    // Flush buffer when it reaches 10 interactions
-    if (interactionBuffer.current.length >= 10) {
-      flushInteractions();
+    if (error) {
+      console.error('❌ Error saving interaction:', error.message, error.details, error.hint);
+    } else {
+      console.log('✅ Interaction saved:', data);
     }
 
-    // Log pour debug en dev
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`🎯 Tracked: ${action} on "${event.title}" - ${duration}ms - ${signal}`);
+    // Aussi tracker dans user_event_views pour les pénalités de répétition
+    if (action === 'view' || action === 'like' || action === 'participate') {
+      await trackEventView(eventId);
     }
 
     return { duration, signal };
-  }, [user]);
-
-  // Envoie les interactions en batch vers Supabase
-  const flushInteractions = useCallback(async () => {
-    if (!user || interactionBuffer.current.length === 0) return;
-
-    const interactions = [...interactionBuffer.current];
-    interactionBuffer.current = [];
-
-    try {
-      const records = interactions.map(interaction => ({
-        user_id: user.id,
-        event_id: interaction.event_id,
-        session_id: sessionId,
-        action: interaction.action,
-        duration_ms: interaction.duration_ms,
-        signal_interpretation: interaction.signal_interpretation,
-        position_in_session: interaction.position_in_session,
-        device_type: interaction.device_type,
-        event_snapshot: interaction.event_snapshot,
-        created_at: interaction.created_at
-      }));
-
-      const { error } = await supabase
-        .from('event_interactions')
-        .insert(records);
-
-      if (error) {
-        console.error('Error saving interactions:', error);
-        // Re-add failed interactions to buffer
-        interactionBuffer.current.unshift(...interactions);
-      }
-    } catch (error) {
-      console.error('Error flushing interactions:', error);
-      interactionBuffer.current.unshift(...interactions);
-    }
   }, [user, sessionId]);
+
+  // Track les vues d'événements pour les pénalités de répétition
+  const trackEventView = useCallback(async (eventId: string) => {
+    if (!user) return;
+    
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Try insert first, if conflict then ignore (already tracked today)
+    const { error } = await supabase
+      .from('user_event_views')
+      .insert({ 
+        event_id: eventId, 
+        user_id: user.id, 
+        source: 'app',
+        view_date: today
+      });
+
+    // Ignore duplicate key error (23505) - already viewed today
+    if (error && error.code !== '23505') {
+      console.error('❌ Error tracking view:', error.message);
+    }
+  }, [user]);
 
   // Calcule les métriques de session
   const getSessionMetrics = useCallback((): SessionMetrics => {
@@ -225,58 +206,12 @@ export const useSmartTracking = () => {
     };
   }, [sessionStartTime]);
 
-  // Flush au démontage du composant
-  useEffect(() => {
-    return () => {
-      flushInteractions();
-    };
-  }, [flushInteractions]);
-
-  // Flush périodique toutes les 30 secondes
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (interactionBuffer.current.length > 0) {
-        flushInteractions();
-      }
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [flushInteractions]);
-
-  // Flush avant fermeture de page
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (interactionBuffer.current.length > 0 && user) {
-        // Use sendBeacon for reliable delivery on page close
-        const records = interactionBuffer.current.map(interaction => ({
-          user_id: user.id,
-          event_id: interaction.event_id,
-          session_id: sessionId,
-          action: interaction.action,
-          duration_ms: interaction.duration_ms,
-          signal_interpretation: interaction.signal_interpretation,
-          position_in_session: interaction.position_in_session,
-          device_type: interaction.device_type,
-          event_snapshot: interaction.event_snapshot,
-          created_at: interaction.created_at
-        }));
-
-        // Using navigator.sendBeacon for reliable delivery
-        const url = `https://ddvboxgescsptvhkjgjl.supabase.co/rest/v1/event_interactions`;
-        navigator.sendBeacon(url, JSON.stringify(records));
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [user, sessionId]);
-
   return {
     sessionId,
     startViewTracking,
     stopViewTracking,
     trackInteraction,
-    flushInteractions,
+    trackEventView,
     getSessionMetrics,
     interpretSignal
   };
