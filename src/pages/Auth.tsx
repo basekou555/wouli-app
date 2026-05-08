@@ -70,6 +70,8 @@ const Auth = () => {
       setTimeout(() => {
         if (isBusinessUser) {
           navigate('/business', { replace: true });
+        } else if (userType === 'admin') {
+          navigate('/admin', { replace: true });
         } else {
           navigate('/app', { replace: true });
         }
