@@ -17,13 +17,14 @@ const AuthRedirect = ({ children }: AuthRedirectProps) => {
     // If user is authenticated, redirect based on their type
     if (user && userType) {
      if (isBusinessUser) {
-  navigate('/business', { replace: true });
-} else if (userType === 'admin') {
-  navigate('/admin', { replace: true });
-} else {
-  navigate('/app', { replace: true });
-}
-  }, [user, userType, loading, isBusinessUser, navigate]);
+      navigate('/business', { replace: true });
+    } else if (userType === 'admin') {
+      navigate('/admin', { replace: true });
+    } else {
+      navigate('/app', { replace: true });
+    }
+  }
+    }, [user, userType, loading, isBusinessUser, navigate]);
 
   if (loading) {
     return (
