@@ -1,0 +1,7 @@
+@echo off
+echo Téléchargement scraper-v5-wouli.js...
+curl -L "https://raw.githubusercontent.com/basekou555/wouli-app/claude/transfer-project-9mUNw/scraper/scraper-v5-wouli.js" -o scraper-v5-wouli.js
+echo Téléchargement accounts-v5.json...
+curl -L "https://raw.githubusercontent.com/basekou555/wouli-app/claude/transfer-project-9mUNw/scraper/accounts-v5.json" -o accounts-v5.json
+echo Mise à jour terminée.
+pause
