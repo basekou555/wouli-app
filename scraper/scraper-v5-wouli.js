@@ -652,7 +652,7 @@ class WouliScraperV5 {
       end_date: null,
       location: this.cleanUnicode(account.venue_name),
       address: this.cleanUnicode(account.address || `${account.venue_name}, Lyon`),
-      category: account.category || this.config.default_category || 'activites',
+      category: this.sanitizeCategory(account.category || this.config.default_category || 'activites'),
       tags: ['instagram', account.username, 'manual_review'],
       image_url: postData.imageUrl && !postData.imageUrl.startsWith('data:') ? postData.imageUrl : null,
       external_url: postData.url,
@@ -755,7 +755,7 @@ class WouliScraperV5 {
       end_date: null,
       location: this.cleanUnicode(account.venue_name),
       address: this.cleanUnicode(account.address || `${account.venue_name}, Lyon`),
-      category: account.category || this.config.default_category || 'activites',
+      category: this.sanitizeCategory(account.category || this.config.default_category || 'activites'),
       tags: ['instagram', account.username],
       // FIX v5.2 : ne jamais stocker du base64 dans image_url (trop lourd pour Supabase)
       image_url: imageUrl && !imageUrl.startsWith('data:') ? imageUrl : null,
@@ -920,6 +920,11 @@ class WouliScraperV5 {
     const prices = (text || '').match(/(\d+[\.,]?\d*)\s*€/g);
     if (prices && prices.length) return prices.join(' / ');
     return null;
+  }
+
+  sanitizeCategory(category) {
+    const valid = ['soirees', 'activites', 'a-boire', 'a-manger'];
+    return valid.includes(category) ? category : 'activites';
   }
 
   async wait(ms) {
