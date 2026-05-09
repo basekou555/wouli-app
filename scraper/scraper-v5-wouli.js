@@ -1,11 +1,10 @@
 // scraper-v5-wouli.js
-// VERSION 5.2 : Fix throttling Instagram + bug base64 image + accounts.json path
+// VERSION 5.3 : Fix erreurs consécutives + re-login automatique + délai adaptatif
 // ==================================================================
-// CORRECTIONS v5.2 vs v5.1:
-// - FIX 1 : Délai inter-comptes passé à 15-45s (anti-throttling Instagram)
-// - FIX 2 : Screenshot base64 uniquement si og:image absent (résout bug 800k chars)
-// - FIX 3 : saveCookies() après chaque compte scraped avec succès
-// - NOTE   : Renommer accounts-v2.json → accounts.json avant de lancer
+// CORRECTIONS v5.3 vs v5.2:
+// - FIX 4 : Compteur d'erreurs CONSÉCUTIVES (reset à 0 après un succès)
+// - FIX 5 : Re-login automatique après 5 erreurs consécutives (avant arrêt)
+// - FIX 6 : Délai inter-comptes adaptatif — 30-60s après erreur, 15-45s après succès
 // ==================================================================
 
 const puppeteer = require('puppeteer-extra');
@@ -118,7 +117,7 @@ class WouliScraperV5 {
   }
 
   async init() {
-    console.log('WOULI SCRAPER V5.2 - Stable');
+    console.log('WOULI SCRAPER V5.3 - Stable');
     console.log(`${new Date().toLocaleString('fr-FR')}`);
     console.log(`Mode filtrage: ${this.FILTERING_MODE.toUpperCase()}`);
 
@@ -975,7 +974,7 @@ class WouliScraperV5 {
 
   async generateReport() {
     console.log('\n' + '='.repeat(60));
-    console.log('RAPPORT FINAL V5.2');
+    console.log('RAPPORT FINAL V5.3');
     console.log('='.repeat(60));
     console.log(`Comptes analysés   : ${this.stats.accounts_scraped}`);
     console.log(`Posts analysés     : ${this.stats.posts_analyzed}`);
@@ -1013,18 +1012,37 @@ async function runScraperV5() {
     const sorted = scraper.accounts.sort((a, b) => (b.priority || 0) - (a.priority || 0));
     console.log(`\nDébut du scraping de ${sorted.length} compte(s)...\n`);
 
-    for (const acc of sorted) {
-      await scraper.scrapeAccount(acc);
+    let consecutiveErrors = 0;
+    const MAX_CONSECUTIVE = 6;
 
-      // FIX v5.2 : Délai inter-comptes augmenté à 15-45s pour éviter le throttling Instagram
-      const delay = 15000 + Math.random() * 30000;
+    for (const acc of sorted) {
+      const errorsBefore = scraper.stats.errors.length;
+      await scraper.scrapeAccount(acc);
+      const hadError = scraper.stats.errors.length > errorsBefore;
+
+      if (hadError) {
+        consecutiveErrors++;
+        // FIX v5.3 : Après 5 erreurs consécutives, tenter re-login avant d'abandonner
+        if (consecutiveErrors >= MAX_CONSECUTIVE) {
+          console.log(`\n${consecutiveErrors} erreurs consécutives — tentative re-connexion...`);
+          try {
+            await scraper.login();
+            consecutiveErrors = 0;
+            console.log('Re-connexion réussie, reprise\n');
+          } catch (e) {
+            console.log('Re-connexion échouée, arrêt.');
+            break;
+          }
+        }
+      } else {
+        consecutiveErrors = 0;
+      }
+
+      // FIX v5.3 : Délai adaptatif — plus long après erreur pour laisser Instagram récupérer
+      const baseDelay = hadError ? 30000 : 15000;
+      const delay = baseDelay + Math.random() * 30000;
       console.log(`\n   Pause ${Math.round(delay / 1000)}s avant le prochain compte...`);
       await scraper.wait(delay);
-
-      if (scraper.stats.errors.length > 5) {
-        console.log('\nTrop d\'erreurs consécutives, arrêt.');
-        break;
-      }
     }
 
     await scraper.saveToSupabase();
@@ -1037,7 +1055,7 @@ async function runScraperV5() {
 }
 
 if (require.main === module) {
-  console.log('LANCEMENT DU SCRAPER V5.2');
+  console.log('LANCEMENT DU SCRAPER V5.3');
   console.log(`Mode Test    : ${process.env.TEST_MODE === 'true' ? 'OUI' : 'NON'}`);
   console.log(`Headless     : ${process.env.HEADLESS !== 'false' ? 'OUI' : 'NON'}`);
   console.log(`Auto Enhance : ${process.env.AUTO_ENHANCE === 'true' ? 'OUI' : 'NON'}`);
