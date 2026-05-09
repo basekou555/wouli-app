@@ -91,7 +91,7 @@ class WouliScraperV5 {
   async loadAccountsList() {
     console.log('Chargement de la liste des comptes...');
     try {
-      const accountsPath = path.join(__dirname, 'accounts.json');
+      const accountsPath = path.join(__dirname, 'accounts-v5.json');
       const data = await fs.readFile(accountsPath, 'utf8');
       const jsonData = JSON.parse(data);
 
