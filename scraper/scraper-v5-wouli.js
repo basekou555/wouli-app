@@ -160,14 +160,27 @@ class WouliScraperV5 {
 
     if (cookiesLoaded) {
       await this.page.goto('https://www.instagram.com/', { waitUntil: 'networkidle2' });
-      await this.wait(2000);
+      await this.wait(3000);
       const url = this.page.url();
-      if (!url.includes('/accounts/login')) {
+
+      // Vérification réelle : URL + contenu de la page (évite les faux positifs "Something went wrong")
+      const sessionValid = await this.page.evaluate(() => {
+        const body = document.body?.innerText || '';
+        const hasError = body.includes("Something went wrong") || body.includes("Une erreur");
+        const hasLoginLink = !!document.querySelector('a[href="/accounts/login/"]');
+        const hasNav = !!document.querySelector('nav') || !!document.querySelector('[role="navigation"]');
+        return !hasError && !hasLoginLink && hasNav;
+      }).catch(() => false);
+
+      if (!url.includes('/accounts/login') && sessionValid) {
         console.log('Session restaurée depuis cookies\n');
         await this.closePopups();
         return;
       }
-      console.log('   Session expirée, reconnexion...');
+      console.log('   Session invalide ou expirée, reconnexion complète...');
+      // Supprimer les cookies invalides
+      const client = await this.page.createCDPSession();
+      await client.send('Network.clearBrowserCookies');
     }
 
     try {
@@ -290,13 +303,28 @@ class WouliScraperV5 {
         return;
       }
 
+      // Détecter les pages d'erreur Instagram avant d'évaluer le DOM
+      const pageStatus = await this.page.evaluate(() => {
+        const body = document.body?.innerText || '';
+        if (body.includes('Something went wrong') || body.includes('Une erreur')) return 'error';
+        if (body.includes('Page not found') || body.includes('Page introuvable')) return 'notfound';
+        if (document.querySelector('a[href="/accounts/login/"]')) return 'login_required';
+        return 'ok';
+      }).catch(() => 'error');
+
+      if (pageStatus !== 'ok') {
+        console.log(`   Page Instagram: ${pageStatus} — compte ignoré`);
+        this.stats.errors.push(`@${account.username}: ${pageStatus}`);
+        return;
+      }
+
       const postLinks = await this.page.evaluate(() => {
         const links = new Set();
         document.querySelectorAll('a[href*="/p/"], a[href*="/reel/"]').forEach(link => {
           if (link.href.includes('/p/') || link.href.includes('/reel/')) links.add(link.href);
         });
         return Array.from(links);
-      });
+      }).catch(() => []);
 
       const maxPosts = (this.config.scraping && this.config.scraping.posts_per_account) || this.config.posts_per_account || 5;
       const postsToAnalyze = postLinks.slice(0, maxPosts);
@@ -436,7 +464,12 @@ class WouliScraperV5 {
       });
 
     } catch (error) {
-      console.log(`      Erreur: ${error.message}`);
+      const msg = error.message || '';
+      if (msg.includes('detached Frame') || msg.includes('Execution context was destroyed')) {
+        console.log('      Instagram a redirigé pendant l\'analyse — post ignoré');
+      } else {
+        console.log(`      Erreur: ${msg}`);
+      }
     }
 
     return foundEvents;
