@@ -1,0 +1,459 @@
+{
+  "version": "2.1",
+  "last_updated": "2026-05-09",
+  "description": "Configuration des comptes Instagram à scraper pour Wouli",
+
+  "accounts": [
+    {
+      "username": "lesucrelyon",
+      "venue_name": "Le Sucre",
+      "type": "club",
+      "category": "soirees",
+      "priority": 5,
+      "trusted": true,
+      "enabled": true,
+      "address": "50 Quai Rambaud, Lyon",
+      "notes": "Salle de concert électro, très fiable, posts programmes hebdo"
+    },
+    {
+      "username": "barrioclub",
+      "venue_name": "Barrio Club",
+      "type": "club",
+      "category": "soirees",
+      "priority": 5,
+      "trusted": true,
+      "enabled": true,
+      "address": "13 place Jules Ferry, Lyon",
+      "notes": "Club latino, posts réguliers, bonne qualité"
+    },
+    {
+      "username": "transbolyon",
+      "venue_name": "Transbordeur",
+      "type": "salle_concert",
+      "category": "soirees",
+      "priority": 5,
+      "trusted": true,
+      "enabled": true,
+      "address": "Le Transbordeur, Villeurbanne",
+      "notes": "Salle de concert majeure, programmes mensuels détaillés"
+    },
+    {
+      "username": "laferialyon",
+      "venue_name": "La Feria",
+      "type": "bar",
+      "category": "soirees",
+      "priority": 5,
+      "trusted": true,
+      "enabled": true,
+      "address": "La Feria, Lyon",
+      "notes": "Soirées latino, programmes hebdomadaires"
+    },
+    {
+      "username": "nh.club.lyon",
+      "venue_name": "NH Club Lyon",
+      "type": "club",
+      "category": "soirees",
+      "priority": 5,
+      "trusted": true,
+      "enabled": true,
+      "address": "Les Salons du NH, Lyon",
+      "notes": "Soirées étudiantes, posts réguliers"
+    },
+    {
+      "username": "olma.club",
+      "venue_name": "OLMA Club",
+      "type": "club",
+      "category": "soirees",
+      "priority": 5,
+      "trusted": true,
+      "enabled": true,
+      "address": "3 rue Terme, Lyon",
+      "notes": "Club house, programmes hebdo très structurés, parfait pour parsing"
+    },
+    {
+      "username": "halletonygarnier",
+      "venue_name": "Halle Tony Garnier",
+      "type": "salle_concert",
+      "category": "soirees",
+      "priority": 5,
+      "trusted": false,
+      "enabled": true,
+      "address": "Halle Tony Garnier, Lyon",
+      "notes": "Très grande salle, concerts majeurs"
+    },
+    {
+      "username": "radiantbellevue",
+      "venue_name": "Radiant Bellevue",
+      "type": "salle_concert",
+      "category": "soirees",
+      "priority": 5,
+      "trusted": false,
+      "enabled": true,
+      "address": "Radiant Bellevue, Caluire",
+      "notes": "Grande salle concert Caluire, grosses têtes d'affiche"
+    },
+    {
+      "username": "lepetitsalon",
+      "venue_name": "Le Petit Salon",
+      "type": "salle_concert",
+      "category": "soirees",
+      "priority": 4,
+      "trusted": true,
+      "enabled": true,
+      "address": "Le Petit Salon, Lyon",
+      "notes": "Petite salle, programmation éclectique"
+    },
+    {
+      "username": "lesoundclubfdy",
+      "venue_name": "Sound Club",
+      "type": "club",
+      "category": "soirees",
+      "priority": 4,
+      "trusted": true,
+      "enabled": true,
+      "address": "Sound Club, Lyon",
+      "notes": "Club underground, bons événements électro"
+    },
+    {
+      "username": "heat_lyon",
+      "venue_name": "HEAT Lyon",
+      "type": "food_hall",
+      "category": "a-manger",
+      "priority": 4,
+      "trusted": false,
+      "enabled": true,
+      "address": "HEAT, Lyon",
+      "notes": "Halle gourmande, événements réguliers, programmes longs"
+    },
+    {
+      "username": "loft_club_lyon_",
+      "venue_name": "Loft Club Lyon",
+      "type": "club",
+      "category": "soirees",
+      "priority": 4,
+      "trusted": true,
+      "enabled": true,
+      "address": "7 rue Renan, Lyon 07",
+      "notes": "Club, programmes simples format liste"
+    },
+    {
+      "username": "sonic_lyon",
+      "venue_name": "Sonic Lyon",
+      "type": "salle_concert",
+      "category": "soirees",
+      "priority": 4,
+      "trusted": false,
+      "enabled": true,
+      "address": "4 quai des Étroits, Lyon",
+      "notes": "Salle rock/alternatif, agendas en image (OCR requis)"
+    },
+    {
+      "username": "docks40",
+      "venue_name": "Docks 40",
+      "type": "club_restaurant",
+      "category": "soirees",
+      "priority": 4,
+      "trusted": false,
+      "enabled": true,
+      "address": "40 quai Rambaud, Lyon",
+      "notes": "Restaurant & club, événements réguliers"
+    },
+    {
+      "username": "periscope.lyon",
+      "venue_name": "Le Périscope",
+      "type": "cafe_concert",
+      "category": "soirees",
+      "priority": 4,
+      "trusted": false,
+      "enabled": true,
+      "address": "Le Périscope, Lyon",
+      "notes": "Café-concert alternatif Croix-Rousse"
+    },
+    {
+      "username": "hotclubdelyon",
+      "venue_name": "Hot Club",
+      "type": "club",
+      "category": "soirees",
+      "priority": 4,
+      "trusted": false,
+      "enabled": true,
+      "address": "Hot Club de Lyon, Lyon",
+      "notes": "Club jazz manouche, ambiance unique"
+    },
+    {
+      "username": "larayonne_",
+      "venue_name": "La Rayonne",
+      "type": "salle_concert",
+      "category": "soirees",
+      "priority": 4,
+      "trusted": false,
+      "enabled": true,
+      "address": "La Rayonne, Lyon",
+      "notes": "Centre Culturel, programmation éclectique"
+    },
+    {
+      "username": "clefdevoutejazzclub",
+      "venue_name": "La Clef de Voûte",
+      "type": "salle_concert",
+      "category": "soirees",
+      "priority": 4,
+      "trusted": false,
+      "enabled": true,
+      "address": "La Clef de Voûte, Lyon",
+      "notes": "Salle underground, électro expérimentale"
+    },
+    {
+      "username": "ninkasicordelierslyon",
+      "venue_name": "Ninkasi Cordeliers",
+      "type": "bar_brasserie",
+      "category": "a-boire",
+      "priority": 4,
+      "trusted": false,
+      "enabled": true,
+      "address": "Ninkasi Cordeliers, Lyon 02",
+      "notes": "Même réseau, programmation culturelle"
+    },
+    {
+      "username": "wallacelyon",
+      "venue_name": "Wallace Bar",
+      "type": "bar",
+      "category": "a-boire",
+      "priority": 3,
+      "trusted": false,
+      "enabled": true,
+      "address": "Wallace Bar, Lyon",
+      "notes": "Bar Croix-Rousse, concerts live occasionnels"
+    },
+    {
+      "username": "le_roi_lyon_bar",
+      "venue_name": "Le Roi Bar",
+      "type": "bar",
+      "category": "a-boire",
+      "priority": 3,
+      "trusted": false,
+      "enabled": false,
+      "address": "30 Quai Saint Antoine, Lyon",
+      "notes": "PROBLÈME: les événements sont dans les stories à la une"
+    },
+    {
+      "username": "maisonmlyon",
+      "venue_name": "La Maison M",
+      "type": "venue",
+      "category": "soirees",
+      "priority": 3,
+      "trusted": false,
+      "enabled": true,
+      "address": "21 place Gabriel Rambaud, Lyon 01",
+      "notes": "Lieu événementiel"
+    },
+    {
+      "username": "operadelyon",
+      "venue_name": "Opéra de Lyon",
+      "type": "culture",
+      "category": "activites",
+      "priority": 3,
+      "trusted": false,
+      "enabled": true,
+      "address": "Opéra de Lyon, Place de la Comédie",
+      "notes": "Institution culturelle, saisons longues (cas marginaux fréquents)"
+    },
+    {
+      "username": "thcelestinslyon",
+      "venue_name": "Théâtre des Célestins",
+      "type": "culture",
+      "category": "activites",
+      "priority": 3,
+      "trusted": false,
+      "enabled": true,
+      "address": "Théâtre des Célestins, Lyon",
+      "notes": "Théâtre majeur, saisons longues"
+    },
+    {
+      "username": "tnp_villeurbanne",
+      "venue_name": "TNP Villeurbanne",
+      "type": "culture",
+      "category": "activites",
+      "priority": 3,
+      "trusted": false,
+      "enabled": true,
+      "address": "TNP, Villeurbanne",
+      "notes": "Théâtre National Populaire"
+    },
+    {
+      "username": "institut.lumiere",
+      "venue_name": "Institut Lumière",
+      "type": "culture",
+      "category": "activites",
+      "priority": 3,
+      "trusted": false,
+      "enabled": true,
+      "address": "Institut Lumière, Lyon",
+      "notes": "Cinéma + événements culturels"
+    },
+    {
+      "username": "bikube.lyon",
+      "venue_name": "Bikube",
+      "type": "bar_restaurant",
+      "category": "a-boire",
+      "priority": 3,
+      "trusted": false,
+      "enabled": true,
+      "address": "Bikube, Lyon",
+      "notes": "Coliving - Hôtel - Bar & Restaurant"
+    },
+    {
+      "username": "culturel_lyon",
+      "venue_name": "Culturel Lyon",
+      "type": "media",
+      "category": "activites",
+      "priority": 2,
+      "trusted": false,
+      "enabled": true,
+      "address": "Lyon",
+      "notes": "Agrégateur culturel, filtrage strict recommandé"
+    },
+    {
+      "username": "onlylyon",
+      "venue_name": "OnlyLyon",
+      "type": "media",
+      "category": "multi",
+      "priority": 2,
+      "trusted": false,
+      "enabled": true,
+      "address": "Lyon",
+      "notes": "Agrégateur, beaucoup de bruit, filtrage strict recommandé"
+    },
+    {
+      "username": "lyon_citycrunch",
+      "venue_name": "Lyon City Crunch",
+      "type": "media",
+      "category": "multi",
+      "priority": 2,
+      "trusted": false,
+      "enabled": true,
+      "address": "Lyon",
+      "notes": "Média local, mix actus + événements"
+    },
+    {
+      "username": "le_bonbon_lyon",
+      "venue_name": "Le Bonbon Lyon",
+      "type": "media",
+      "category": "multi",
+      "priority": 2,
+      "trusted": false,
+      "enabled": true,
+      "address": "Lyon",
+      "notes": "Agrégateur événementiel, carrousels fréquents"
+    },
+    {
+      "username": "mylittlelyon",
+      "venue_name": "My Little Lyon",
+      "type": "influencer",
+      "category": "activites",
+      "priority": 2,
+      "trusted": false,
+      "enabled": true,
+      "address": "Lyon",
+      "notes": "Guide des bonnes adresses"
+    },
+    {
+      "username": "musee_des_confluences",
+      "venue_name": "Musée des Confluences",
+      "type": "culture",
+      "category": "activites",
+      "priority": 2,
+      "trusted": false,
+      "enabled": true,
+      "address": "Musée des Confluences, Lyon",
+      "notes": "Musée, expositions + nocturnes événementielles"
+    },
+    {
+      "username": "mba_lyon",
+      "venue_name": "Musée des Beaux-Arts de Lyon",
+      "type": "culture",
+      "category": "activites",
+      "priority": 2,
+      "trusted": false,
+      "enabled": true,
+      "address": "Musée des Beaux-Arts, Lyon",
+      "notes": "Musée, événements ponctuels"
+    },
+    {
+      "username": "metropolisbowlinglaserlyonbron",
+      "venue_name": "Métropolis Bowling Laser",
+      "type": "activite",
+      "category": "activites",
+      "priority": 2,
+      "trusted": false,
+      "enabled": true,
+      "address": "Métropolis, Bron",
+      "notes": "Bowling + soirées thématiques"
+    },
+    {
+      "username": "lyonesport",
+      "venue_name": "Lyon e-Sport",
+      "type": "activite",
+      "category": "activites",
+      "priority": 2,
+      "trusted": false,
+      "enabled": true,
+      "address": "Lyon e-Sport, Lyon",
+      "notes": "Gaming bar, tournois e-sport"
+    },
+    {
+      "username": "brasserie_georges",
+      "venue_name": "Brasserie Georges",
+      "type": "restaurant",
+      "category": "a-manger",
+      "priority": 2,
+      "trusted": false,
+      "enabled": true,
+      "address": "Brasserie Georges, Lyon",
+      "notes": "Brasserie historique, concerts jazz occasionnels"
+    },
+    {
+      "username": "lyonfood",
+      "venue_name": "Lyon Food",
+      "type": "influencer",
+      "category": "a-manger",
+      "priority": 2,
+      "trusted": false,
+      "enabled": true,
+      "address": "Lyon",
+      "notes": "Événements food"
+    },
+    {
+      "username": "tuviensmanger",
+      "venue_name": "TU VIENS MANGER",
+      "type": "media_food",
+      "category": "a-manger",
+      "priority": 1,
+      "trusted": false,
+      "enabled": false,
+      "address": "Lyon",
+      "notes": "DÉSACTIVÉ: Vidéos restaurants, pas d'événements"
+    }
+  ],
+
+  "configuration": {
+    "scraping": {
+      "posts_per_account": 5,
+      "retry_attempts": 3,
+      "screenshot_quality": 90,
+      "popup_wait_time_ms": 2000
+    },
+    "filtering": {
+      "default_mode": "balanced",
+      "auto_validate_trusted_accounts": true,
+      "confidence_threshold_auto_validate": 0.8
+    },
+    "parsing": {
+      "enable_ocr": true,
+      "enable_program_parsing": true,
+      "manual_review_edge_cases": true
+    },
+    "min_score_for_event": 3,
+    "default_event_time": "22:00",
+    "default_category": "activites"
+  }
+}
