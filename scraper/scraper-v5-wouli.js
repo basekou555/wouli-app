@@ -1070,9 +1070,9 @@ async function runScraperV5() {
         consecutiveErrors = 0;
       }
 
-      // FIX v5.3 : Délai adaptatif — plus long après erreur pour laisser Instagram récupérer
-      const baseDelay = hadError ? 30000 : 15000;
-      const delay = baseDelay + Math.random() * 30000;
+      // Délai adaptatif — max 30s
+      const baseDelay = hadError ? 15000 : 8000;
+      const delay = baseDelay + Math.random() * 15000;
       console.log(`\n   Pause ${Math.round(delay / 1000)}s avant le prochain compte...`);
       await scraper.wait(delay);
     }
