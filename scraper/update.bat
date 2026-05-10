@@ -11,8 +11,12 @@ echo.
 curl -s -L "%BASE%/scraper-v5-wouli.js" -o scraper-v5-wouli.js
 if errorlevel 1 (echo   [ERREUR] scraper-v5-wouli.js) else (echo   [OK] scraper-v5-wouli.js)
 
-curl -s -L "%BASE%/accounts-v5.json" -o accounts-v5.json
-if errorlevel 1 (echo   [ERREUR] accounts-v5.json) else (echo   [OK] accounts-v5.json)
+if not exist accounts-v5.json (
+  curl -s -L "%BASE%/accounts-v5.json" -o accounts-v5.json
+  if errorlevel 1 (echo   [ERREUR] accounts-v5.json) else (echo   [OK] accounts-v5.json - installation initiale)
+) else (
+  echo   [SKIP] accounts-v5.json - votre fichier local est conserve
+)
 
 curl -s -L "%BASE%/notion-import.js" -o notion-import.js
 if errorlevel 1 (echo   [ERREUR] notion-import.js) else (echo   [OK] notion-import.js)
