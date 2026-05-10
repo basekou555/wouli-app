@@ -1,0 +1,27 @@
+{
+  "name": "wouli-scraper",
+  "version": "1.0.0",
+  "description": "Scraper Instagram pour Wouli - événements Lyon",
+  "main": "index.js",
+  "scripts": {
+    "start": "node scraper-v5-wouli.js",
+    "v4": "node scraper-v4-wouli.js",
+    "debug": "node debug-instagram-selectors.js",
+    "shotgun": "node shotgun-parser.js && node shotgun-to-sql.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.58.0",
+    "cheerio": "^1.1.2",
+    "dotenv": "^17.2.3",
+    "node-fetch": "^3.3.2",
+    "puppeteer": "^24.23.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "tesseract.js": "^6.0.1"
+  }
+}

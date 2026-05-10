@@ -1,11 +1,9 @@
 // scraper-v5-wouli.js
-// VERSION 5.2 : Fix throttling Instagram + bug base64 image + accounts.json path
+// VERSION 5.4 : Fix page Puppeteer morte (detached Frame / Session closed)
 // ==================================================================
-// CORRECTIONS v5.2 vs v5.1:
-// - FIX 1 : Délai inter-comptes passé à 15-45s (anti-throttling Instagram)
-// - FIX 2 : Screenshot base64 uniquement si og:image absent (résout bug 800k chars)
-// - FIX 3 : saveCookies() après chaque compte scraped avec succès
-// - NOTE   : Renommer accounts-v2.json → accounts.json avant de lancer
+// CORRECTIONS v5.4 vs v5.3:
+// - FIX 7 : Détection page morte dans scrapeAccount → recréation automatique
+// - FIX 8 : login() vérifie si la page est vivante avant toute opération
 // ==================================================================
 
 const puppeteer = require('puppeteer-extra');
@@ -118,7 +116,7 @@ class WouliScraperV5 {
   }
 
   async init() {
-    console.log('WOULI SCRAPER V5.2 - Stable');
+    console.log('WOULI SCRAPER V5.4 - Stable');
     console.log(`${new Date().toLocaleString('fr-FR')}`);
     console.log(`Mode filtrage: ${this.FILTERING_MODE.toUpperCase()}`);
 
@@ -155,6 +153,19 @@ class WouliScraperV5 {
 
   async login() {
     console.log('\nConnexion Instagram...');
+
+    // FIX v5.4 : Si la page est morte, en recréer une avant toute tentative de connexion
+    try {
+      const isClosed = this.page.isClosed();
+      if (isClosed) throw new Error('page closed');
+      await this.page.evaluate(() => true); // test rapide
+    } catch (_) {
+      console.log('   Page morte détectée — recréation avant reconnexion...');
+      this.page = await this.browser.newPage();
+      await this.page.setDefaultNavigationTimeout(30000);
+      await this.page.setDefaultTimeout(30000);
+      await this.page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    }
 
     const cookiesLoaded = await this.loadCookies();
 
@@ -353,8 +364,23 @@ class WouliScraperV5 {
 
       console.log(`\nRésumé : ${accountEvents} événement(s) trouvés`);
     } catch (error) {
-      console.log(`Erreur : ${error.message}`);
-      this.stats.errors.push(`@${account.username}: ${error.message}`);
+      const msg = error.message || '';
+      console.log(`Erreur : ${msg}`);
+      this.stats.errors.push(`@${account.username}: ${msg.substring(0, 80)}`);
+
+      // FIX v5.4 : Si la page Puppeteer est morte (tab fermée par Instagram), en recréer une
+      if (msg.includes('detached Frame') || msg.includes('Session closed') || msg.includes('Target closed') || msg.includes('Protocol error')) {
+        console.log('   Page Puppeteer fermée par Instagram — recréation...');
+        try {
+          this.page = await this.browser.newPage();
+          await this.page.setDefaultNavigationTimeout(30000);
+          await this.page.setDefaultTimeout(30000);
+          await this.page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+          console.log('   Nouvelle page créée — le prochain compte tentera une reconnexion');
+        } catch (pageError) {
+          console.log('   Impossible de recréer la page:', pageError.message);
+        }
+      }
     }
   }
 
@@ -653,7 +679,7 @@ class WouliScraperV5 {
       end_date: null,
       location: this.cleanUnicode(account.venue_name),
       address: this.cleanUnicode(account.address || `${account.venue_name}, Lyon`),
-      category: account.category || this.config.default_category || 'activites',
+      category: this.sanitizeCategory(account.category || this.config.default_category || 'activites'),
       tags: ['instagram', account.username, 'manual_review'],
       image_url: postData.imageUrl && !postData.imageUrl.startsWith('data:') ? postData.imageUrl : null,
       external_url: postData.url,
@@ -756,7 +782,7 @@ class WouliScraperV5 {
       end_date: null,
       location: this.cleanUnicode(account.venue_name),
       address: this.cleanUnicode(account.address || `${account.venue_name}, Lyon`),
-      category: account.category || this.config.default_category || 'activites',
+      category: this.sanitizeCategory(account.category || this.config.default_category || 'activites'),
       tags: ['instagram', account.username],
       // FIX v5.2 : ne jamais stocker du base64 dans image_url (trop lourd pour Supabase)
       image_url: imageUrl && !imageUrl.startsWith('data:') ? imageUrl : null,
@@ -923,6 +949,11 @@ class WouliScraperV5 {
     return null;
   }
 
+  sanitizeCategory(category) {
+    const valid = ['soirees', 'activites', 'a-boire', 'a-manger'];
+    return valid.includes(category) ? category : 'activites';
+  }
+
   async wait(ms) {
     return new Promise(r => setTimeout(r, ms));
   }
@@ -975,7 +1006,7 @@ class WouliScraperV5 {
 
   async generateReport() {
     console.log('\n' + '='.repeat(60));
-    console.log('RAPPORT FINAL V5.2');
+    console.log('RAPPORT FINAL V5.4');
     console.log('='.repeat(60));
     console.log(`Comptes analysés   : ${this.stats.accounts_scraped}`);
     console.log(`Posts analysés     : ${this.stats.posts_analyzed}`);
@@ -1013,18 +1044,37 @@ async function runScraperV5() {
     const sorted = scraper.accounts.sort((a, b) => (b.priority || 0) - (a.priority || 0));
     console.log(`\nDébut du scraping de ${sorted.length} compte(s)...\n`);
 
-    for (const acc of sorted) {
-      await scraper.scrapeAccount(acc);
+    let consecutiveErrors = 0;
+    const MAX_CONSECUTIVE = 6;
 
-      // FIX v5.2 : Délai inter-comptes augmenté à 15-45s pour éviter le throttling Instagram
-      const delay = 15000 + Math.random() * 30000;
+    for (const acc of sorted) {
+      const errorsBefore = scraper.stats.errors.length;
+      await scraper.scrapeAccount(acc);
+      const hadError = scraper.stats.errors.length > errorsBefore;
+
+      if (hadError) {
+        consecutiveErrors++;
+        // FIX v5.3 : Après 5 erreurs consécutives, tenter re-login avant d'abandonner
+        if (consecutiveErrors >= MAX_CONSECUTIVE) {
+          console.log(`\n${consecutiveErrors} erreurs consécutives — tentative re-connexion...`);
+          try {
+            await scraper.login();
+            consecutiveErrors = 0;
+            console.log('Re-connexion réussie, reprise\n');
+          } catch (e) {
+            console.log('Re-connexion échouée, arrêt.');
+            break;
+          }
+        }
+      } else {
+        consecutiveErrors = 0;
+      }
+
+      // Délai adaptatif — max 30s
+      const baseDelay = hadError ? 15000 : 8000;
+      const delay = baseDelay + Math.random() * 15000;
       console.log(`\n   Pause ${Math.round(delay / 1000)}s avant le prochain compte...`);
       await scraper.wait(delay);
-
-      if (scraper.stats.errors.length > 5) {
-        console.log('\nTrop d\'erreurs consécutives, arrêt.');
-        break;
-      }
     }
 
     await scraper.saveToSupabase();
@@ -1037,7 +1087,7 @@ async function runScraperV5() {
 }
 
 if (require.main === module) {
-  console.log('LANCEMENT DU SCRAPER V5.2');
+  console.log('LANCEMENT DU SCRAPER V5.4');
   console.log(`Mode Test    : ${process.env.TEST_MODE === 'true' ? 'OUI' : 'NON'}`);
   console.log(`Headless     : ${process.env.HEADLESS !== 'false' ? 'OUI' : 'NON'}`);
   console.log(`Auto Enhance : ${process.env.AUTO_ENHANCE === 'true' ? 'OUI' : 'NON'}`);
