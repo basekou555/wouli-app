@@ -1,10 +1,9 @@
 // scraper-v5-wouli.js
-// VERSION 5.3 : Fix erreurs consécutives + re-login automatique + délai adaptatif
+// VERSION 5.4 : Fix page Puppeteer morte (detached Frame / Session closed)
 // ==================================================================
-// CORRECTIONS v5.3 vs v5.2:
-// - FIX 4 : Compteur d'erreurs CONSÉCUTIVES (reset à 0 après un succès)
-// - FIX 5 : Re-login automatique après 5 erreurs consécutives (avant arrêt)
-// - FIX 6 : Délai inter-comptes adaptatif — 30-60s après erreur, 15-45s après succès
+// CORRECTIONS v5.4 vs v5.3:
+// - FIX 7 : Détection page morte dans scrapeAccount → recréation automatique
+// - FIX 8 : login() vérifie si la page est vivante avant toute opération
 // ==================================================================
 
 const puppeteer = require('puppeteer-extra');
@@ -117,7 +116,7 @@ class WouliScraperV5 {
   }
 
   async init() {
-    console.log('WOULI SCRAPER V5.3 - Stable');
+    console.log('WOULI SCRAPER V5.4 - Stable');
     console.log(`${new Date().toLocaleString('fr-FR')}`);
     console.log(`Mode filtrage: ${this.FILTERING_MODE.toUpperCase()}`);
 
@@ -154,6 +153,19 @@ class WouliScraperV5 {
 
   async login() {
     console.log('\nConnexion Instagram...');
+
+    // FIX v5.4 : Si la page est morte, en recréer une avant toute tentative de connexion
+    try {
+      const isClosed = this.page.isClosed();
+      if (isClosed) throw new Error('page closed');
+      await this.page.evaluate(() => true); // test rapide
+    } catch (_) {
+      console.log('   Page morte détectée — recréation avant reconnexion...');
+      this.page = await this.browser.newPage();
+      await this.page.setDefaultNavigationTimeout(30000);
+      await this.page.setDefaultTimeout(30000);
+      await this.page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    }
 
     const cookiesLoaded = await this.loadCookies();
 
@@ -352,8 +364,23 @@ class WouliScraperV5 {
 
       console.log(`\nRésumé : ${accountEvents} événement(s) trouvés`);
     } catch (error) {
-      console.log(`Erreur : ${error.message}`);
-      this.stats.errors.push(`@${account.username}: ${error.message}`);
+      const msg = error.message || '';
+      console.log(`Erreur : ${msg}`);
+      this.stats.errors.push(`@${account.username}: ${msg.substring(0, 80)}`);
+
+      // FIX v5.4 : Si la page Puppeteer est morte (tab fermée par Instagram), en recréer une
+      if (msg.includes('detached Frame') || msg.includes('Session closed') || msg.includes('Target closed') || msg.includes('Protocol error')) {
+        console.log('   Page Puppeteer fermée par Instagram — recréation...');
+        try {
+          this.page = await this.browser.newPage();
+          await this.page.setDefaultNavigationTimeout(30000);
+          await this.page.setDefaultTimeout(30000);
+          await this.page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+          console.log('   Nouvelle page créée — le prochain compte tentera une reconnexion');
+        } catch (pageError) {
+          console.log('   Impossible de recréer la page:', pageError.message);
+        }
+      }
     }
   }
 
@@ -979,7 +1006,7 @@ class WouliScraperV5 {
 
   async generateReport() {
     console.log('\n' + '='.repeat(60));
-    console.log('RAPPORT FINAL V5.3');
+    console.log('RAPPORT FINAL V5.4');
     console.log('='.repeat(60));
     console.log(`Comptes analysés   : ${this.stats.accounts_scraped}`);
     console.log(`Posts analysés     : ${this.stats.posts_analyzed}`);
@@ -1060,7 +1087,7 @@ async function runScraperV5() {
 }
 
 if (require.main === module) {
-  console.log('LANCEMENT DU SCRAPER V5.3');
+  console.log('LANCEMENT DU SCRAPER V5.4');
   console.log(`Mode Test    : ${process.env.TEST_MODE === 'true' ? 'OUI' : 'NON'}`);
   console.log(`Headless     : ${process.env.HEADLESS !== 'false' ? 'OUI' : 'NON'}`);
   console.log(`Auto Enhance : ${process.env.AUTO_ENHANCE === 'true' ? 'OUI' : 'NON'}`);
