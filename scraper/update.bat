@@ -37,6 +37,14 @@ if errorlevel 1 (
 ) else (
   echo   [OK] notion-import.js
 )
+
+REM --- fix-categories.js ---
+curl -s -L "https://raw.githubusercontent.com/basekou555/wouli-app/claude/transfer-project-9mUNw/scraper/fix-categories.js" -o fix-categories.js
+if errorlevel 1 (
+  echo   [ERREUR] Echec telechargement fix-categories.js
+) else (
+  echo   [OK] fix-categories.js
+)
 echo.
 
 echo ========================================
