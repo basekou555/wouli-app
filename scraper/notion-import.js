@@ -93,7 +93,9 @@ function parseCSVLine(line) {
 }
 
 function parseCSV(content) {
-  const lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.trim());
+  // Supprimer le BOM UTF-8 que Notion ajoute parfois (casse le nom de la 1ère colonne)
+  const cleaned = content.replace(/^﻿/, '');
+  const lines = cleaned.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.trim());
   if (lines.length < 2) return [];
   const header = parseCSVLine(lines[0]);
   return lines.slice(1).map(line => {
@@ -175,19 +177,18 @@ function main() {
   const noUsername = [];
 
   for (const row of rows) {
-    // Cherche la colonne username (plusieurs noms possibles)
+    // Colonnes Notion (noms exacts du CSV exporté)
     const usernameRaw =
-      row['Username Instagram'] ||
-      row['username Instagram'] ||
-      row['Instagram'] ||
-      row['Compte Instagram'] ||
+      row['username'] ||
       row['Username'] ||
+      row['Username Instagram'] ||
+      row['Instagram'] ||
       '';
 
     const username = cleanUsername(usernameRaw);
 
     if (!username) {
-      noUsername.push(row['Nom du lieu'] || row['Nom'] || row['Name'] || '(inconnu)');
+      noUsername.push(row['Établissement'] || row['Nom Insta'] || row['Nom'] || row['Name'] || '(inconnu)');
       continue;
     }
 
@@ -197,19 +198,22 @@ function main() {
     }
 
     const venueName =
+      row['Établissement'] ||
+      row['Nom Insta'] ||
       row['Nom du lieu'] ||
       row['Nom'] ||
       row['Name'] ||
       username;
 
     const typeRaw =
+      row['Type'] ||
       row['Type / catégorie'] ||
       row['Type / Catégorie'] ||
-      row['Type'] ||
       row['Catégorie'] ||
       '';
 
     const mapsLink =
+      row['Google_Maps'] ||
       row['lien google maps'] ||
       row['Lien Google Maps'] ||
       row['Google Maps'] ||
