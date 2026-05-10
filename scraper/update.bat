@@ -47,6 +47,13 @@ if errorlevel 1 (
 )
 echo.
 
+REM --- Correction automatique des categories ---
+if exist accounts-v5.json (
+  echo Correction des categories...
+  node fix-categories.js
+)
+echo.
+
 echo ========================================
 echo   Mise a jour terminee.
 echo   Pour lancer : node scraper-v5-wouli.js
