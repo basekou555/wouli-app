@@ -1,11 +1,13 @@
 // scraper-v5-wouli.js
-// VERSION 5.5 : Checkpoint/reprise + Notification Telegram
+// VERSION 5.6 : Scoring et nettoyage automatique des comptes
 // ==================================================================
-// CORRECTIONS v5.5 vs v5.4:
+// CORRECTIONS v5.6 vs v5.5:
 // - FIX 7 : Détection page morte dans scrapeAccount → recréation automatique
 // - FIX 8 : login() vérifie si la page est vivante avant toute opération
 // - FIX 9 : Checkpoint scraper-progress.json — reprise automatique après crash
 // - FIX 10 : Notification Telegram en fin de run (succès ou erreur fatale)
+// - FIX 11 : Stats par compte (last_scraped, consecutive_error_runs, last_event_count)
+// - FIX 12 : Règles auto — username invalide → needs_review, 3 runs → priority--, 5 runs → disabled
 // ==================================================================
 
 const puppeteer = require('puppeteer-extra');
@@ -119,7 +121,7 @@ class WouliScraperV5 {
   }
 
   async init() {
-    console.log('WOULI SCRAPER V5.4 - Stable');
+    console.log('WOULI SCRAPER V5.6 - Scoring comptes');
     console.log(`${new Date().toLocaleString('fr-FR')}`);
     console.log(`Mode filtrage: ${this.FILTERING_MODE.toUpperCase()}`);
 
@@ -1035,6 +1037,68 @@ class WouliScraperV5 {
 }
 
 // ============================================
+// SCORING & NETTOYAGE DES COMPTES
+// ============================================
+
+async function saveAccountStats(scrapedAccounts) {
+  const accountsPath = path.join(__dirname, 'accounts-v5.json');
+  try {
+    const raw = await fs.readFile(accountsPath, 'utf8');
+    const data = JSON.parse(raw);
+
+    const statsMap = new Map(scrapedAccounts.map(a => [a.username, a]));
+    let flagged = 0, downgraded = 0, disabled = 0;
+
+    for (const acc of data.accounts) {
+      const updated = statsMap.get(acc.username);
+      if (!updated) continue;
+
+      // Mise à jour des stats de run
+      acc.last_scraped = updated.last_scraped;
+      acc.last_event_count = updated.last_event_count || 0;
+      acc.consecutive_error_runs = updated.consecutive_error_runs || 0;
+      acc.total_events_found = (acc.total_events_found || 0) + (updated.last_event_count || 0);
+
+      // Règle 0 : espace dans le username = username Instagram impossible → flaguer
+      if (/\s/.test(acc.username) && !acc.needs_review) {
+        acc.needs_review = true;
+        acc.review_reason = 'username invalide (contient un espace — probablement une faute de saisie)';
+        flagged++;
+      }
+
+      // Règle 1 : 3 runs consécutifs sans résultat → baisser priorité + flaguer pour vérification
+      if (acc.consecutive_error_runs >= 3 && !acc.needs_review) {
+        acc.priority = Math.max(1, (acc.priority || 3) - 1);
+        acc.needs_review = true;
+        acc.review_reason = `${acc.consecutive_error_runs} runs consécutifs sans résultat`;
+        downgraded++;
+      }
+
+      // Règle 2 : 5 runs consécutifs sans résultat → désactiver automatiquement
+      if (acc.consecutive_error_runs >= 5 && acc.enabled) {
+        acc.enabled = false;
+        acc.disable_reason = `auto-désactivé après ${acc.consecutive_error_runs} runs sans résultat`;
+        disabled++;
+      }
+    }
+
+    data.last_updated = new Date().toISOString().split('T')[0];
+    await fs.writeFile(accountsPath, JSON.stringify(data, null, 2), 'utf8');
+
+    console.log('\n📊 Mise à jour accounts-v5.json :');
+    if (flagged)    console.log(`   ⚠️  ${flagged} compte(s) flagués (username avec espace)`);
+    if (downgraded) console.log(`   ↓  ${downgraded} compte(s) rétrogradés (3+ runs sans résultat)`);
+    if (disabled)   console.log(`   🔴 ${disabled} compte(s) désactivés (5+ runs sans résultat)`);
+    if (!flagged && !downgraded && !disabled) console.log('   ✅ Aucun changement');
+
+    return { flagged, downgraded, disabled };
+  } catch (e) {
+    console.error('Erreur saveAccountStats:', e.message);
+    return { flagged: 0, downgraded: 0, disabled: 0 };
+  }
+}
+
+// ============================================
 // CHECKPOINT & TELEGRAM
 // ============================================
 
@@ -1103,8 +1167,21 @@ async function runScraperV5() {
 
     for (const acc of toScrape) {
       const errorsBefore = scraper.stats.errors.length;
+      const eventsBefore = scraper.events.length;
+
       await scraper.scrapeAccount(acc);
+
       const hadError = scraper.stats.errors.length > errorsBefore;
+      const eventsThisAccount = scraper.events.length - eventsBefore;
+
+      // FIX v5.6 : Mettre à jour les stats de l'account en mémoire
+      acc.last_scraped = new Date().toISOString().split('T')[0];
+      acc.last_event_count = eventsThisAccount;
+      if (hadError && eventsThisAccount === 0) {
+        acc.consecutive_error_runs = (acc.consecutive_error_runs || 0) + 1;
+      } else {
+        acc.consecutive_error_runs = 0;
+      }
 
       // Checkpoint après chaque compte (succès ou erreur)
       completedAccounts.push(acc.username);
@@ -1138,22 +1215,29 @@ async function runScraperV5() {
     await scraper.saveToSupabase();
     await scraper.generateReport();
 
+    // FIX v5.6 : Sauvegarder les stats et appliquer les règles de nettoyage
+    const cleanupStats = await saveAccountStats(scraper.accounts);
+
     // Run complet : supprimer le checkpoint
     await fs.unlink(PROGRESS_FILE).catch(() => {});
 
     // FIX v5.5 : Notification Telegram — résumé de fin de run
     const duration = Math.round((Date.now() - runStart.getTime()) / 60000);
+    const cleanupLine = (cleanupStats.flagged + cleanupStats.downgraded + cleanupStats.disabled) > 0
+      ? `\n🧹 Comptes : ${cleanupStats.flagged} flagués · ${cleanupStats.downgraded} rétrogradés · ${cleanupStats.disabled} désactivés`
+      : '';
     const msg = [
-      `🤖 <b>Wouli Scraper V5.5 — Run terminé</b>`,
+      `🤖 <b>Wouli Scraper V5.6 — Run terminé</b>`,
       ``,
       `⏱ Durée : ${duration} min`,
       `📊 Comptes scrapés : ${scraper.stats.accounts_scraped}/${sorted.length}`,
       `📝 Posts analysés : ${scraper.stats.posts_analyzed}`,
       `🎉 Événements trouvés : ${scraper.events.length}`,
       scraper.stats.errors.length ? `❌ Erreurs : ${scraper.stats.errors.length}` : `✅ Aucune erreur`,
+      cleanupLine,
       ``,
       `→ À valider dans l'admin Wouli`
-    ].join('\n');
+    ].filter(l => l !== '').join('\n');
     await sendTelegramNotif(msg);
 
   } catch (e) {
@@ -1165,7 +1249,7 @@ async function runScraperV5() {
 }
 
 if (require.main === module) {
-  console.log('LANCEMENT DU SCRAPER V5.4');
+  console.log('LANCEMENT DU SCRAPER V5.6');
   console.log(`Mode Test    : ${process.env.TEST_MODE === 'true' ? 'OUI' : 'NON'}`);
   console.log(`Headless     : ${process.env.HEADLESS !== 'false' ? 'OUI' : 'NON'}`);
   console.log(`Auto Enhance : ${process.env.AUTO_ENHANCE === 'true' ? 'OUI' : 'NON'}`);
