@@ -1,9 +1,11 @@
 // scraper-v5-wouli.js
-// VERSION 5.4 : Fix page Puppeteer morte (detached Frame / Session closed)
+// VERSION 5.5 : Checkpoint/reprise + Notification Telegram
 // ==================================================================
-// CORRECTIONS v5.4 vs v5.3:
+// CORRECTIONS v5.5 vs v5.4:
 // - FIX 7 : Détection page morte dans scrapeAccount → recréation automatique
 // - FIX 8 : login() vérifie si la page est vivante avant toute opération
+// - FIX 9 : Checkpoint scraper-progress.json — reprise automatique après crash
+// - FIX 10 : Notification Telegram en fin de run (succès ou erreur fatale)
 // ==================================================================
 
 const puppeteer = require('puppeteer-extra');
@@ -17,6 +19,7 @@ require('dotenv').config();
 puppeteer.use(StealthPlugin());
 
 const COOKIES_PATH = path.join(__dirname, 'instagram_cookies.json');
+const PROGRESS_FILE = path.join(__dirname, 'scraper-progress.json');
 
 class WouliScraperV5 {
   constructor() {
@@ -1032,29 +1035,84 @@ class WouliScraperV5 {
 }
 
 // ============================================
+// CHECKPOINT & TELEGRAM
+// ============================================
+
+async function loadProgress() {
+  try {
+    const data = await fs.readFile(PROGRESS_FILE, 'utf8');
+    return JSON.parse(data);
+  } catch {
+    return null;
+  }
+}
+
+async function saveProgress(startedAt, completed) {
+  await fs.writeFile(PROGRESS_FILE, JSON.stringify({
+    startedAt,
+    completedAccounts: completed,
+    lastUpdated: new Date().toISOString()
+  }, null, 2));
+}
+
+async function sendTelegramNotif(message) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId) return;
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: 'HTML' })
+    });
+    console.log('   Telegram : notification envoyée');
+  } catch (e) {
+    console.log('   Telegram : échec (' + e.message + ')');
+  }
+}
+
+// ============================================
 // MAIN
 // ============================================
 
 async function runScraperV5() {
   const scraper = new WouliScraperV5();
+  const runStart = new Date();
+
   try {
     await scraper.init();
     await scraper.login();
 
     const sorted = scraper.accounts.sort((a, b) => (b.priority || 0) - (a.priority || 0));
-    console.log(`\nDébut du scraping de ${sorted.length} compte(s)...\n`);
+
+    // FIX v5.5 : Checkpoint — reprendre depuis le dernier compte traité si crash
+    const progress = await loadProgress();
+    let completedAccounts = [];
+    if (progress && progress.completedAccounts?.length > 0) {
+      completedAccounts = progress.completedAccounts;
+      console.log(`\n⏩ Reprise détectée : ${completedAccounts.length} comptes déjà traités`);
+      console.log(`   (Run démarré le ${progress.startedAt})`);
+    }
+    const startedAt = progress?.startedAt || runStart.toISOString();
+    const toScrape = sorted.filter(acc => !completedAccounts.includes(acc.username));
+
+    console.log(`\nDébut du scraping de ${toScrape.length} compte(s) restants...\n`);
 
     let consecutiveErrors = 0;
     const MAX_CONSECUTIVE = 6;
 
-    for (const acc of sorted) {
+    for (const acc of toScrape) {
       const errorsBefore = scraper.stats.errors.length;
       await scraper.scrapeAccount(acc);
       const hadError = scraper.stats.errors.length > errorsBefore;
 
+      // Checkpoint après chaque compte (succès ou erreur)
+      completedAccounts.push(acc.username);
+      await saveProgress(startedAt, completedAccounts);
+
       if (hadError) {
         consecutiveErrors++;
-        // FIX v5.3 : Après 5 erreurs consécutives, tenter re-login avant d'abandonner
+        // FIX v5.3 : Après 6 erreurs consécutives, tenter re-login avant d'abandonner
         if (consecutiveErrors >= MAX_CONSECUTIVE) {
           console.log(`\n${consecutiveErrors} erreurs consécutives — tentative re-connexion...`);
           try {
@@ -1079,8 +1137,28 @@ async function runScraperV5() {
 
     await scraper.saveToSupabase();
     await scraper.generateReport();
+
+    // Run complet : supprimer le checkpoint
+    await fs.unlink(PROGRESS_FILE).catch(() => {});
+
+    // FIX v5.5 : Notification Telegram — résumé de fin de run
+    const duration = Math.round((Date.now() - runStart.getTime()) / 60000);
+    const msg = [
+      `🤖 <b>Wouli Scraper V5.5 — Run terminé</b>`,
+      ``,
+      `⏱ Durée : ${duration} min`,
+      `📊 Comptes scrapés : ${scraper.stats.accounts_scraped}/${sorted.length}`,
+      `📝 Posts analysés : ${scraper.stats.posts_analyzed}`,
+      `🎉 Événements trouvés : ${scraper.events.length}`,
+      scraper.stats.errors.length ? `❌ Erreurs : ${scraper.stats.errors.length}` : `✅ Aucune erreur`,
+      ``,
+      `→ À valider dans l'admin Wouli`
+    ].join('\n');
+    await sendTelegramNotif(msg);
+
   } catch (e) {
     console.error('\nERREUR FATALE:', e.message);
+    await sendTelegramNotif(`❌ <b>Wouli Scraper — ERREUR FATALE</b>\n${e.message}`);
   } finally {
     await scraper.close();
   }
@@ -1094,6 +1172,7 @@ if (require.main === module) {
   console.log(`Filtrage     : ${process.env.FILTERING_MODE || 'balanced'}`);
   console.log(`Instagram    : ${process.env.INSTAGRAM_USERNAME ? 'configuré' : 'MANQUANT'}`);
   console.log(`Supabase     : ${process.env.SUPABASE_URL ? 'configuré' : 'MANQUANT'}`);
+  console.log(`Telegram     : ${process.env.TELEGRAM_BOT_TOKEN ? 'configuré' : 'désactivé'}`);
   runScraperV5();
 }
 
