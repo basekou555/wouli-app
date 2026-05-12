@@ -6,9 +6,11 @@
   "scripts": {
     "start": "node scraper-v5-wouli.js",
     "bot": "node scraper-bot.js",
+    "ra": "node ra-scraper.js",
+    "shotgun": "node shotgun-runner.js",
+    "all": "node ra-scraper.js && node shotgun-runner.js && node scraper-v5-wouli.js",
     "v4": "node scraper-v4-wouli.js",
     "debug": "node debug-instagram-selectors.js",
-    "shotgun": "node shotgun-parser.js && node shotgun-to-sql.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

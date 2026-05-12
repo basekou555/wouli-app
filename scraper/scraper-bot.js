@@ -3,11 +3,14 @@
  * Bot Telegram pour piloter le scraper Wouli à distance
  *
  * Commandes :
- *   /scrape  — Lance le scraper (reprend depuis le checkpoint si existant)
- *   /reset   — Supprime le checkpoint et lance depuis zéro
- *   /stop    — Arrête le scraper en cours
- *   /status  — État actuel (en cours / inactif)
- *   /help    — Liste des commandes
+ *   /scrape   — Lance le scraper Instagram (reprend si checkpoint)
+ *   /reset    — Supprime le checkpoint et relance depuis zéro
+ *   /ra       — Lance le scraper Resident Advisor
+ *   /shotgun  — Lance le scraper Shotgun Lyon
+ *   /all      — Lance toutes les sources (Instagram + RA + Shotgun)
+ *   /stop     — Arrête le process en cours
+ *   /status   — État actuel
+ *   /help     — Liste des commandes
  *
  * Usage : node scraper-bot.js
  * Requis dans .env : TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
@@ -27,7 +30,9 @@ if (!TOKEN || !CHAT_ID) {
   process.exit(1);
 }
 
-let scraperProcess = null;
+// Process actif (un seul à la fois)
+let activeProcess = null;
+let activeSource  = null;
 let offset = 0;
 
 // ============================================================
@@ -53,57 +58,151 @@ async function getUpdates() {
 }
 
 // ============================================================
-// COMMANDES
+// LANCEMENT DE PROCESS
+// ============================================================
+
+function launchProcess(script, args, label) {
+  if (activeProcess) return false;
+
+  activeProcess = spawn('node', [path.join(__dirname, script), ...args], {
+    cwd: __dirname,
+    env: process.env
+  });
+  activeSource = label;
+
+  activeProcess.stdout.on('data', d => process.stdout.write(d));
+  activeProcess.stderr.on('data', d => process.stderr.write(d));
+
+  activeProcess.on('close', async (code) => {
+    const src = activeSource;
+    activeProcess = null;
+    activeSource  = null;
+    // code null = SIGTERM volontaire (/stop)
+    if (code !== null && code !== 0) {
+      await send(`❌ <b>${src} terminé anormalement</b> (code ${code})`);
+    }
+    // Les scrapers envoient eux-mêmes leur résumé Telegram en fin de run
+  });
+
+  activeProcess.on('error', async (err) => {
+    activeProcess = null;
+    activeSource  = null;
+    await send(`❌ <b>Erreur de lancement ${label}</b> : ${err.message}`);
+  });
+
+  return true;
+}
+
+// ============================================================
+// COMMANDES — INSTAGRAM
 // ============================================================
 
 async function cmdScrape() {
-  if (scraperProcess) {
-    await send('⚠️ Le scraper tourne déjà.');
+  if (activeProcess) {
+    await send(`⚠️ <b>${activeSource}</b> tourne déjà. /stop pour arrêter.`);
     return;
   }
-
   const hasCheckpoint = fs.existsSync(PROGRESS);
+  let msg = '🚀 <b>Lancement Instagram...</b>';
   if (hasCheckpoint) {
-    let info = '';
     try {
       const p = JSON.parse(fs.readFileSync(PROGRESS, 'utf8'));
-      info = `\n⏩ Reprise depuis ${p.completedAccounts?.length || 0} comptes déjà traités`;
+      msg = `🚀 <b>Reprise Instagram...</b>\n⏩ ${p.completedAccounts?.length || 0} comptes déjà traités`;
     } catch {}
-    await send(`🚀 <b>Lancement du scraper (reprise)...</b>${info}`);
-  } else {
-    await send('🚀 <b>Lancement du scraper...</b>');
   }
-
-  startScraper();
+  await send(msg);
+  launchProcess('scraper-v5-wouli.js', [], 'Instagram');
 }
 
 async function cmdReset() {
-  if (scraperProcess) {
-    await send('⚠️ Arrête d\'abord le scraper en cours avec /stop');
+  if (activeProcess) {
+    await send('⚠️ Arrête d\'abord avec /stop');
     return;
   }
   if (fs.existsSync(PROGRESS)) {
     fs.unlinkSync(PROGRESS);
     await send('🗑 Checkpoint supprimé.');
   }
-  await send('🚀 <b>Lancement depuis zéro...</b>');
-  startScraper();
+  await send('🚀 <b>Instagram — démarrage depuis zéro...</b>');
+  launchProcess('scraper-v5-wouli.js', [], 'Instagram');
 }
 
-async function cmdStop() {
-  if (!scraperProcess) {
-    await send('ℹ️ Aucun scraper en cours.');
+// ============================================================
+// COMMANDES — SOURCES SECONDAIRES
+// ============================================================
+
+async function cmdRA() {
+  if (activeProcess) {
+    await send(`⚠️ <b>${activeSource}</b> tourne déjà. /stop pour arrêter.`);
     return;
   }
-  scraperProcess.kill('SIGTERM');
-  scraperProcess = null;
-  await send('🛑 Scraper arrêté.');
+  await send('🎵 <b>Lancement Resident Advisor Lyon...</b>');
+  launchProcess('ra-scraper.js', [], 'Resident Advisor');
+}
+
+async function cmdShotgun() {
+  if (activeProcess) {
+    await send(`⚠️ <b>${activeSource}</b> tourne déjà. /stop pour arrêter.`);
+    return;
+  }
+  await send('🎯 <b>Lancement Shotgun Lyon...</b>');
+  launchProcess('shotgun-runner.js', [], 'Shotgun');
+}
+
+async function cmdAll() {
+  if (activeProcess) {
+    await send(`⚠️ <b>${activeSource}</b> tourne déjà. /stop pour arrêter.`);
+    return;
+  }
+  await send('🚀 <b>Lancement de toutes les sources...</b>\nRA et Shotgun d\'abord, Instagram ensuite.');
+
+  // Lancer RA puis Shotgun en séquence (rapides), puis Instagram
+  const runAll = async () => {
+    for (const [script, label] of [
+      ['ra-scraper.js',      'Resident Advisor'],
+      ['shotgun-runner.js',  'Shotgun'],
+    ]) {
+      await new Promise((resolve) => {
+        const proc = spawn('node', [path.join(__dirname, script)], {
+          cwd: __dirname,
+          env: process.env
+        });
+        proc.stdout.on('data', d => process.stdout.write(d));
+        proc.stderr.on('data', d => process.stderr.write(d));
+        proc.on('close', (code) => {
+          if (code !== 0) console.error(`[${label}] Terminé avec code ${code}`);
+          resolve();
+        });
+      });
+    }
+    // Puis Instagram (long)
+    await send('✅ RA + Shotgun terminés — lancement Instagram...');
+    launchProcess('scraper-v5-wouli.js', [], 'Instagram (/all)');
+  };
+
+  runAll().catch(e => send(`❌ Erreur /all : ${e.message}`));
+}
+
+// ============================================================
+// COMMANDES — CONTRÔLE
+// ============================================================
+
+async function cmdStop() {
+  if (!activeProcess) {
+    await send('ℹ️ Aucun process en cours.');
+    return;
+  }
+  const src = activeSource;
+  activeProcess.kill('SIGTERM');
+  activeProcess = null;
+  activeSource  = null;
+  await send(`🛑 <b>${src}</b> arrêté.`);
 }
 
 async function cmdStatus() {
-  if (scraperProcess) {
+  if (activeProcess) {
     let progress = '';
-    if (fs.existsSync(PROGRESS)) {
+    if (activeSource?.includes('Instagram') && fs.existsSync(PROGRESS)) {
       try {
         const p = JSON.parse(fs.readFileSync(PROGRESS, 'utf8'));
         const count = p.completedAccounts?.length || 0;
@@ -111,12 +210,12 @@ async function cmdStatus() {
         progress = `\n${count} comptes traités${since}`;
       } catch {}
     }
-    await send(`🟢 <b>Scraper en cours</b>${progress}`);
+    await send(`🟢 <b>${activeSource} en cours</b>${progress}`);
   } else {
     const hasCheckpoint = fs.existsSync(PROGRESS);
     await send(hasCheckpoint
-      ? '⚫ Scraper inactif — checkpoint disponible (/scrape pour reprendre)'
-      : '⚫ Scraper inactif');
+      ? '⚫ Inactif — checkpoint Instagram disponible (/scrape pour reprendre)'
+      : '⚫ Inactif — toutes les sources disponibles');
   }
 }
 
@@ -124,42 +223,20 @@ async function cmdHelp() {
   await send([
     '🤖 <b>Wouli Scraper Bot</b>',
     '',
-    '/scrape — Lancer (reprend si checkpoint)',
-    '/reset  — Repartir depuis zéro',
-    '/stop   — Arrêter',
-    '/status — État actuel',
-    '/help   — Ce message'
+    '<b>Instagram</b>',
+    '/scrape  — Lancer (reprend si checkpoint)',
+    '/reset   — Repartir depuis zéro',
+    '',
+    '<b>Autres sources</b>',
+    '/ra      — Resident Advisor Lyon',
+    '/shotgun — Shotgun Lyon',
+    '/all     — Toutes les sources',
+    '',
+    '<b>Contrôle</b>',
+    '/stop    — Arrêter',
+    '/status  — État actuel',
+    '/help    — Ce message'
   ].join('\n'));
-}
-
-// ============================================================
-// PROCESSUS SCRAPER
-// ============================================================
-
-function startScraper() {
-  scraperProcess = spawn('node', [path.join(__dirname, 'scraper-v5-wouli.js')], {
-    cwd: __dirname,
-    env: process.env
-  });
-
-  scraperProcess.stdout.on('data', d => process.stdout.write(d));
-  scraperProcess.stderr.on('data', d => process.stderr.write(d));
-
-  scraperProcess.on('close', async (code) => {
-    scraperProcess = null;
-    if (code === 0) {
-      // Le scraper envoie lui-même le résumé Telegram en fin de run
-      // Ici on gère juste les crashes inattendus (code != 0)
-    } else if (code !== null) {
-      // code=null = SIGTERM volontaire (/stop), pas une erreur
-      await send(`❌ <b>Scraper terminé anormalement</b> (code ${code})`);
-    }
-  });
-
-  scraperProcess.on('error', async (err) => {
-    scraperProcess = null;
-    await send(`❌ <b>Erreur de lancement</b> : ${err.message}`);
-  });
 }
 
 // ============================================================
@@ -167,16 +244,19 @@ function startScraper() {
 // ============================================================
 
 async function handleMessage(text) {
-  const cmd = (text || '').trim().toLowerCase().split('@')[0]; // ignore @BotName suffix
+  const cmd = (text || '').trim().toLowerCase().split('@')[0];
   switch (cmd) {
-    case '/scrape':  return cmdScrape();
-    case '/reset':   return cmdReset();
-    case '/stop':    return cmdStop();
-    case '/status':  return cmdStatus();
+    case '/scrape':   return cmdScrape();
+    case '/reset':    return cmdReset();
+    case '/ra':       return cmdRA();
+    case '/shotgun':  return cmdShotgun();
+    case '/all':      return cmdAll();
+    case '/stop':     return cmdStop();
+    case '/status':   return cmdStatus();
     case '/help':
-    case '/start':   return cmdHelp();
+    case '/start':    return cmdHelp();
     default:
-      await send(`Commande inconnue. Tape /help`);
+      await send('Commande inconnue. Tape /help');
   }
 }
 
@@ -188,9 +268,8 @@ async function poll() {
         offset = update.update_id + 1;
         const msg = update.message;
         if (!msg?.text) continue;
-        // Sécurité : ignorer tous les chats sauf le CHAT_ID configuré
         if (String(msg.chat.id) !== CHAT_ID) {
-          console.log(`Message ignoré (chat_id: ${msg.chat.id})`);
+          console.log(`[Bot] Message ignoré (chat_id: ${msg.chat.id})`);
           continue;
         }
         console.log(`[Bot] Commande reçue : ${msg.text}`);

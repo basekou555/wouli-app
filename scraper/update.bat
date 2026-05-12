@@ -30,6 +30,15 @@ if errorlevel 1 (echo   [ERREUR] scraper-bot.js) else (echo   [OK] scraper-bot.j
 curl -s -L "%BASE%/start-bot.bat" -o start-bot.bat
 if errorlevel 1 (echo   [ERREUR] start-bot.bat) else (echo   [OK] start-bot.bat)
 
+curl -s -L "%BASE%/ra-scraper.js" -o ra-scraper.js
+if errorlevel 1 (echo   [ERREUR] ra-scraper.js) else (echo   [OK] ra-scraper.js)
+
+curl -s -L "%BASE%/shotgun-runner.js" -o shotgun-runner.js
+if errorlevel 1 (echo   [ERREUR] shotgun-runner.js) else (echo   [OK] shotgun-runner.js)
+
+curl -s -L "%BASE%/save-events.js" -o save-events.js
+if errorlevel 1 (echo   [ERREUR] save-events.js) else (echo   [OK] save-events.js)
+
 echo.
 echo --- Details scraper ---
 findstr /C:"// VERSION" scraper-v5-wouli.js
@@ -41,8 +50,11 @@ node fix-categories.js
 
 echo.
 echo ========================================
-echo   Scraper : node scraper-v5-wouli.js
-echo   Bot     : start-bot.bat (ou double-clic)
+echo   Instagram : node scraper-v5-wouli.js
+echo   RA        : node ra-scraper.js
+echo   Shotgun   : node shotgun-runner.js
+echo   Tout      : via bot Telegram /all
+echo   Bot       : start-bot.bat
 echo ========================================
 echo.
 pause
