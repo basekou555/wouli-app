@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node scraper-v5-wouli.js",
+    "bot": "node scraper-bot.js",
     "v4": "node scraper-v4-wouli.js",
     "debug": "node debug-instagram-selectors.js",
     "shotgun": "node shotgun-parser.js && node shotgun-to-sql.js",

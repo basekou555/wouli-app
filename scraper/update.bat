@@ -24,6 +24,12 @@ if errorlevel 1 (echo   [ERREUR] notion-import.js) else (echo   [OK] notion-impo
 curl -s -L "%BASE%/fix-categories.js" -o fix-categories.js
 if errorlevel 1 (echo   [ERREUR] fix-categories.js) else (echo   [OK] fix-categories.js)
 
+curl -s -L "%BASE%/scraper-bot.js" -o scraper-bot.js
+if errorlevel 1 (echo   [ERREUR] scraper-bot.js) else (echo   [OK] scraper-bot.js)
+
+curl -s -L "%BASE%/start-bot.bat" -o start-bot.bat
+if errorlevel 1 (echo   [ERREUR] start-bot.bat) else (echo   [OK] start-bot.bat)
+
 echo.
 echo --- Details scraper ---
 findstr /C:"// VERSION" scraper-v5-wouli.js
@@ -35,7 +41,8 @@ node fix-categories.js
 
 echo.
 echo ========================================
-echo   Termine. Pour lancer : node scraper-v5-wouli.js
+echo   Scraper : node scraper-v5-wouli.js
+echo   Bot     : start-bot.bat (ou double-clic)
 echo ========================================
 echo.
 pause
