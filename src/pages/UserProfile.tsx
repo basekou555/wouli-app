@@ -10,6 +10,7 @@ import { useEventViews } from '@/hooks/useEventViews';
 import { useProfile } from '@/hooks/useProfile';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
 import MenuDrawer from '@/components/MenuDrawer';
+import BottomNavigation from '@/components/BottomNavigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { FavoritesTab } from '@/components/profile/FavoritesTab';
@@ -73,7 +74,7 @@ const UserProfile = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="bg-background flex flex-col overflow-hidden" style={{ height: '100dvh' }}>
       {/* Header style App */}
       <header className="flex-shrink-0 h-14 px-4 flex items-center justify-between bg-card border-b border-border">
         <button
@@ -222,6 +223,8 @@ const UserProfile = () => {
           />
         </TabsContent>
       </Tabs>
+
+      <BottomNavigation variant="inline" />
 
       {/* Menu Drawer */}
       <MenuDrawer isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />

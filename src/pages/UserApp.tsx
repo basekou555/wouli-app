@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from 'react-router-dom';
@@ -6,7 +6,8 @@ import { usePaginatedEvents } from '@/hooks/usePaginatedEvents';
 import { useRecommendedFeed } from '@/hooks/useRecommendedFeed';
 import { useSearchFilters } from '@/hooks/useSearchFilters';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
-import EventCard from '@/components/EventCard';
+import SwipeCard from '@/components/user/swipe/SwipeCard';
+import BottomNavigation from '@/components/BottomNavigation';
 import { motion } from 'framer-motion';
 import { MenuDrawer } from '@/components/MenuDrawer';
 import { FiltersDrawer } from '@/components/FiltersDrawer';
@@ -19,16 +20,14 @@ const UserApp = () => {
   const [likedEvents, setLikedEvents] = useState<Set<string>>(new Set());
   const [participatingEvents, setParticipatingEvents] = useState<Set<string>>(new Set());
   const [viewedEventIds, setViewedEventIds] = useState<Set<string>>(new Set());
-  const [currentScrollIndex, setCurrentScrollIndex] = useState(0);
-  
-  // Drawer states
+  const [currentIndex, setCurrentIndex] = useState(0);
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  
-  const containerRef = useRef<HTMLDivElement>(null);
+
   const { toast } = useToast();
   const navigate = useNavigate();
-  
+
   const {
     events: allEvents,
     loading,
@@ -37,18 +36,11 @@ const UserApp = () => {
     loadMore,
     likeEvent: handleLikeEvent,
     participateEvent: handleParticipateEvent,
-    incrementViews: handleIncrementViews
+    incrementViews: handleIncrementViews,
   } = usePaginatedEvents();
 
-  // Recommendation engine integration
-  const {
-    recommendedEvents,
-    feedMode,
-    setFeedMode,
-    getBadgesForEvent
-  } = useRecommendedFeed(allEvents);
+  const { recommendedEvents, feedMode, setFeedMode } = useRecommendedFeed(allEvents);
 
-  // Unified filters - uses recommended or all events based on mode
   const baseEvents = feedMode === 'recommended' ? recommendedEvents : allEvents;
   const {
     selectedCategory,
@@ -59,162 +51,99 @@ const UserApp = () => {
     setSelectedTime,
     filteredEvents,
     clearFilters,
-    hasActiveFilters
+    hasActiveFilters,
   } = useSearchFilters(baseEvents);
 
   const isPWA = useIsPWA();
-  
-  // Hauteur du header fixe
-  const HEADER_HEIGHT = 56; // h-14 = 3.5rem = 56px
 
-  // Scroll programmatique vers un event
-  const scrollToEvent = useCallback((targetIndex: number) => {
-    if (!containerRef.current) return;
-    
-    // Limites
-    if (targetIndex < 0 || targetIndex > filteredEvents.length) return;
-    
-    const container = containerRef.current;
-    const cardHeight = container.clientHeight; // Hauteur visible du container (sans header)
-    const targetY = targetIndex * cardHeight;
-    
-    container.scrollTo({
-      top: targetY,
-      behavior: 'smooth'
-    });
-    
-    setCurrentScrollIndex(targetIndex);
-  }, [filteredEvents.length]);
+  const currentEvent = filteredEvents[currentIndex];
+  const nextEvent = filteredEvents[currentIndex + 1];
+  const isAtEnd = !currentEvent && !hasMore;
+  const isLoadingNext = !currentEvent && hasMore;
 
-  // Tracking du scroll pour détecter l'event visible + charger plus
+  // Track view when the visible event changes
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    
-    let scrollTimeout: ReturnType<typeof setTimeout>;
-    
-    const handleScroll = () => {
-      clearTimeout(scrollTimeout);
-      
-      scrollTimeout = setTimeout(() => {
-        const scrollTop = container.scrollTop;
-        const cardHeight = container.clientHeight;
-        const currentIndex = Math.round(scrollTop / cardHeight);
-        
-        if (currentIndex !== currentScrollIndex && currentIndex < filteredEvents.length) {
-          setCurrentScrollIndex(currentIndex);
-          
-          // Incrémenter les vues pour le nouvel event
-          const newEvent = filteredEvents[currentIndex];
-          if (newEvent && !viewedEventIds.has(newEvent.id)) {
-            setViewedEventIds(prev => new Set([...prev, newEvent.id]));
-            handleIncrementViews(newEvent.id);
-          }
-        }
+    const event = filteredEvents[currentIndex];
+    if (event && !viewedEventIds.has(event.id)) {
+      setViewedEventIds(prev => new Set([...prev, event.id]));
+      handleIncrementViews(event.id);
+    }
+  }, [currentIndex, filteredEvents, viewedEventIds, handleIncrementViews]);
 
-        // Charger plus quand on approche de la fin (3 events avant la fin)
-        if (hasMore && !loadingMore && currentIndex >= filteredEvents.length - 3) {
-          loadMore();
-        }
-      }, 150);
-    };
-    
-    container.addEventListener('scroll', handleScroll, { passive: true });
-    
-    return () => {
-      container.removeEventListener('scroll', handleScroll);
-      clearTimeout(scrollTimeout);
-    };
-  }, [currentScrollIndex, filteredEvents, viewedEventIds, handleIncrementViews, hasMore, loadingMore, loadMore]);
-
-  // Incrémenter les vues du premier event au chargement
+  // Preload more events before reaching the end
   useEffect(() => {
-    if (filteredEvents.length > 0 && !viewedEventIds.has(filteredEvents[0].id)) {
-      setViewedEventIds(prev => new Set([...prev, filteredEvents[0].id]));
-      handleIncrementViews(filteredEvents[0].id);
+    if (hasMore && !loadingMore && currentIndex >= filteredEvents.length - 3) {
+      loadMore();
     }
-  }, [filteredEvents, viewedEventIds, handleIncrementViews]);
-  
-  const handleCategoryChange = (categoryId: string) => {
-    setSelectedCategory(categoryId === 'all' ? null : categoryId);
-    setCurrentScrollIndex(0);
-    if (containerRef.current) {
-      containerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
+  }, [currentIndex, filteredEvents.length, hasMore, loadingMore, loadMore]);
+
+  const goToNext = useCallback(() => {
+    setCurrentIndex(prev => prev + 1);
+  }, []);
 
   const handleResetFilters = () => {
     clearFilters();
-    setCurrentScrollIndex(0);
-    if (containerRef.current) {
-      containerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    setCurrentIndex(0);
   };
 
-  const handleDislike = useCallback((eventId: string, currentIndex: number) => {
-    toast({
-      title: "Événement ignoré 👋",
-      duration: 1000,
-    });
-    
-    setTimeout(() => {
-      scrollToEvent(currentIndex + 1);
-    }, 300);
-  }, [scrollToEvent, toast]);
+  const handleCategoryChange = (categoryId: string) => {
+    setSelectedCategory(categoryId === 'all' ? null : categoryId);
+    setCurrentIndex(0);
+  };
 
-  const handleLike = useCallback(async (eventId: string, currentIndex: number) => {
-    if (likedEvents.has(eventId)) {
-      // Unlike
+  // Called by SwipeCard AFTER the fly-left animation completes
+  const onSwipeLeft = useCallback(() => {
+    toast({ title: "Événement ignoré 👋", duration: 900 });
+    goToNext();
+  }, [goToNext, toast]);
+
+  // Called by SwipeCard AFTER the fly-right animation completes
+  const onSwipeRight = useCallback(async () => {
+    const event = currentEvent;
+    if (!event) return;
+
+    if (likedEvents.has(event.id)) {
       setLikedEvents(prev => {
         const next = new Set(prev);
-        next.delete(eventId);
+        next.delete(event.id);
         return next;
       });
-      toast({ title: "❤️ Like retiré", duration: 1000 });
     } else {
-      // Like
-      setLikedEvents(prev => new Set([...prev, eventId]));
-      await handleLikeEvent(eventId);
-      toast({ title: "❤️ Liké !", duration: 1000 });
+      setLikedEvents(prev => new Set([...prev, event.id]));
+      await handleLikeEvent(event.id);
+      toast({ title: "❤️ Liké !", duration: 900 });
     }
+    goToNext();
+  }, [currentEvent, likedEvents, handleLikeEvent, goToNext, toast]);
 
-    setTimeout(() => {
-      scrollToEvent(currentIndex + 1);
-    }, 300);
-  }, [likedEvents, handleLikeEvent, scrollToEvent, toast]);
+  const onParticipate = useCallback(async () => {
+    const event = currentEvent;
+    if (!event) return;
 
-  const handleParticipate = useCallback(async (eventId: string, currentIndex: number) => {
-    const currentEvent = filteredEvents[currentIndex];
-    
-    if (participatingEvents.has(eventId)) {
-      // Cancel participation
+    if (participatingEvents.has(event.id)) {
       setParticipatingEvents(prev => {
         const next = new Set(prev);
-        next.delete(eventId);
+        next.delete(event.id);
         return next;
       });
-      toast({ title: "Participation annulée", duration: 1000 });
+      toast({ title: "Participation annulée", duration: 900 });
     } else {
-      // Participate
-      setParticipatingEvents(prev => new Set([...prev, eventId]));
-      await handleParticipateEvent(eventId);
+      setParticipatingEvents(prev => new Set([...prev, event.id]));
+      await handleParticipateEvent(event.id);
       toast({
         title: "✅ Tu participes !",
-        description: currentEvent ? `Rendez-vous ${currentEvent.location} 🎉` : undefined,
+        description: `Rendez-vous ${event.location} 🎉`,
         duration: 2000,
       });
     }
+    // Short delay so the participate animation plays before advancing
+    setTimeout(goToNext, 500);
+  }, [currentEvent, participatingEvents, handleParticipateEvent, goToNext, toast]);
 
-    // Plus long delay pour voir l'animation
-    setTimeout(() => {
-      scrollToEvent(currentIndex + 1);
-    }, 500);
-  }, [filteredEvents, participatingEvents, handleParticipateEvent, scrollToEvent, toast]);
-
-  const handleShare = useCallback(async (eventId: string) => {
-    const event = filteredEvents.find(e => e.id === eventId);
+  const onShare = useCallback(async () => {
+    const event = currentEvent;
     if (!event) return;
-    
+
     const shareData = {
       title: `${event.title} - Wouli`,
       text: `Découvre cet événement : ${event.title}`,
@@ -227,54 +156,47 @@ const UserApp = () => {
         toast({ title: "Événement partagé ! 🎉", duration: 1500 });
       } else {
         await navigator.clipboard.writeText(shareData.url);
-        toast({
-          title: "Lien copié ! 📋",
-          description: "Le lien a été copié dans le presse-papier",
-          duration: 2000,
-        });
+        toast({ title: "Lien copié ! 📋", duration: 2000 });
       }
-    } catch (error) {
-      console.log('Share cancelled');
+    } catch {
+      // Share cancelled — no action needed
     }
-    // Pas de scroll après partage
-  }, [filteredEvents, toast]);
+  }, [currentEvent, toast]);
 
-  const handleEstablishmentClick = useCallback((eventId: string) => {
-    const event = filteredEvents.find(e => e.id === eventId);
+  const onEstablishmentClick = useCallback(() => {
+    if (!currentEvent) return;
     toast({
-      title: event?.venue || event?.location || "Établissement",
-      description: "Page établissement à venir"
+      title: currentEvent.venue || currentEvent.location || "Établissement",
+      description: "Page établissement à venir",
     });
-  }, [filteredEvents, toast]);
+  }, [currentEvent, toast]);
 
-  const handleMapClick = useCallback((eventId: string) => {
-    const event = filteredEvents.find(e => e.id === eventId);
-    if (!event?.address) {
-      toast({
-        title: "Adresse non disponible",
-        variant: "destructive"
-      });
+  const onMapClick = useCallback(() => {
+    if (!currentEvent?.address) {
+      toast({ title: "Adresse non disponible", variant: "destructive" });
       return;
     }
-    
-    const encodedAddress = encodeURIComponent(event.address);
+    const encoded = encodeURIComponent(currentEvent.address);
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    
-    if (isIOS) {
-      window.open(`maps://maps.apple.com/?q=${encodedAddress}`, '_blank');
-    } else {
-      window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, '_blank');
-    }
-  }, [filteredEvents, toast]);
+    window.open(
+      isIOS
+        ? `maps://maps.apple.com/?q=${encoded}`
+        : `https://www.google.com/maps/search/?api=1&query=${encoded}`,
+      '_blank'
+    );
+  }, [currentEvent, toast]);
 
   if (loading) {
     return <PageSkeleton />;
   }
 
   return (
-    <div className="h-screen bg-background overflow-hidden flex flex-col">
-      {/* Header fixe - toujours visible */}
-      <header 
+    <div
+      className="bg-background overflow-hidden flex flex-col"
+      style={{ height: '100dvh' }}
+    >
+      {/* Fixed header */}
+      <header
         className="flex-shrink-0 h-14 px-4 flex items-center justify-between bg-card border-b border-border z-50"
         style={{ paddingTop: isPWA ? 'env(safe-area-inset-top)' : undefined }}
       >
@@ -285,13 +207,9 @@ const UserApp = () => {
         >
           <Menu className="w-5 h-5" />
         </button>
-        
-        {/* Feed Mode Toggle - replaces "WOULI" text */}
-        <FeedModeToggle 
-          mode={feedMode} 
-          onModeChange={setFeedMode}
-        />
-        
+
+        <FeedModeToggle mode={feedMode} onModeChange={setFeedMode} />
+
         <button
           onClick={() => setIsFiltersOpen(true)}
           className="px-3 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors flex items-center gap-1"
@@ -301,94 +219,79 @@ const UserApp = () => {
         </button>
       </header>
 
-      {/* Container avec Scroll Snap TikTok-style */}
-      <div 
-        ref={containerRef}
-        className="flex-1 overflow-y-scroll snap-y-mandatory scroll-smooth scrollbar-hide"
-      >
-        {filteredEvents.length > 0 ? (
-          <>
-            {filteredEvents.map((event, index) => (
-              <div 
-                key={event.id}
-                className="h-full snap-start snap-always"
-                data-index={index}
-              >
-                <EventCard
-                  event={event}
-                  isFirstEvent={index === 0}
-                  onBack={() => scrollToEvent(index - 1)}
-                  onDislike={() => handleDislike(event.id, index)}
-                  onLike={() => handleLike(event.id, index)}
-                  onParticipate={() => handleParticipate(event.id, index)}
-                  onShare={() => handleShare(event.id)}
-                  onEstablishmentClick={() => handleEstablishmentClick(event.id)}
-                  onMapClick={() => handleMapClick(event.id)}
-                />
-              </div>
-            ))}
-            
-            {/* Loading indicator when loading more */}
-            {loadingMore && (
-              <div className="h-full snap-start snap-always flex items-center justify-center bg-background">
-                <div className="text-center space-y-4">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
-                  <p className="text-muted-foreground">Chargement...</p>
-                </div>
-              </div>
-            )}
-            
-            {/* Écran de fin - seulement si pas de hasMore */}
-            {!hasMore && (
-              <div className="h-full snap-start snap-always flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 p-8">
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3 }}
-                  className="text-center text-white space-y-6"
+      {/* Card stack — takes all remaining height */}
+      <div className="relative flex-1 overflow-hidden">
+        {/* Next card peeking behind — stationary, no interaction */}
+        {nextEvent && (
+          <div className="absolute inset-0 scale-95 opacity-60 pointer-events-none origin-bottom">
+            {/* Lightweight placeholder so the user perceives depth */}
+            <div className="absolute inset-0 bg-card rounded-t-2xl" />
+          </div>
+        )}
+
+        {/* Current card */}
+        {currentEvent ? (
+          <SwipeCard
+            key={currentEvent.id}
+            event={currentEvent}
+            isFirstEvent={currentIndex === 0}
+            onSwipeLeft={onSwipeLeft}
+            onSwipeRight={onSwipeRight}
+            onParticipate={onParticipate}
+            onShare={onShare}
+            onEstablishmentClick={onEstablishmentClick}
+            onMapClick={onMapClick}
+          />
+        ) : isLoadingNext ? (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center space-y-4">
+              <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+              <p className="text-muted-foreground">Chargement...</p>
+            </div>
+          </div>
+        ) : isAtEnd ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 p-8">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+              className="text-center text-white space-y-6"
+            >
+              <span className="text-6xl">🎉</span>
+              <h2 className="text-3xl font-bold">C'est tout pour aujourd'hui !</h2>
+              <p className="text-white/80 max-w-xs mx-auto">
+                {hasActiveFilters
+                  ? "Essaie d'élargir tes filtres pour voir plus d'événements !"
+                  : "Plus d'événements à découvrir. Reviens demain pour de nouvelles sorties !"}
+              </p>
+              <div className="flex flex-col gap-3">
+                {hasActiveFilters && (
+                  <Button
+                    onClick={handleResetFilters}
+                    className="px-6 py-3 bg-white/20 text-white rounded-full font-semibold hover:bg-white/30 transition-colors"
+                  >
+                    Réinitialiser les filtres
+                  </Button>
+                )}
+                <Button
+                  onClick={() => setCurrentIndex(0)}
+                  className="px-6 py-3 bg-white text-purple-600 rounded-full font-semibold hover:scale-105 transition-transform"
                 >
-                  <span className="text-6xl">🎉</span>
-                  <h2 className="text-3xl font-bold">C'est tout pour aujourd'hui !</h2>
-                  <p className="text-white/80 max-w-xs mx-auto">
-                    {hasActiveFilters 
-                      ? "Essaie d'élargir tes filtres pour voir plus d'événements !"
-                      : "Plus d'événements à découvrir. Reviens demain pour de nouvelles sorties !"}
-                  </p>
-                  
-                  <div className="flex flex-col gap-3">
-                    {hasActiveFilters && (
-                      <Button
-                        onClick={handleResetFilters}
-                        variant="secondary"
-                        className="px-6 py-3 bg-white/20 text-white rounded-full font-semibold hover:bg-white/30 transition-colors"
-                      >
-                        Réinitialiser les filtres
-                      </Button>
-                    )}
-                    <Button
-                      onClick={() => scrollToEvent(0)}
-                      variant="secondary"
-                      className="px-6 py-3 bg-white text-purple-600 rounded-full font-semibold hover:scale-105 transition-transform"
-                    >
-                      ← Revoir depuis le début
-                    </Button>
-                  </div>
-                </motion.div>
+                  ← Revoir depuis le début
+                </Button>
               </div>
-            )}
-          </>
+            </motion.div>
+          </div>
         ) : (
-          <div className="h-full flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center p-8 space-y-4">
-              <p className="text-muted-foreground mb-4">
-                {hasActiveFilters 
+              <p className="text-muted-foreground">
+                {hasActiveFilters
                   ? "Aucun événement ne correspond à tes filtres"
                   : "Aucun événement disponible"}
               </p>
               {hasActiveFilters ? (
-                <Button onClick={handleResetFilters}>
-                  Réinitialiser les filtres
-                </Button>
+                <Button onClick={handleResetFilters}>Réinitialiser les filtres</Button>
               ) : (
                 <Button onClick={() => handleCategoryChange('all')}>
                   Voir tous les événements
@@ -399,16 +302,12 @@ const UserApp = () => {
         )}
       </div>
 
-      {/* Install Prompt PWA */}
+      <BottomNavigation variant="inline" />
+
       <InstallPrompt pageId="swipe" delay={1000} />
 
-      {/* Menu Drawer */}
-      <MenuDrawer
-        isOpen={isMenuOpen}
-        onClose={() => setIsMenuOpen(false)}
-      />
+      <MenuDrawer isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
 
-      {/* Filters Drawer */}
       <FiltersDrawer
         isOpen={isFiltersOpen}
         onClose={() => setIsFiltersOpen(false)}
