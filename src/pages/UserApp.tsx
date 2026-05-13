@@ -5,8 +5,11 @@ import { useNavigate } from 'react-router-dom';
 import { usePaginatedEvents } from '@/hooks/usePaginatedEvents';
 import { useRecommendedFeed } from '@/hooks/useRecommendedFeed';
 import { useSearchFilters } from '@/hooks/useSearchFilters';
+import { useSmartTracking } from '@/hooks/useSmartTracking';
+import { usePreferenceLearning } from '@/hooks/usePreferenceLearning';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
 import EventCard from '@/components/EventCard';
+import SwipeFeedEmpty from '@/components/SwipeFeedEmpty';
 import { motion } from 'framer-motion';
 import { MenuDrawer } from '@/components/MenuDrawer';
 import { FiltersDrawer } from '@/components/FiltersDrawer';
@@ -62,6 +65,19 @@ const UserApp = () => {
     hasActiveFilters
   } = useSearchFilters(baseEvents);
 
+  const { startViewTracking, stopViewTracking, trackInteraction } = useSmartTracking();
+  const { learnFromInteraction, flushNow } = usePreferenceLearning();
+
+  // Flush preferences when user leaves
+  useEffect(() => {
+    const handleUnload = () => { flushNow(); };
+    window.addEventListener('beforeunload', handleUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload);
+      flushNow();
+    };
+  }, [flushNow]);
+
   const isPWA = useIsPWA();
   
   // Hauteur du header fixe
@@ -102,13 +118,20 @@ const UserApp = () => {
         const currentIndex = Math.round(scrollTop / cardHeight);
         
         if (currentIndex !== currentScrollIndex && currentIndex < filteredEvents.length) {
+          // Stop tracking previous event
+          const prevEvent = filteredEvents[currentScrollIndex];
+          if (prevEvent) stopViewTracking(prevEvent.id);
+
           setCurrentScrollIndex(currentIndex);
-          
-          // Incrémenter les vues pour le nouvel event
+
+          // Start tracking new event
           const newEvent = filteredEvents[currentIndex];
-          if (newEvent && !viewedEventIds.has(newEvent.id)) {
-            setViewedEventIds(prev => new Set([...prev, newEvent.id]));
-            handleIncrementViews(newEvent.id);
+          if (newEvent) {
+            startViewTracking(newEvent.id);
+            if (!viewedEventIds.has(newEvent.id)) {
+              setViewedEventIds(prev => new Set([...prev, newEvent.id]));
+              handleIncrementViews(newEvent.id);
+            }
           }
         }
 
@@ -151,65 +174,54 @@ const UserApp = () => {
     }
   };
 
-  const handleDislike = useCallback((eventId: string, currentIndex: number) => {
-    toast({
-      title: "Événement ignoré 👋",
-      duration: 1000,
-    });
-    
-    setTimeout(() => {
-      scrollToEvent(currentIndex + 1);
-    }, 300);
-  }, [scrollToEvent, toast]);
+  const handleDislike = useCallback(async (eventId: string, currentIndex: number) => {
+    const event = filteredEvents[currentIndex];
+    if (event) {
+      const result = await trackInteraction(eventId, 'dislike', event);
+      if (result) learnFromInteraction(result.signal, event);
+    }
+    toast({ title: "Événement ignoré 👋", duration: 1000 });
+    setTimeout(() => { scrollToEvent(currentIndex + 1); }, 300);
+  }, [filteredEvents, trackInteraction, learnFromInteraction, scrollToEvent, toast]);
 
   const handleLike = useCallback(async (eventId: string, currentIndex: number) => {
+    const event = filteredEvents[currentIndex];
     if (likedEvents.has(eventId)) {
-      // Unlike
-      setLikedEvents(prev => {
-        const next = new Set(prev);
-        next.delete(eventId);
-        return next;
-      });
+      setLikedEvents(prev => { const n = new Set(prev); n.delete(eventId); return n; });
       toast({ title: "❤️ Like retiré", duration: 1000 });
     } else {
-      // Like
       setLikedEvents(prev => new Set([...prev, eventId]));
       await handleLikeEvent(eventId);
+      if (event) {
+        const result = await trackInteraction(eventId, 'like', event);
+        if (result) learnFromInteraction(result.signal, event);
+      }
       toast({ title: "❤️ Liké !", duration: 1000 });
     }
-
-    setTimeout(() => {
-      scrollToEvent(currentIndex + 1);
-    }, 300);
-  }, [likedEvents, handleLikeEvent, scrollToEvent, toast]);
+    setTimeout(() => { scrollToEvent(currentIndex + 1); }, 300);
+  }, [filteredEvents, likedEvents, handleLikeEvent, trackInteraction, learnFromInteraction, scrollToEvent, toast]);
 
   const handleParticipate = useCallback(async (eventId: string, currentIndex: number) => {
     const currentEvent = filteredEvents[currentIndex];
-    
+
     if (participatingEvents.has(eventId)) {
-      // Cancel participation
-      setParticipatingEvents(prev => {
-        const next = new Set(prev);
-        next.delete(eventId);
-        return next;
-      });
+      setParticipatingEvents(prev => { const n = new Set(prev); n.delete(eventId); return n; });
       toast({ title: "Participation annulée", duration: 1000 });
     } else {
-      // Participate
       setParticipatingEvents(prev => new Set([...prev, eventId]));
       await handleParticipateEvent(eventId);
+      if (currentEvent) {
+        const result = await trackInteraction(eventId, 'participate', currentEvent);
+        if (result) learnFromInteraction(result.signal, currentEvent);
+      }
       toast({
         title: "✅ Tu participes !",
         description: currentEvent ? `Rendez-vous ${currentEvent.location} 🎉` : undefined,
         duration: 2000,
       });
     }
-
-    // Plus long delay pour voir l'animation
-    setTimeout(() => {
-      scrollToEvent(currentIndex + 1);
-    }, 500);
-  }, [filteredEvents, participatingEvents, handleParticipateEvent, scrollToEvent, toast]);
+    setTimeout(() => { scrollToEvent(currentIndex + 1); }, 500);
+  }, [filteredEvents, participatingEvents, handleParticipateEvent, trackInteraction, learnFromInteraction, scrollToEvent, toast]);
 
   const handleShare = useCallback(async (eventId: string) => {
     const event = filteredEvents.find(e => e.id === eventId);
@@ -338,42 +350,14 @@ const UserApp = () => {
               </div>
             )}
             
-            {/* Écran de fin - seulement si pas de hasMore */}
+            {/* Écran de fin intelligent */}
             {!hasMore && (
-              <div className="h-full snap-start snap-always flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 p-8">
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3 }}
-                  className="text-center text-white space-y-6"
-                >
-                  <span className="text-6xl">🎉</span>
-                  <h2 className="text-3xl font-bold">C'est tout pour aujourd'hui !</h2>
-                  <p className="text-white/80 max-w-xs mx-auto">
-                    {hasActiveFilters 
-                      ? "Essaie d'élargir tes filtres pour voir plus d'événements !"
-                      : "Plus d'événements à découvrir. Reviens demain pour de nouvelles sorties !"}
-                  </p>
-                  
-                  <div className="flex flex-col gap-3">
-                    {hasActiveFilters && (
-                      <Button
-                        onClick={handleResetFilters}
-                        variant="secondary"
-                        className="px-6 py-3 bg-white/20 text-white rounded-full font-semibold hover:bg-white/30 transition-colors"
-                      >
-                        Réinitialiser les filtres
-                      </Button>
-                    )}
-                    <Button
-                      onClick={() => scrollToEvent(0)}
-                      variant="secondary"
-                      className="px-6 py-3 bg-white text-purple-600 rounded-full font-semibold hover:scale-105 transition-transform"
-                    >
-                      ← Revoir depuis le début
-                    </Button>
-                  </div>
-                </motion.div>
+              <div className="h-full snap-start snap-always">
+                <SwipeFeedEmpty
+                  hasActiveFilters={hasActiveFilters}
+                  onResetFilters={handleResetFilters}
+                  onRestart={() => scrollToEvent(0)}
+                />
               </div>
             )}
           </>
