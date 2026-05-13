@@ -1,73 +1,51 @@
-
 import React from 'react';
-import { Button } from "@/components/ui/button";
-import { Heart, Search, User } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { Compass, Search, User } from 'lucide-react';
 
 interface BottomNavigationProps {
   variant?: 'fixed' | 'inline';
 }
 
-const BottomNavigation = ({ variant = 'fixed' }: BottomNavigationProps) => {
+const navItems = [
+  { icon: Compass, label: 'Découvrir', path: '/app' },
+  { icon: Search,  label: 'Explorer',  path: '/explore' },
+  { icon: User,    label: 'Profil',     path: '/profile' },
+];
+
+const BottomNavigation: React.FC<BottomNavigationProps> = ({ variant = 'fixed' }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const navItems = [
-    {
-      icon: Heart,
-      label: 'Découvrir',
-      path: '/app',
-      isActive: location.pathname === '/app'
-    },
-    {
-      icon: Search,
-      label: 'Explorer',
-      path: '/explore',
-      isActive: location.pathname === '/explore'
-    },
-    {
-      icon: User,
-      label: 'Profil',
-      path: '/profile',
-      isActive: location.pathname === '/profile'
-    }
-  ];
-
   return (
-    <div 
+    <nav
       className={`
-        ${variant === 'fixed' ? 'fixed bottom-0 left-0 right-0 z-50' : 'relative'}
-        h-[60px] bg-white border-t border-border px-4 flex items-center
+        bg-card border-t border-border flex-shrink-0
+        ${variant === 'fixed' ? 'fixed bottom-0 left-0 right-0 z-50' : ''}
       `}
-      style={variant === 'fixed' ? { 
-        bottom: 'var(--safe-bottom)',
-        paddingBottom: 'var(--safe-bottom)'
-      } : {
-        paddingBottom: 'var(--safe-bottom)'
-      }}
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      <div className="flex justify-around items-center max-w-md mx-auto w-full">
-        {navItems.map((item) => {
-          const Icon = item.icon;
+      <div className="flex justify-around items-center h-14 max-w-lg mx-auto px-2">
+        {navItems.map(({ icon: Icon, label, path }) => {
+          const isActive = location.pathname === path;
           return (
-            <Button
-              key={item.path}
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center space-y-1 min-w-0 px-3 py-2 border ${
-                item.isActive 
-                  ? 'text-purple-600 bg-purple-50 border-purple-200' 
-                  : 'text-gray-500 hover:text-gray-700 border-gray-200'
-              }`}
+            <button
+              key={path}
+              onClick={() => navigate(path)}
+              className={`
+                flex flex-col items-center justify-center gap-0.5 flex-1 h-full
+                rounded-lg transition-colors
+                ${isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}
+              `}
             >
-              <Icon className="h-5 w-5" />
-              <span className="text-xs font-medium">{item.label}</span>
-            </Button>
+              <Icon className="w-5 h-5" strokeWidth={isActive ? 2.5 : 1.75} />
+              <span className={`text-[10px] font-medium ${isActive ? '' : 'opacity-60'}`}>
+                {label}
+              </span>
+            </button>
           );
         })}
       </div>
-    </div>
+    </nav>
   );
 };
 

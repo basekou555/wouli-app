@@ -6,6 +6,7 @@ import { useRecommendedFeed } from '@/hooks/useRecommendedFeed';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
 import SearchResults from '@/components/search/SearchResults';
 import MenuDrawer from '@/components/MenuDrawer';
+import BottomNavigation from '@/components/BottomNavigation';
 import FiltersDrawer from '@/components/FiltersDrawer';
 import FeedModeToggle from '@/components/FeedModeToggle';
 import { Input } from '@/components/ui/input';
@@ -89,7 +90,7 @@ const Explore = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="bg-background flex flex-col overflow-hidden" style={{ height: '100dvh' }}>
       {/* Header style App avec recherche */}
       <header className="flex-shrink-0 bg-card border-b border-border sticky top-0 z-40">
         {/* Ligne 1 : Menu + Toggle + Filtres */}
@@ -165,6 +166,8 @@ const Explore = () => {
           </div>
         )}
       </div>
+
+      <BottomNavigation variant="inline" />
 
       {/* Drawers */}
       <MenuDrawer isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />

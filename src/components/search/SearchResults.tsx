@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search as SearchIcon } from 'lucide-react';
 import { UnifiedEvent } from '@/types/unified';
-import WouliEventCard from '../cards/WouliEventCard';
+import EventListCard from '../cards/EventListCard';
 import { RecommendationBadges } from '../cards/RecommendationBadge';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -90,16 +90,14 @@ const SearchResults: React.FC<SearchResultsProps> = ({
                 {badges.length > 0 && (
                   <RecommendationBadges badges={badges} className="mb-2" />
                 )}
-                <WouliEventCard
+                <EventListCard
                   event={event}
-                  variant="list"
                   isLiked={likedEvents.includes(event.id)}
                   isParticipating={participatingEvents.includes(event.id)}
                   onLike={() => onLike(event.id)}
                   onParticipate={() => onParticipate(event.id)}
                   onShare={() => handleShare(event)}
                   onCardClick={() => handleCardClick(event.id)}
-                  className="w-full"
                 />
               </motion.div>
             );

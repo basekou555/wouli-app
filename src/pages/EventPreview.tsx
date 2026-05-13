@@ -149,27 +149,27 @@ const EventPreview = () => {
   ].filter(Boolean);
 
   return (
-    <div className="min-h-screen bg-white pb-20">
+    <div className="min-h-screen bg-background pb-20">
       {/* Header buttons fixe */}
       <div className="fixed top-4 left-4 right-4 flex justify-between z-50">
-        <button 
+        <button
           onClick={() => navigate(-1)}
-          className="bg-white/90 backdrop-blur rounded-full p-2 hover:bg-white transition-colors shadow-sm"
+          className="bg-card/90 backdrop-blur rounded-full p-2 hover:bg-card transition-colors shadow-sm"
         >
-          <ArrowLeft className="w-5 h-5 text-gray-700" />
+          <ArrowLeft className="w-5 h-5 text-foreground" />
         </button>
-        <button 
+        <button
           onClick={handleShare}
-          className="bg-white/90 backdrop-blur rounded-full p-2 hover:bg-white transition-colors shadow-sm"
+          className="bg-card/90 backdrop-blur rounded-full p-2 hover:bg-card transition-colors shadow-sm"
         >
-          <Share2 className="w-5 h-5 text-gray-700" />
+          <Share2 className="w-5 h-5 text-foreground" />
         </button>
       </div>
 
       {/* Image pleine largeur ratio 4:5 */}
       <div className="w-full aspect-[4/5] bg-black">
-        <EventImageCarousel 
-          images={eventImages} 
+        <EventImageCarousel
+          images={eventImages}
           title={event.title}
           isFullWidth={true}
         />
@@ -185,7 +185,7 @@ const EventPreview = () => {
               CE SOIR
             </span>
           )}
-          <h1 className="text-3xl font-bold text-gray-900">{event.title}</h1>
+          <h1 className="text-3xl font-bold text-foreground">{event.title}</h1>
         </div>
 
         {/* 2. Social Proof Section */}
@@ -193,12 +193,14 @@ const EventPreview = () => {
 
         {/* Indicateur de capacité */}
         {event.max_participants && event.participants >= event.max_participants * 0.7 && (
-          <div className="p-4 bg-orange-50 border border-orange-100 rounded-lg">
+          <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-lg">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-orange-600" />
               <p className="text-sm">
-                <span className="font-semibold">Plus que {event.max_participants - event.participants} places</span>
-                <span className="text-gray-600 ml-1">sur {event.max_participants}</span>
+                <span className="font-semibold text-foreground">
+                  Plus que {event.max_participants - event.participants} places
+                </span>
+                <span className="text-muted-foreground ml-1">sur {event.max_participants}</span>
               </p>
             </div>
           </div>
@@ -207,20 +209,20 @@ const EventPreview = () => {
         {/* 3. Description */}
         {event.description && (
           <div>
-            <h2 className="text-lg font-semibold mb-3 text-gray-900">À propos</h2>
-            <p className="text-gray-700 leading-relaxed">{event.description}</p>
+            <h2 className="text-lg font-semibold mb-3 text-foreground">À propos</h2>
+            <p className="text-muted-foreground leading-relaxed">{event.description}</p>
           </div>
         )}
-        
+
         {/* 4. Infos pratiques */}
         <div>
-          <h2 className="text-lg font-semibold mb-4 text-gray-900">Informations pratiques</h2>
+          <h2 className="text-lg font-semibold mb-4 text-foreground">Informations pratiques</h2>
           <EventInfoGrid event={event} />
         </div>
       </div>
 
       {/* 5. Section Lieu détaillée */}
-      <EventLocationSection 
+      <EventLocationSection
         event={event}
         onOpenMaps={openMaps}
         onCopyAddress={copyAddress}
@@ -230,41 +232,38 @@ const EventPreview = () => {
       <EventStatsRecurrent event={event} />
 
       {/* Bottom Bar Fixe - CTAs */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 z-50 safe-area-bottom">
+      <div
+        className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4 z-50"
+        style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
+      >
         <div className="flex gap-3 max-w-lg mx-auto">
           {/* Bouton Like */}
-          <button 
+          <button
             onClick={handleLikeClick}
             disabled={interactionsLoading}
             className={`p-3 rounded-xl border-2 transition-all ${
-              isLiked 
-                ? 'bg-red-50 border-red-500 text-red-500' 
-                : 'bg-white border-gray-200 hover:border-gray-300'
+              isLiked
+                ? 'bg-red-50 border-red-500 text-red-500'
+                : 'bg-background border-border hover:border-muted-foreground'
             } ${interactionsLoading ? 'opacity-50' : ''}`}
           >
             <Heart className={`w-6 h-6 ${isLiked ? 'fill-current' : ''}`} />
           </button>
-          
+
           {/* Bouton principal */}
-          <button 
+          <button
             onClick={handleParticipateClick}
             disabled={interactionsLoading}
             className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all ${
               isParticipating
                 ? 'bg-green-500 hover:bg-green-600 text-white'
-                : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white'
+                : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white'
             } ${interactionsLoading ? 'opacity-50' : ''}`}
           >
             {isParticipating ? (
-              <>
-                <CheckCircle className="w-5 h-5 inline mr-2" />
-                J'y vais !
-              </>
+              <><CheckCircle className="w-5 h-5 inline mr-2" />J'y vais !</>
             ) : (
-              <>
-                Je participe
-                {event.participants > 0 && ` (${event.participants})`}
-              </>
+              <>Je participe{event.participants > 0 && ` (${event.participants})`}</>
             )}
           </button>
         </div>
