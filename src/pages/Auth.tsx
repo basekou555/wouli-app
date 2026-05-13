@@ -73,7 +73,11 @@ const Auth = () => {
         } else if (userType === 'admin') {
           navigate('/admin', { replace: true });
         } else {
-          navigate('/app', { replace: true });
+          const pendingRef = localStorage.getItem('pending_ref');
+          localStorage.removeItem('pending_ref');
+          localStorage.removeItem('pending_ref_event');
+          const destination = pendingRef ? `/app?add_friend=${pendingRef}` : '/app';
+          navigate(destination, { replace: true });
         }
       }, 100);
     }
