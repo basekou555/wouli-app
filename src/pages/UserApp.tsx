@@ -5,8 +5,11 @@ import { useNavigate } from 'react-router-dom';
 import { usePaginatedEvents } from '@/hooks/usePaginatedEvents';
 import { useRecommendedFeed } from '@/hooks/useRecommendedFeed';
 import { useSearchFilters } from '@/hooks/useSearchFilters';
+import { useSmartTracking } from '@/hooks/useSmartTracking';
+import { usePreferenceLearning } from '@/hooks/usePreferenceLearning';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
 import SwipeCard from '@/components/user/swipe/SwipeCard';
+import SwipeFeedEmpty from '@/components/SwipeFeedEmpty';
 import BottomNavigation from '@/components/BottomNavigation';
 import { motion } from 'framer-motion';
 import { MenuDrawer } from '@/components/MenuDrawer';
@@ -54,6 +57,17 @@ const UserApp = () => {
     hasActiveFilters,
   } = useSearchFilters(baseEvents);
 
+  const { trackInteraction } = useSmartTracking();
+  const { learnFromInteraction, flushNow } = usePreferenceLearning();
+
+  useEffect(() => {
+    window.addEventListener('beforeunload', flushNow);
+    return () => {
+      window.removeEventListener('beforeunload', flushNow);
+      flushNow();
+    };
+  }, [flushNow]);
+
   const isPWA = useIsPWA();
 
   const currentEvent = filteredEvents[currentIndex];
@@ -92,10 +106,15 @@ const UserApp = () => {
   };
 
   // Called by SwipeCard AFTER the fly-left animation completes
-  const onSwipeLeft = useCallback(() => {
+  const onSwipeLeft = useCallback(async () => {
+    const event = currentEvent;
     toast({ title: "Événement ignoré 👋", duration: 900 });
+    if (event) {
+      const result = await trackInteraction(event.id, 'dislike', event);
+      if (result) learnFromInteraction(result.signal, event);
+    }
     goToNext();
-  }, [goToNext, toast]);
+  }, [currentEvent, trackInteraction, learnFromInteraction, goToNext, toast]);
 
   // Called by SwipeCard AFTER the fly-right animation completes
   const onSwipeRight = useCallback(async () => {
@@ -111,10 +130,12 @@ const UserApp = () => {
     } else {
       setLikedEvents(prev => new Set([...prev, event.id]));
       await handleLikeEvent(event.id);
+      const result = await trackInteraction(event.id, 'like', event);
+      if (result) learnFromInteraction(result.signal, event);
       toast({ title: "❤️ Liké !", duration: 900 });
     }
     goToNext();
-  }, [currentEvent, likedEvents, handleLikeEvent, goToNext, toast]);
+  }, [currentEvent, likedEvents, handleLikeEvent, trackInteraction, learnFromInteraction, goToNext, toast]);
 
   const onParticipate = useCallback(async () => {
     const event = currentEvent;
@@ -130,15 +151,16 @@ const UserApp = () => {
     } else {
       setParticipatingEvents(prev => new Set([...prev, event.id]));
       await handleParticipateEvent(event.id);
+      const result = await trackInteraction(event.id, 'participate', event);
+      if (result) learnFromInteraction(result.signal, event);
       toast({
         title: "✅ Tu participes !",
         description: `Rendez-vous ${event.location} 🎉`,
         duration: 2000,
       });
     }
-    // Short delay so the participate animation plays before advancing
     setTimeout(goToNext, 500);
-  }, [currentEvent, participatingEvents, handleParticipateEvent, goToNext, toast]);
+  }, [currentEvent, participatingEvents, handleParticipateEvent, trackInteraction, learnFromInteraction, goToNext, toast]);
 
   const onShare = useCallback(async () => {
     const event = currentEvent;
@@ -224,7 +246,6 @@ const UserApp = () => {
         {/* Next card peeking behind — stationary, no interaction */}
         {nextEvent && (
           <div className="absolute inset-0 scale-95 opacity-60 pointer-events-none origin-bottom">
-            {/* Lightweight placeholder so the user perceives depth */}
             <div className="absolute inset-0 bg-card rounded-t-2xl" />
           </div>
         )}
@@ -250,38 +271,11 @@ const UserApp = () => {
             </div>
           </div>
         ) : isAtEnd ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 p-8">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
-              className="text-center text-white space-y-6"
-            >
-              <span className="text-6xl">🎉</span>
-              <h2 className="text-3xl font-bold">C'est tout pour aujourd'hui !</h2>
-              <p className="text-white/80 max-w-xs mx-auto">
-                {hasActiveFilters
-                  ? "Essaie d'élargir tes filtres pour voir plus d'événements !"
-                  : "Plus d'événements à découvrir. Reviens demain pour de nouvelles sorties !"}
-              </p>
-              <div className="flex flex-col gap-3">
-                {hasActiveFilters && (
-                  <Button
-                    onClick={handleResetFilters}
-                    className="px-6 py-3 bg-white/20 text-white rounded-full font-semibold hover:bg-white/30 transition-colors"
-                  >
-                    Réinitialiser les filtres
-                  </Button>
-                )}
-                <Button
-                  onClick={() => setCurrentIndex(0)}
-                  className="px-6 py-3 bg-white text-purple-600 rounded-full font-semibold hover:scale-105 transition-transform"
-                >
-                  ← Revoir depuis le début
-                </Button>
-              </div>
-            </motion.div>
-          </div>
+          <SwipeFeedEmpty
+            hasActiveFilters={hasActiveFilters}
+            onResetFilters={handleResetFilters}
+            onRestart={() => setCurrentIndex(0)}
+          />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center p-8 space-y-4">
