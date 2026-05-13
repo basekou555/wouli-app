@@ -7,6 +7,7 @@ import { useRecommendedFeed } from '@/hooks/useRecommendedFeed';
 import { useSearchFilters } from '@/hooks/useSearchFilters';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
 import SwipeCard from '@/components/user/swipe/SwipeCard';
+import BottomNavigation from '@/components/BottomNavigation';
 import { motion } from 'framer-motion';
 import { MenuDrawer } from '@/components/MenuDrawer';
 import { FiltersDrawer } from '@/components/FiltersDrawer';
@@ -219,10 +220,7 @@ const UserApp = () => {
       </header>
 
       {/* Card stack — takes all remaining height */}
-      <div
-        className="relative flex-1 overflow-hidden"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-      >
+      <div className="relative flex-1 overflow-hidden">
         {/* Next card peeking behind — stationary, no interaction */}
         {nextEvent && (
           <div className="absolute inset-0 scale-95 opacity-60 pointer-events-none origin-bottom">
@@ -303,6 +301,8 @@ const UserApp = () => {
           </div>
         )}
       </div>
+
+      <BottomNavigation variant="inline" />
 
       <InstallPrompt pageId="swipe" delay={1000} />
 
