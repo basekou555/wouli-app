@@ -15,6 +15,8 @@ interface SwipeCardProps {
   onShare?: () => void;
   onEstablishmentClick?: () => void;
   onMapClick?: () => void;
+  onUndo?: () => void;
+  canUndo?: boolean;
 }
 
 const SwipeCard: React.FC<SwipeCardProps> = ({
@@ -26,6 +28,8 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
   onShare,
   onEstablishmentClick,
   onMapClick,
+  onUndo,
+  canUndo,
 }) => {
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-280, 0, 280], [-12, 0, 12]);
@@ -121,6 +125,8 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
           onShare={onShare}
           onEstablishmentClick={onEstablishmentClick}
           onMapClick={onMapClick}
+          onUndo={onUndo}
+          canUndo={canUndo}
         />
       </motion.div>
     </motion.div>

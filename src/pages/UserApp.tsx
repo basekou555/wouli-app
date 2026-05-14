@@ -105,6 +105,15 @@ const UserApp = () => {
     };
   }, [flushNow]);
 
+  const canUndo = currentIndex > 0;
+
+  const onUndo = useCallback(() => {
+    if (currentIndex > 0) {
+      setCurrentIndex(prev => prev - 1);
+      toast({ title: "↩ Retour en arrière", duration: 800 });
+    }
+  }, [currentIndex, toast]);
+
   const currentEvent = filteredEvents[currentIndex];
   const nextEvent = filteredEvents[currentIndex + 1];
   const isAtEnd = !currentEvent && !hasMore;
@@ -301,6 +310,8 @@ const UserApp = () => {
             onShare={onShare}
             onEstablishmentClick={onEstablishmentClick}
             onMapClick={onMapClick}
+            onUndo={onUndo}
+            canUndo={canUndo}
           />
         ) : isLoadingNext ? (
           <div className="absolute inset-0 flex items-center justify-center">
