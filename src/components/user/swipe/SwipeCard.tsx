@@ -89,11 +89,11 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
         {/* LIKE overlay — appears when dragging right */}
         <motion.div
           style={{ opacity: likeOpacity }}
-          className="absolute top-16 left-6 z-20 pointer-events-none select-none"
+          className="absolute top-16 left-5 z-20 pointer-events-none select-none"
         >
-          <div className="border-[3px] border-green-500 rounded-xl px-4 py-1.5 -rotate-12">
-            <span className="text-green-500 font-black text-3xl tracking-widest uppercase">
-              Like
+          <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl px-5 py-2 -rotate-12 shadow-xl">
+            <span className="text-white font-black text-2xl tracking-wide flex items-center gap-2">
+              ❤️ Chaud !
             </span>
           </div>
         </motion.div>
@@ -101,11 +101,11 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
         {/* NOPE overlay — appears when dragging left */}
         <motion.div
           style={{ opacity: nopeOpacity }}
-          className="absolute top-16 right-6 z-20 pointer-events-none select-none"
+          className="absolute top-16 right-5 z-20 pointer-events-none select-none"
         >
-          <div className="border-[3px] border-red-500 rounded-xl px-4 py-1.5 rotate-12">
-            <span className="text-red-500 font-black text-3xl tracking-widest uppercase">
-              Nope
+          <div className="bg-gray-900/90 backdrop-blur rounded-2xl px-5 py-2 rotate-12 shadow-xl">
+            <span className="text-white font-black text-2xl tracking-wide flex items-center gap-2">
+              ✕ Passe
             </span>
           </div>
         </motion.div>

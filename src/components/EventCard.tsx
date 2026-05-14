@@ -44,9 +44,9 @@ const ParticipateButton: React.FC<{ onClick: () => void }> = ({ onClick }) => {
 
   return (
       <motion.button
-        whileTap={{ scale: 0.9 }}
+        whileTap={{ scale: 0.93 }}
         onClick={handleClick}
-        className="flex-[2] h-11 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold transition-all shadow-lg flex items-center justify-center gap-2 relative overflow-hidden"
+        className="flex-[2] h-12 rounded-2xl bg-gradient-to-r from-primary to-accent text-white font-bold transition-all shadow-lg hover:shadow-xl hover:opacity-95 flex items-center justify-center gap-2 relative overflow-hidden"
         aria-label="Participer"
       >
       {/* Animation success */}
@@ -180,33 +180,36 @@ const EventCard: React.FC<EventCardProps> = ({
           />
         </div>
 
-        {/* Section infos fusionnée - Design Premium */}
-        <div className="flex-shrink-0 px-4 py-3 bg-card border-b border-border">
-          {/* Titre sur 2 lignes */}
-          <h1 className="text-xl font-bold text-foreground line-clamp-2 leading-tight mb-1">
+        {/* Section infos */}
+        <div className="flex-shrink-0 px-4 pt-3 pb-2 bg-card">
+          {/* Titre */}
+          <h1 className="text-[1.15rem] font-bold text-foreground line-clamp-2 leading-snug mb-1">
             {event.title}
           </h1>
           {/* Lieu */}
-          <p className="text-sm text-muted-foreground mb-3">
-            📍 {event.venue || event.location}
+          <p className="text-sm text-muted-foreground mb-2.5 flex items-center gap-1">
+            <span className="text-xs">📍</span>
+            {event.venue || event.location}
           </p>
-          {/* Chips colorés premium */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-3 py-1.5 bg-primary/10 text-primary text-xs font-semibold rounded-full">
-              📅 {formatEventDateTime(event.date, event.time)}
+          {/* Chips */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="px-2.5 py-1 bg-primary/10 text-primary text-xs font-semibold rounded-full">
+              {formatEventDateTime(event.date, event.time)}
             </span>
-            <span className="px-3 py-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold rounded-full">
+            <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-600 text-xs font-semibold rounded-full">
               {getPriceInfo(event.price_text).display}
             </span>
-            <span className="px-3 py-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-semibold rounded-full">
-              👥 {event.totalParticipants || event.participants || 0}
-            </span>
+            {(event.totalParticipants || event.participants || 0) > 0 && (
+              <span className="px-2.5 py-1 bg-amber-500/10 text-amber-600 text-xs font-semibold rounded-full">
+                {event.totalParticipants || event.participants || 0} participants
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Social Proof - compact */}
+        {/* Social Proof */}
         {(event.friendsParticipating && event.friendsParticipating.length > 0) && (
-          <div className="flex-shrink-0 px-4 py-2 bg-card border-b border-border">
+          <div className="flex-shrink-0 px-4 py-2 bg-card">
             <div className="flex items-center gap-2">
               <div className="flex -space-x-2">
                 {event.friendsParticipating.slice(0, 3).map((friend) => (
@@ -234,13 +237,14 @@ const EventCard: React.FC<EventCardProps> = ({
           </div>
         )}
 
-        {/* Bouton voir plus - compact */}
-        <div className="flex-shrink-0 px-4 py-2 bg-card border-b border-border">
+        {/* Bouton voir plus */}
+        <div className="flex-shrink-0 px-4 py-2 bg-card border-b border-border/50">
           <button
             onClick={() => setIsDetailsOpen(true)}
-            className="w-full py-2 bg-accent hover:bg-accent/80 rounded-lg text-sm font-medium transition-colors"
+            className="w-full py-2 text-primary/80 hover:text-primary rounded-xl text-sm font-medium transition-colors hover:bg-primary/5 flex items-center justify-center gap-1"
           >
-            Voir plus de détails →
+            Voir les détails
+            <span className="text-xs">↓</span>
           </button>
         </div>
       </div>
@@ -254,15 +258,15 @@ const EventCard: React.FC<EventCardProps> = ({
             : 'calc(1.5rem + env(safe-area-inset-bottom))'
         }}
       >
-        <div className="flex gap-2 max-w-md mx-auto">
+        <div className="flex gap-2.5 max-w-md mx-auto">
           {/* Dislike */}
           <motion.button
-            whileTap={{ scale: 0.9 }}
+            whileTap={{ scale: 0.88 }}
             onClick={handleDislike}
-            className="flex-1 h-11 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
+            className="flex-1 h-12 rounded-2xl bg-red-50 hover:bg-red-100 transition-colors flex items-center justify-center border border-red-100"
             aria-label="Passer"
           >
-            <X className="w-5 h-5 text-muted-foreground" />
+            <X className="w-5 h-5 text-red-400" />
           </motion.button>
 
           {/* Participer */}
@@ -270,22 +274,23 @@ const EventCard: React.FC<EventCardProps> = ({
 
           {/* Like */}
           <motion.button
-            whileTap={{ scale: 0.9 }}
+            whileTap={{ scale: 0.88 }}
             onClick={handleLike}
-            className="flex-1 h-11 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
+            className="flex-1 h-12 rounded-2xl bg-pink-50 hover:bg-pink-100 transition-colors flex items-center justify-center border border-pink-100"
             aria-label="J'aime"
           >
             <Heart className="w-5 h-5 text-pink-500" />
           </motion.button>
 
           {/* Partager */}
-          <button
+          <motion.button
+            whileTap={{ scale: 0.88 }}
             onClick={handleShare}
-            className="flex-1 h-11 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
+            className="flex-1 h-12 rounded-2xl bg-muted hover:bg-muted/70 transition-colors flex items-center justify-center border border-border"
             aria-label="Partager"
           >
             <Share2 className="w-5 h-5 text-muted-foreground" />
-          </button>
+          </motion.button>
         </div>
       </div>
 
