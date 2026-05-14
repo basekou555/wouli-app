@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Share2, 
-  Clock, 
-  Calendar, 
-  MapPin, 
+import {
+  ArrowLeft,
+  Share2,
+  Clock,
+  Calendar,
+  MapPin,
   Heart,
   CheckCircle,
   Users,
@@ -14,13 +14,15 @@ import {
   Euro,
   Timer,
   Navigation,
-  Copy
+  Copy,
+  MessageCircle
 } from 'lucide-react';
 import { useEventPreview } from '@/hooks/useEventPreview';
 import { useSimpleEventInteractions } from '@/hooks/useSimpleEventInteractions';
 import { formatEventDateTime, isToday, calculateDistance } from '@/utils/eventDetailHelpers';
 import { getCategoryIcon } from '@/data/wouliCategories';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import EventImageCarousel from '@/components/event-preview/EventImageCarousel';
 import EventSocialProof from '@/components/event-preview/EventSocialProof';
@@ -32,6 +34,7 @@ const EventPreview = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { profile } = useAuth();
   const { event, loading, error } = useEventPreview(id);
   const { handleLike, handleParticipate, handleIncrementViews, getInteractionStatus } = useSimpleEventInteractions();
   
@@ -86,16 +89,20 @@ const EventPreview = () => {
     await handleParticipate(event.id, event.title);
   };
 
+  const getShareUrl = () => {
+    const base = `${window.location.origin}/e/${event?.id}`;
+    return profile?.username ? `${base}?ref=${profile.username}` : base;
+  };
+
   const handleShare = async () => {
     if (navigator.share && event) {
       try {
         await navigator.share({
           title: event.title,
           text: `Découvre cet événement sur Wouli : ${event.title}`,
-          url: window.location.href,
+          url: getShareUrl(),
         });
       } catch (err) {
-        // Fallback vers copie du lien
         handleCopyLink();
       }
     } else {
@@ -104,11 +111,17 @@ const EventPreview = () => {
   };
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
+    navigator.clipboard.writeText(getShareUrl());
     toast({
       title: "Lien copié !",
       description: "Le lien de l'événement a été copié dans le presse-papier"
     });
+  };
+
+  const handleWhatsApp = () => {
+    if (!event) return;
+    const text = encodeURIComponent(`On y va ? ${event.title} 🎉\n${getShareUrl()}`);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
   };
 
   const openMaps = (location: string) => {
@@ -249,6 +262,16 @@ const EventPreview = () => {
           >
             <Heart className={`w-6 h-6 ${isLiked ? 'fill-current' : ''}`} />
           </button>
+
+          {/* Bouton WhatsApp */}
+          <button
+            onClick={handleWhatsApp}
+            className="p-3 rounded-xl border-2 border-green-400 text-green-600 hover:bg-green-50 transition-all"
+            title="Organiser avec des amis"
+          >
+            <MessageCircle className="w-6 h-6" />
+          </button>
+
 
           {/* Bouton principal */}
           <button

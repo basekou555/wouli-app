@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { usePaginatedEvents } from '@/hooks/usePaginatedEvents';
 import { useRecommendedFeed } from '@/hooks/useRecommendedFeed';
 import { useSearchFilters } from '@/hooks/useSearchFilters';
@@ -11,13 +11,16 @@ import { PageSkeleton } from '@/components/LoadingSkeleton';
 import SwipeCard from '@/components/user/swipe/SwipeCard';
 import SwipeFeedEmpty from '@/components/SwipeFeedEmpty';
 import BottomNavigation from '@/components/BottomNavigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { MenuDrawer } from '@/components/MenuDrawer';
 import { FiltersDrawer } from '@/components/FiltersDrawer';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import FeedModeToggle from '@/components/FeedModeToggle';
-import { Menu, Loader2, SlidersHorizontal } from 'lucide-react';
+import { Menu, Loader2, SlidersHorizontal, UserPlus, X } from 'lucide-react';
 import { useIsPWA } from '@/hooks/useIsPWA';
+import { useAuth } from '@/contexts/AuthContext';
+import { useFriendships } from '@/hooks/useFriendships';
+import { supabase } from '@/integrations/supabase/client';
 
 const UserApp = () => {
   const [likedEvents, setLikedEvents] = useState<Set<string>>(new Set());
@@ -28,8 +31,16 @@ const UserApp = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
+  // Pending friend suggestion (from referral link)
+  const [pendingFriendUsername, setPendingFriendUsername] = useState<string | null>(null);
+  const [pendingFriendId, setPendingFriendId] = useState<string | null>(null);
+  const [showFriendSuggestion, setShowFriendSuggestion] = useState(false);
+
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { profile } = useAuth();
+  const { sendFriendRequest } = useFriendships();
 
   const {
     events: allEvents,
@@ -59,6 +70,32 @@ const UserApp = () => {
 
   const { trackInteraction } = useSmartTracking();
   const { learnFromInteraction, flushNow } = usePreferenceLearning();
+
+  const isPWA = useIsPWA();
+
+  // Détecter suggestion d'ami depuis le flux référent
+  useEffect(() => {
+    const addFriendParam = searchParams.get('add_friend');
+    if (!addFriendParam) return;
+
+    const resolveFriend = async () => {
+      const { data } = await supabase
+        .from('public_profiles')
+        .select('id, username')
+        .eq('username', addFriendParam)
+        .single();
+
+      if (data) {
+        setPendingFriendUsername(data.username);
+        setPendingFriendId(data.id);
+        setShowFriendSuggestion(true);
+      }
+      setSearchParams((prev) => { prev.delete('add_friend'); return prev; }, { replace: true });
+    };
+
+    resolveFriend();
+  }, []);
+
 
   useEffect(() => {
     window.addEventListener('beforeunload', flushNow);
@@ -166,10 +203,14 @@ const UserApp = () => {
     const event = currentEvent;
     if (!event) return;
 
+    const base = `${window.location.origin}/e/${event.id}`;
+    const shareUrl = profile?.username ? `${base}?ref=${profile.username}` : base;
+
+
     const shareData = {
       title: `${event.title} - Wouli`,
       text: `Découvre cet événement : ${event.title}`,
-      url: `${window.location.origin}/events/${event.id}`,
+      url: shareUrl,
     };
 
     try {
@@ -183,7 +224,7 @@ const UserApp = () => {
     } catch {
       // Share cancelled — no action needed
     }
-  }, [currentEvent, toast]);
+  }, [currentEvent, toast, profile]);
 
   const onEstablishmentClick = useCallback(() => {
     if (!currentEvent) return;
@@ -313,6 +354,70 @@ const UserApp = () => {
         onTimeChange={setSelectedTime}
         onReset={handleResetFilters}
       />
+
+      {/* Bottom sheet suggestion d'ami (flux référent TikTok-style) */}
+      <AnimatePresence>
+        {showFriendSuggestion && pendingFriendUsername && pendingFriendId && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-end"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <div
+              className="absolute inset-0 bg-black/40"
+              onClick={() => setShowFriendSuggestion(false)}
+            />
+            <motion.div
+              className="relative w-full bg-white rounded-t-2xl p-6 space-y-4"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            >
+              <button
+                onClick={() => setShowFriendSuggestion(false)}
+                className="absolute top-4 right-4 p-1 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="flex flex-col items-center text-center gap-3 pt-2">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-2xl font-bold">
+                  {pendingFriendUsername[0].toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Tu as découvert Wouli grâce à</p>
+                  <p className="text-lg font-bold text-gray-900">{pendingFriendUsername}</p>
+                </div>
+                <p className="text-sm text-gray-500">Ajoute-le comme ami pour voir ses sorties !</p>
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowFriendSuggestion(false)}
+                >
+                  Ignorer
+                </Button>
+                <Button
+                  className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white"
+                  onClick={async () => {
+                    if (!pendingFriendId) return;
+                    const ok = await sendFriendRequest(pendingFriendId);
+                    if (ok) {
+                      toast({ title: `Demande envoyée à ${pendingFriendUsername} !`, duration: 2000 });
+                    }
+                    setShowFriendSuggestion(false);
+                  }}
+                >
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Ajouter en ami
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
