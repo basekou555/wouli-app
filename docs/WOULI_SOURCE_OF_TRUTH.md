@@ -110,6 +110,37 @@ J'aide les créateurs de contenu événementiel local à structurer leur busines
 
 ## 💻 PRODUCT STATE
 
+### Architecture Technique
+
+#### Système Swipe - Fragilité Connue
+
+**⚠️ CRITIQUE :** Le swipe repose sur une cascade de 5 niveaux de contraintes de hauteur. Modifier un maillon casse toute la chaîne.
+
+**Chaîne de dépendances :**
+```
+h-screen → flex-1 → max-h-full → absolute inset-0 → TinderCard
+```
+
+**Règles strictes UserApp.tsx :**
+- Ligne 73 : `h-screen` (référence hauteur globale)
+- Ligne 97 : `flex-1` (container cartes)
+- Ligne 99 : `relative` + `max-h-full` (positionnement)
+- Ligne 102 : `absolute inset-0` (TinderCard)
+
+**Piège BottomNavigation :**
+- `position: fixed` = hors flux document
+- Prend 60px EN PLUS du 100vh
+- Peut causer overlap sur mobile
+
+**⚠️ Avant toute modification layout :** Consulter `docs/archives/Architecture_Swipe.md` (checklist complète + guide debug)
+
+**Top 3 Symptômes Régression :**
+1. **Cartes invisibles** → Vérifier `relative` ligne 99
+2. **Swipe cassé** → Vérifier hauteur explicite container
+3. **Scroll horizontal** → Vérifier `overflow-hidden` lignes 73, 97
+
+---
+
 ### App Wouli
 
 **Déployé :** Web app (Vercel)
@@ -159,6 +190,106 @@ J'aide les créateurs de contenu événementiel local à structurer leur busines
 
 ---
 
+### Features Sociales - Architecture Détaillée
+
+**Positionnement :** "Social Hybride" - pas un réseau social, un outil de coordination pour sortir IRL.
+
+#### Système Amis - Bidirectionnel
+- **Connexion réelle :** Demande + Acceptation (pas follow unilatéral)
+- **Privacy first :** Contrôle visibilité
+- **Cercle restreint :** Qualité > Quantité
+- **Pas de DM ouvert :** Chat uniquement entre amis confirmés
+
+#### Chat Contextuel Événement
+- **Temporaire :** Disparaît 24h après événement
+- **Privé :** Seulement entre amis participants
+- **Groupes flexibles :** Créer/modifier participants
+- **Focus coordination :** "On se retrouve où ?" pas small talk
+
+#### Viralité Organique
+- **Partage externe :** Lien unique user/event
+- **Preview limitée :** 3 swipes max non-inscrits
+- **Conversion naturelle :** "Inscris-toi pour rejoindre [Ami]"
+
+**Statut :** 🚧 Features basiques live, architecture complète en roadmap
+
+---
+
+### Système Tags & Attribution Événements
+
+**Migration BDD (6 Déc 2024) :** Passage de 6 catégories rigides → 8 tags flexibles
+
+**8 Tags Granulaires :**
+- Musique (électro, rock, jazz, hip-hop, etc.)
+- Ambiance (chill, festif, romantique, énergique)
+- Social (solo-friendly, groupes, networking, rencontres)
+- Type lieu (bar, club, restaurant, musée, plein air)
+- Moment (afterwork, soirée, brunch, nocturne)
+- Prix (gratuit, abordable, premium)
+- Public (étudiants, jeunes pro, couples, familles)
+- Activités (danse, dégustation, jeux, spectacle)
+
+**Logique Attribution :**
+```
+Event scrapé Instagram
+→ Extraction venue_instagram
+→ Matching avec business_configs.instagram_handle
+→ Si match : event.business_id = business.id
+→ Dashboard business = seulement events attribués
+```
+
+**Avantages :**
+- Recommandations précises (combinaison tags vs catégorie unique)
+- Benchmark intelligent (comparer events vraiment similaires)
+- Attribution automatique events → établissements clients
+
+**Statut :** ✅ Migration complète, opérationnel
+
+---
+
+### Algorithme Recommandations V2.0
+
+**Formule Globale :**
+```
+Score Final = 40% Préférences + 25% Social + 15% Urgence 
+              + 10% Discovery + 10% Context
+```
+
+**Détails Poids :**
+
+1. **Préférences (40%)** : Tags likés vs tags event
+   - Match parfait tag : +10 points
+   - Tag opposé : -5 points
+   - Onboarding : minimum 5 keywords style Spotify
+
+2. **Social (25%)** : Amis participants
+   - 1 ami : +8 points
+   - 2-3 amis : +15 points
+   - 4+ amis : +20 points
+
+3. **Urgence (15%)** : Proximité temporelle
+   - Ce soir : +15 points
+   - Demain : +10 points
+   - Cette semaine : +5 points
+
+4. **Discovery (10%)** : Nouveauté
+   - Event jamais swipé : +5 points
+   - Établissement nouveau : +3 points
+
+5. **Context (10%)** : Météo, jour semaine
+   - Vendredi soir : boost clubs +5
+   - Dimanche : boost brunches +5
+   - Pluie : boost lieux couverts +3
+
+**North Star Metrics :**
+- Primary : Weekly Active Users >60%
+- Secondary : Engagement >30 swipes/session
+- Tertiary : Satisfaction post-event >4.2/5
+
+**Statut :** ✅ V2.0 implémenté (Fév 2026)
+
+---
+
 ### Scraper Wouli
 
 **Version Active :** V5 stabilisé
@@ -180,6 +311,67 @@ J'aide les créateurs de contenu événementiel local à structurer leur busines
 - Sync auto via update.bat
 
 **Statut :** ✅ Performant, scalable
+
+---
+
+### Scraper - Guide Opérationnel
+
+#### Installation & Setup
+
+**Prérequis :** Node.js 18+, Compte Instagram, Compte Supabase
+
+**Dépendances clés :**
+```bash
+npm install puppeteer-extra puppeteer-extra-plugin-stealth
+npm install @supabase/supabase-js dotenv
+```
+
+**Configuration `.env` :**
+```env
+INSTAGRAM_USERNAME=xxx
+INSTAGRAM_PASSWORD=xxx
+SUPABASE_URL=xxx
+SUPABASE_SERVICE_KEY=xxx
+SUPABASE_ADMIN_UUID=b8750c46-6717-4427-aac4-3e5c1e5a86c5
+TEST_MODE=false
+HEADLESS=false
+```
+
+**Commandes :**
+```bash
+# Production (tous comptes)
+node scraper-v5-wouli.js
+
+# Test (1 compte, 3 posts)
+TEST_MODE=true HEADLESS=false node scraper-v5-wouli.js
+```
+
+---
+
+#### Top 3 Erreurs & Solutions
+
+| Erreur | Cause | Solution |
+|--------|-------|----------|
+| **Connexion échouée** | Instagram changé | Mode manuel (HEADLESS=false) |
+| **Screenshot échoué** | Article non trouvé | Fallback zone fixe automatique |
+| **Image trop lourde** | Screenshot >3MB | Réduire clip width/height |
+
+**⚠️ Troubleshooting complet :** `docs/archives/Documentation_Scraper.md`
+
+---
+
+#### Leçons Clés V1→V5
+
+**✅ Ce qui fonctionne :**
+- Configuration Puppeteer simple (`waitUntil: 'networkidle2'`)
+- Screenshots HD (deviceScaleFactor: 2) vs URLs Instagram (CORS)
+- Mode manuel connexion (fallback fiable)
+- Batch processing (10 events à la fois)
+
+**❌ Pièges évités :**
+- Sur-optimisation V3 (régression stabilité)
+- URLs Instagram directes (bloquées CORS, expirent)
+- Tentatives contournement CORS (complexes, instables)
 
 ---
 
@@ -366,6 +558,45 @@ J'aide les créateurs de contenu événementiel local à structurer leur busines
 ---
 
 ## 📚 DECISIONS LOG
+
+### 6 Décembre 2024 : Migration BDD - Système Tags
+
+**Contexte :** Préparer scaling commercial + améliorer recommandations
+
+**Problème :** 6 catégories rigides = recommandations imprécises
+
+**Décision :** Migration vers 8 tags flexibles granulaires  
+(Musique, Ambiance, Social, Type lieu, Moment, Prix, Public, Activités)
+
+**Migration technique :**
+- event_tags (array), tag_weights, attribution venue_instagram → business_id
+- Scripts SQL exécutés, tests 10/10 validés
+
+**Impact :**
+- Recommandations précises (combinaison tags vs catégorie unique)
+- Benchmark intelligent
+- Attribution auto events → clients
+
+**Statut :** ✅ Production
+
+---
+
+### 22 Décembre 2024 : Interface Admin Optimisée
+
+**Contexte :** Validation manuelle 8+ clics/event = friction
+
+**Décision :** 7 prompts Lovable refonte UX
+
+**Améliorations :**
+- Actions rapides : 8 clics → 2 clics
+- Filtres avancés combinables
+- Batch actions
+
+**Résultat :** Vélocité validation x4
+
+**Statut :** ✅ Opérationnel
+
+---
 
 ### 2024-12-16 : Dual Track Validé ✨ MAJEUR
 
@@ -589,6 +820,15 @@ J'aide les créateurs de contenu événementiel local à structurer leur busines
 ---
 
 ## 🔄 CHANGELOG
+
+### 2024-12-16 - V1.5
+- ✅ Architecture technique swipe ajoutée (fragilité cascade hauteurs)
+- ✅ Scraper guide opérationnel (installation, troubleshooting, leçons V1-V5)
+- ✅ Features sociales architecture détaillée (amis, chat, viralité)
+- ✅ Système tags & attribution events explicité (8 tags vs 6 catégories)
+- ✅ Algorithme recommandations V2.0 formules précises
+- ✅ Migration BDD 6 déc + Interface Admin 22 déc ajoutées DECISIONS_LOG
+- ✅ Docs obsolètes archivés (workflow cleanup établi)
 
 ### 2024-12-16 - V1.4
 - ✅ Dual track Wouli + Agence validé
