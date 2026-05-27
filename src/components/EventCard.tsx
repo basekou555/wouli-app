@@ -138,14 +138,21 @@ function getTitleFontSize(title: string, isRecurring: boolean, energy: Energy): 
   return `${size}px`;
 }
 
-// Source names that can leak into venue/location fields from the scraper
-const SOURCE_NAMES = /^(instagram|facebook|twitter|tiktok)$/i;
+// Source names that can leak into venue/location/organizer fields
+const SOURCE_NAMES = /^(instagram|facebook|twitter|tiktok|utilisateur|user|Utilisateur)$/i;
 
 function getVenueName(event: UnifiedEvent): string {
   for (const c of [event.venue, event.organizer, event.location]) {
     if (c && c.trim() && !SOURCE_NAMES.test(c.trim())) return c.trim();
   }
   return 'Lyon';
+}
+
+// Only for the venue display line in the card — uses event.venue only (real establishment)
+function getDisplayVenue(event: UnifiedEvent): string | null {
+  const v = event.venue?.trim();
+  if (v && !SOURCE_NAMES.test(v)) return v;
+  return null;
 }
 
 function isBadTitleStart(title: string): boolean {
@@ -243,7 +250,7 @@ const EventCard: React.FC<EventCardProps> = ({
   if (!subtitle && titleWasCleaned && rawTitle.length > 0) {
     subtitle = rawTitle.length > 60 ? rawTitle.slice(0, 57) + '…' : rawTitle;
   }
-  const venueName = getVenueName(event);
+  const displayVenue = getDisplayVenue(event);
   const priceInfo = getPriceInfo(event.price_text);
   const isRecurring = event.is_recurring === true;
 
@@ -330,8 +337,8 @@ const EventCard: React.FC<EventCardProps> = ({
             {displayTitle}
           </h1>
 
-          {/* Nom du lieu */}
-          {venueName && (
+          {/* Nom du lieu — uniquement si un vrai nom d'établissement existe */}
+          {displayVenue && (
             <p
               className="leading-none uppercase truncate"
               style={{
@@ -341,7 +348,7 @@ const EventCard: React.FC<EventCardProps> = ({
                 letterSpacing: '0.1em',
               }}
             >
-              {venueName}
+              {displayVenue}
             </p>
           )}
 
