@@ -189,6 +189,7 @@ function cleanTitle(event: UnifiedEvent): string {
   const raw = (event.title || '').trim();
   const words = raw.split(/\s+/).filter(Boolean);
   if (raw.length > 0 && words.length <= 5 && !isBadTitleStart(raw)) return raw;
+  if (raw.length > 0) return words.slice(0, 4).join(' ') + (words.length > 4 ? '...' : '');
   return getVenueName(event);
 }
 
@@ -297,7 +298,7 @@ const EventCard: React.FC<EventCardProps> = ({
       {/* Zone Photo — prend l'espace restant, min 55% */}
       <div
         className="relative overflow-hidden flex-1 min-h-0 cursor-pointer"
-        style={{ minHeight: '55%' }}
+        style={{ minHeight: '55%', boxShadow: `inset 0 -60px 40px -20px ${adaptiveBg}` }}
         onClick={() => setShowImageModal(true)}
       >
         {/* Skeleton */}

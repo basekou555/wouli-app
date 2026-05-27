@@ -22,6 +22,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useFriendships } from '@/hooks/useFriendships';
 import { supabase } from '@/integrations/supabase/client';
 
+function hexToRgba(hex: string, alpha: number): string {
+  const m = hex.replace('#', '').match(/.{2}/g);
+  if (!m || m.length < 3) return `rgba(10,10,10,${alpha})`;
+  return `rgba(${parseInt(m[0], 16)},${parseInt(m[1], 16)},${parseInt(m[2], 16)},${alpha})`;
+}
+
 const UserApp = () => {
   const [likedEvents, setLikedEvents] = useState<Set<string>>(new Set());
   const [participatingEvents, setParticipatingEvents] = useState<Set<string>>(new Set());
@@ -263,7 +269,13 @@ const UserApp = () => {
   return (
     <div
       className="bg-background overflow-hidden flex flex-col"
-      style={{ height: '100dvh' }}
+      style={{
+        height: '100dvh',
+        backgroundColor: currentEvent?.color_card
+          ? hexToRgba(currentEvent.color_card, 0.15)
+          : 'rgba(10,10,10,0.15)',
+        transition: 'background-color 0.8s ease',
+      }}
     >
       {/* Fixed header */}
       <header
