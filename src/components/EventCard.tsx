@@ -148,10 +148,12 @@ function getVenueName(event: UnifiedEvent): string {
   return 'Lyon';
 }
 
-// Only for the venue display line in the card — uses event.venue only (real establishment)
+// For the venue display line — event.venue (business) ou event.location (scraped/admin)
+// Jamais l'organizer qui peut être 'Utilisateur'
 function getDisplayVenue(event: UnifiedEvent): string | null {
-  const v = event.venue?.trim();
-  if (v && !SOURCE_NAMES.test(v)) return v;
+  for (const c of [event.venue, event.location]) {
+    if (c && c.trim() && !SOURCE_NAMES.test(c.trim())) return c.trim();
+  }
   return null;
 }
 
