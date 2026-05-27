@@ -61,12 +61,22 @@ function deriveEnergy(event: UnifiedEvent): Energy {
   return 'JOURNEE';
 }
 
+// Tags inserted by the scraper as metadata — not real subtitle content
+// Handles look like: lowercase, no spaces, dots/underscores only (e.g. "nh.club.lyon")
+function isMetadataTag(tag: string): boolean {
+  if (SOURCE_NAMES.test(tag.trim())) return true;
+  return /^[a-z0-9._]+$/.test(tag.trim());
+}
+
 function deriveSubtitle(event: UnifiedEvent): string | null {
   if (event.subtitle) return event.subtitle;
   if (event.music_style) return event.music_style;
   if (event.ambiance) return event.ambiance;
   if (event.activity_type) return event.activity_type;
-  if (event.tags && event.tags.length > 0) return event.tags[0];
+  if (event.tags && event.tags.length > 0) {
+    const realTag = event.tags.find(t => !isMetadataTag(t));
+    if (realTag) return realTag;
+  }
   return null;
 }
 
@@ -339,8 +349,8 @@ const EventCard: React.FC<EventCardProps> = ({
             {displayTitle}
           </h1>
 
-          {/* Nom du lieu — uniquement si un vrai nom d'établissement existe */}
-          {displayVenue && (
+          {/* Nom du lieu — caché si identique au titre (évite le doublon) */}
+          {displayVenue && displayVenue.toLowerCase() !== displayTitle.toLowerCase() && (
             <p
               className="leading-none uppercase truncate"
               style={{
