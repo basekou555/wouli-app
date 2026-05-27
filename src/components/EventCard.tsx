@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { UnifiedEvent } from '@/types/unified';
-import { X, Heart, Share2, Check, Undo2, MapPin, Calendar, Users, ChevronDown } from 'lucide-react';
+import { X, MapPin, Bookmark, ChevronDown } from 'lucide-react';
 import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
-import { getSocialProofText, getPriceInfo, formatEventDateTime } from '@/utils/eventCardHelpers';
+import { getPriceInfo, formatEventDateTime } from '@/utils/eventCardHelpers';
 import { getFocusClass } from '@/utils/imageHelpers';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { useIsPWA } from '@/hooks/useIsPWA';
 import { useSmartTracking } from '@/hooks/useSmartTracking';
 
 interface EventCardProps {
@@ -23,64 +22,128 @@ interface EventCardProps {
   canUndo?: boolean;
 }
 
+// --- Helpers ---
+
+type Energy = 'SCENE' | 'CLUB' | 'JOURNEE';
+
+const DJ_SIGNALS = ['dj', 'dj set', 'mix', 'b2b'];
+const SCENE_KEYWORDS = ['concert', 'live', 'spectacle', 'théâtre', 'theatre', 'show', 'tournée', 'tournee', 'récital', 'recital'];
+const SCENE_VENUE_KEYWORDS = ['salle', 'théâtre', 'theatre', 'concert', 'opéra', 'opera'];
+
+function deriveEnergy(event: UnifiedEvent): Energy {
+  if (event.energy) return event.energy;
+
+  const titleLow = (event.title || '').toLowerCase();
+  const musicLow = (event.music_style || '').toLowerCase();
+  const activityLow = (event.activity_type || '').toLowerCase();
+  const venueCatLow = (event.venue_category || '').toLowerCase();
+
+  // 1. DJ signal → CLUB sans exception
+  const hasDJ = DJ_SIGNALS.some(s =>
+    titleLow.includes(s) || musicLow.includes(s)
+  );
+  if (hasDJ) return 'CLUB';
+
+  // 2. SCENE : concert/spectacle sans signal DJ
+  const hasSceneSignal = SCENE_KEYWORDS.some(k =>
+    musicLow.includes(k) || activityLow.includes(k) || titleLow.includes(k)
+  );
+  const hasSceneVenue = SCENE_VENUE_KEYWORDS.some(k => venueCatLow.includes(k));
+  if (hasSceneSignal || hasSceneVenue) return 'SCENE';
+
+  // 3. CLUB : soirée tardive
+  const isSoiree = event.event_type === 'soirees' || event.category === 'soirees';
+  if (isSoiree) {
+    const hour = event.time ? parseInt(event.time.split(':')[0], 10) : -1;
+    if (hour === -1 || hour >= 22 || hour < 6) return 'CLUB';
+  }
+
+  return 'JOURNEE';
+}
+
+function deriveSubtitle(event: UnifiedEvent): string | null {
+  if (event.subtitle) return event.subtitle;
+  if (event.music_style) return event.music_style;
+  if (event.ambiance) return event.ambiance;
+  if (event.activity_type) return event.activity_type;
+  if (event.tags && event.tags.length > 0) return event.tags[0];
+  return null;
+}
+
+function hexToHsl(hex: string): [number, number, number] | null {
+  const m = hex.replace('#', '').match(/.{2}/g);
+  if (!m || m.length < 3) return null;
+  const r = parseInt(m[0], 16) / 255;
+  const g = parseInt(m[1], 16) / 255;
+  const b = parseInt(m[2], 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+  s /= 100; l /= 100;
+  const k = (n: number) => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  const toHex = (x: number) => Math.round(x * 255).toString(16).padStart(2, '0');
+  return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+}
+
+function adjustColor(hex: string, lightnessOffset: number): string {
+  const hsl = hexToHsl(hex);
+  if (!hsl) return hex;
+  const [h, s, l] = hsl;
+  return hslToHex(h, Math.max(0, Math.min(100, s)), Math.max(0, Math.min(100, l + lightnessOffset)));
+}
+
+function extractCardColor(imgEl: HTMLImageElement): string | null {
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 10;
+    canvas.height = 10;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.drawImage(imgEl, 0, 0, 10, 10);
+    const data = ctx.getImageData(0, 0, 10, 10).data;
+    let r = 0, g = 0, b = 0;
+    const count = data.length / 4;
+    for (let i = 0; i < data.length; i += 4) {
+      r += data[i]; g += data[i + 1]; b += data[i + 2];
+    }
+    const toHex = (v: number) => Math.round(v / count).toString(16).padStart(2, '0');
+    const rawHex = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    const hsl = hexToHsl(rawHex);
+    if (!hsl) return null;
+    const [h, s, l] = hsl;
+    return hslToHex(h, Math.max(0, s - 20), Math.max(0, l - 25));
+  } catch {
+    return null;
+  }
+}
+
+function getTitleFontSize(title: string, isRecurring: boolean, energy: Energy): string {
+  const base = title.length <= 10 ? 28 : title.length <= 16 ? 22 : 18;
+  const size = isRecurring ? (base === 28 ? 22 : base === 22 ? 18 : 14) : base;
+  return `${size}px`;
+}
+
 const getLyonCoordinates = () => ({ lat: 45.7640, lon: 4.8357 });
 
-const getStaticMapUrl = (lat: number, lon: number) => {
-  return `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lon}&zoom=15&size=600x300&markers=${lat},${lon},red-pushpin`;
-};
+const getMapUrl = (lat: number, lon: number) =>
+  `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lon}&zoom=15&size=600x300&markers=${lat},${lon},red-pushpin`;
 
-const ParticipateButton: React.FC<{ onClick: () => void }> = ({ onClick }) => {
-  const [isAnimating, setIsAnimating] = useState(false);
-
-  const handleClick = () => {
-    setIsAnimating(true);
-    onClick();
-    setTimeout(() => setIsAnimating(false), 1000);
-  };
-
-  return (
-    <motion.button
-      whileTap={{ scale: 0.93 }}
-      onClick={handleClick}
-      className="flex-[2] h-12 rounded-2xl bg-gradient-to-r from-primary to-accent text-white font-bold shadow-lg hover:shadow-xl hover:opacity-95 flex items-center justify-center gap-2 relative overflow-hidden"
-      aria-label="Participer"
-    >
-      {isAnimating && (
-        <>
-          <motion.div
-            initial={{ scale: 0, opacity: 1 }}
-            animate={{ scale: 3, opacity: 0 }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
-            className="absolute inset-0 bg-white rounded-2xl"
-          />
-          {[...Array(4)].map((_, i) => (
-            <motion.div
-              key={i}
-              initial={{ scale: 0, x: 0, y: 0, opacity: 1 }}
-              animate={{
-                scale: [0, 1, 0],
-                x: Math.cos(i * Math.PI / 2) * 40,
-                y: Math.sin(i * Math.PI / 2) * 40,
-                opacity: [1, 1, 0]
-              }}
-              transition={{ duration: 0.6, ease: 'easeOut' }}
-              className="absolute w-2 h-2 bg-yellow-400 rounded-full"
-              style={{ top: '50%', left: '50%' }}
-            />
-          ))}
-        </>
-      )}
-      <motion.div
-        animate={isAnimating ? { scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] } : {}}
-        transition={{ duration: 0.4 }}
-        className="flex items-center gap-2"
-      >
-        <Check className="w-5 h-5" />
-        <span>Participer</span>
-      </motion.div>
-    </motion.button>
-  );
-};
+// --- Component ---
 
 const EventCard: React.FC<EventCardProps> = ({
   event,
@@ -94,9 +157,10 @@ const EventCard: React.FC<EventCardProps> = ({
   canUndo,
 }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [colorCard, setColorCard] = useState<string | null>(event.color_card || null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
-  const isPWA = useIsPWA();
+  const imgRef = useRef<HTMLImageElement>(null);
 
   const { startViewTracking, stopViewTracking, trackInteraction } = useSmartTracking();
   const hasTrackedView = useRef(false);
@@ -110,6 +174,20 @@ const EventCard: React.FC<EventCardProps> = ({
       if (event?.id && hasTrackedView.current) stopViewTracking(event.id);
     };
   }, [event?.id, startViewTracking, stopViewTracking]);
+
+  // Sync server-provided color_card if event changes
+  useEffect(() => {
+    if (event.color_card) setColorCard(event.color_card);
+  }, [event.color_card]);
+
+  const handleImageLoad = useCallback(() => {
+    setImageLoaded(true);
+    // Server color takes priority; only attempt extraction if not provided
+    if (!event.color_card && imgRef.current) {
+      const extracted = extractCardColor(imgRef.current);
+      if (extracted) setColorCard(extracted);
+    }
+  }, [event.color_card]);
 
   const handleDislike = () => {
     if (event?.id) trackInteraction(event.id, 'dislike', event);
@@ -131,17 +209,36 @@ const EventCard: React.FC<EventCardProps> = ({
     onShare?.();
   };
 
+  const energy = deriveEnergy(event);
+  const subtitle = deriveSubtitle(event);
   const priceInfo = getPriceInfo(event.price_text);
+  const isRecurring = event.is_recurring === true;
+
+  const FALLBACK_COLOR = '#1C1A1A';
+  const baseColor = colorCard || FALLBACK_COLOR;
+  const adaptiveBg = energy === 'JOURNEE' ? adjustColor(baseColor, 8) : baseColor;
+  const freePriceColor = adjustColor(baseColor, 20);
+
+  const titleSize = getTitleFontSize(event.title || '', isRecurring, energy);
+  const titleClass = energy === 'JOURNEE'
+    ? 'font-semibold'
+    : 'font-extrabold uppercase';
+
+  const ctaLabel = priceInfo.isFree ? "C'est gratuit ce soir →" : "J'y vais →";
+
+  const friends = event.friendsParticipating || [];
+  const extraFriends = friends.length > 3 ? friends.length - 3 : 0;
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="w-full h-full flex flex-col font-['Poppins']">
 
-      {/* Image plein écran + overlay infos */}
+      {/* Zone Photo — 58% */}
       <div
-        className="relative flex-1 min-h-0 cursor-pointer overflow-hidden"
+        className="relative overflow-hidden flex-shrink-0 cursor-pointer"
+        style={{ height: '58%' }}
         onClick={() => setShowImageModal(true)}
       >
-        {/* Skeleton loading */}
+        {/* Skeleton */}
         {!imageLoaded && (
           <div className="absolute inset-0 bg-gradient-to-br from-neutral-800 to-neutral-900">
             <div className="absolute inset-0 animate-pulse bg-gradient-to-r from-transparent via-white/5 to-transparent" />
@@ -150,31 +247,83 @@ const EventCard: React.FC<EventCardProps> = ({
 
         {/* Photo */}
         <img
-          src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/400/600?random=event"}
+          ref={imgRef}
+          src={getProxiedImageUrl(event.image_url) || 'https://picsum.photos/400/600?random=event'}
           alt={event.title}
+          crossOrigin="anonymous"
           className={cn(
-            "w-full h-full object-cover transition-opacity duration-500",
+            'w-full h-full object-cover transition-opacity duration-500',
             getFocusClass(event.image_focus_position),
-            imageLoaded ? "opacity-100" : "opacity-0"
+            imageLoaded ? 'opacity-100' : 'opacity-0'
           )}
-          onLoad={() => setImageLoaded(true)}
+          onLoad={handleImageLoad}
           onError={handleImageError}
           loading="eager"
         />
 
-        {/* Gradient sombre en bas */}
-        <div className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-black/95 via-black/60 to-transparent pointer-events-none" />
+        {/* Badge UNIQUE */}
+        {event.is_unique && (
+          <span
+            className="absolute top-3 right-3 uppercase tracking-[0.08em]"
+            style={{
+              fontFamily: 'Poppins, sans-serif',
+              fontSize: '7px',
+              fontWeight: 500,
+              background: 'rgba(255,255,255,0.10)',
+              border: '0.5px solid rgba(255,255,255,0.18)',
+              borderRadius: '3px',
+              padding: '2px 6px',
+              color: '#FFFFFF',
+            }}
+          >
+            UNIQUE
+          </span>
+        )}
+      </div>
 
-        {/* Overlay infos */}
-        <div
-          className="absolute inset-x-0 bottom-0 p-4 pointer-events-none"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Social proof */}
-          {event.friendsParticipating && event.friendsParticipating.length > 0 && (
-            <div className="flex items-center gap-2 mb-2 pointer-events-auto">
+      {/* Zone Adaptative — 42% */}
+      <div
+        className="flex-1 flex flex-col font-['Poppins'] transition-colors duration-300"
+        style={{ background: adaptiveBg }}
+      >
+        {/* Contenu */}
+        <div className="flex-1 flex flex-col px-4 pt-3 pb-2 gap-1 min-h-0 overflow-hidden">
+
+          {/* Titre */}
+          <h1
+            className={cn('text-white leading-tight line-clamp-2', titleClass)}
+            style={{ fontSize: titleSize }}
+          >
+            {event.title}
+          </h1>
+
+          {/* Sous-titre */}
+          {subtitle && (
+            <p
+              className="uppercase leading-none"
+              style={{
+                fontSize: '11px',
+                fontWeight: energy === 'SCENE' ? 500 : 400,
+                color: energy === 'SCENE'
+                  ? 'rgba(255,255,255,0.6)'
+                  : 'rgba(255,255,255,0.55)',
+              }}
+            >
+              {subtitle}
+            </p>
+          )}
+
+          {/* Metadata */}
+          <p className="text-white/70 leading-none" style={{ fontSize: '10px', fontWeight: 400 }}>
+            {formatEventDateTime(event.date, event.time)}
+            {energy === 'JOURNEE' && event.end_date && ` – ${formatEventDateTime(event.end_date)}`}
+          </p>
+
+          {/* Couche sociale */}
+          {friends.length > 0 ? (
+            <div className="flex items-center gap-1.5 h-6 flex-shrink-0">
               <div className="flex -space-x-1.5">
-                {event.friendsParticipating.slice(0, 3).map((friend) => (
+                {friends.slice(0, 3).map((friend) =>
                   friend.avatar ? (
                     <img
                       key={friend.id}
@@ -185,118 +334,80 @@ const EventCard: React.FC<EventCardProps> = ({
                   ) : (
                     <div
                       key={friend.id}
-                      className="w-5 h-5 rounded-full border border-white/40 bg-primary/60 flex items-center justify-center text-[9px] font-bold text-white"
+                      className="w-5 h-5 rounded-full border border-white/40 bg-white/20 flex items-center justify-center text-[9px] font-bold text-white"
                     >
                       {friend.name.charAt(0).toUpperCase()}
                     </div>
                   )
-                ))}
+                )}
+                {extraFriends > 0 && (
+                  <div className="w-5 h-5 rounded-full border border-white/40 bg-white/20 flex items-center justify-center text-[8px] font-bold text-white">
+                    +{extraFriends}
+                  </div>
+                )}
               </div>
-              <span className="text-white/80 text-xs">
-                {getSocialProofText(event.friendsParticipating, event.totalParticipants || 0)}
+              <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', fontWeight: 400 }}>
+                {friends.length === 1 ? `${friends[0].name} y va` : `${friends.length} amis intéressés`}
               </span>
             </div>
+          ) : (
+            <div className="h-0" />
           )}
-
-          {/* Titre */}
-          <h1 className="text-white text-[1.35rem] font-black leading-tight line-clamp-2 mb-1.5 drop-shadow-lg">
-            {event.title}
-          </h1>
-
-          {/* Lieu */}
-          <div className="flex items-center gap-1 mb-3">
-            <MapPin className="w-3.5 h-3.5 text-white/70 flex-shrink-0" />
-            <span className="text-white/80 text-sm font-medium truncate">
-              {event.venue || event.location}
-            </span>
-          </div>
-
-          {/* Chips */}
-          <div className="flex items-center gap-2 flex-wrap mb-3 pointer-events-auto">
-            <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-white/15 backdrop-blur-sm text-white border border-white/20">
-              <Calendar className="w-3 h-3" />
-              {formatEventDateTime(event.date, event.time)}
-            </span>
-            <span className={cn(
-              "px-2.5 py-1 rounded-full text-xs font-semibold backdrop-blur-sm",
-              priceInfo.isFree
-                ? "bg-emerald-500/80 text-white"
-                : "bg-white/15 text-white border border-white/20"
-            )}>
-              {priceInfo.display}
-            </span>
-            {(event.totalParticipants || event.participants || 0) > 0 && (
-              <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-white/15 backdrop-blur-sm text-white border border-white/20">
-                <Users className="w-3 h-3" />
-                {event.totalParticipants || event.participants}
-              </span>
-            )}
-          </div>
-
-          {/* Voir les détails */}
-          <button
-            onClick={(e) => { e.stopPropagation(); setIsDetailsOpen(true); }}
-            className="flex items-center gap-1 text-white/60 text-xs font-medium hover:text-white/90 transition-colors pointer-events-auto"
-          >
-            Voir les détails
-            <ChevronDown className="w-3.5 h-3.5" />
-          </button>
         </div>
-      </div>
 
-      {/* Barre d'actions */}
-      <div
-        className="flex-shrink-0 px-4 pt-3 bg-card border-t border-border/50"
-        style={{
-          paddingBottom: isPWA
-            ? 'calc(0.75rem + env(safe-area-inset-bottom))'
-            : 'calc(1rem + env(safe-area-inset-bottom))'
-        }}
-      >
-        <div className="flex gap-2 max-w-md mx-auto">
-          {/* Retour */}
-          <motion.button
-            whileTap={{ scale: 0.88 }}
-            onClick={onUndo}
-            disabled={!canUndo}
-            className="flex-1 h-12 rounded-2xl bg-amber-50 hover:bg-amber-100 transition-colors flex items-center justify-center border border-amber-100 disabled:opacity-30 disabled:cursor-not-allowed"
-            aria-label="Retour"
+        {/* Barre d'action */}
+        <div
+          className="flex-shrink-0 flex items-center justify-between px-3.5"
+          style={{ height: '52px', background: 'rgba(0,0,0,0.20)' }}
+        >
+          {/* Prix */}
+          <span
+            style={{
+              fontFamily: 'Poppins, sans-serif',
+              fontSize: '15px',
+              fontWeight: 700,
+              color: priceInfo.isFree ? freePriceColor : '#FFFFFF',
+            }}
           >
-            <Undo2 className="w-4.5 h-4.5 text-amber-500" />
-          </motion.button>
+            {priceInfo.isFree ? 'Gratuit' : priceInfo.display}
+          </span>
 
-          {/* Dislike */}
-          <motion.button
-            whileTap={{ scale: 0.88 }}
-            onClick={handleDislike}
-            className="flex-1 h-12 rounded-2xl bg-red-50 hover:bg-red-100 transition-colors flex items-center justify-center border border-red-100"
-            aria-label="Passer"
-          >
-            <X className="w-5 h-5 text-red-400" />
-          </motion.button>
+          {/* Actions */}
+          <div className="flex items-center gap-2">
+            {/* Bookmark */}
+            <button
+              onClick={(e) => { e.stopPropagation(); }}
+              className="flex items-center justify-center rounded-full flex-shrink-0"
+              style={{
+                width: '30px',
+                height: '30px',
+                border: '0.5px solid rgba(255,255,255,0.18)',
+              }}
+              aria-label="Sauvegarder"
+            >
+              <Bookmark style={{ width: '13px', height: '13px', color: 'rgba(255,255,255,0.5)' }} />
+            </button>
 
-          {/* Participer */}
-          <ParticipateButton onClick={handleParticipate} />
-
-          {/* Like */}
-          <motion.button
-            whileTap={{ scale: 0.88 }}
-            onClick={handleLike}
-            className="flex-1 h-12 rounded-2xl bg-pink-50 hover:bg-pink-100 transition-colors flex items-center justify-center border border-pink-100"
-            aria-label="J'aime"
-          >
-            <Heart className="w-5 h-5 text-pink-500" />
-          </motion.button>
-
-          {/* Partager */}
-          <motion.button
-            whileTap={{ scale: 0.88 }}
-            onClick={handleShare}
-            className="flex-1 h-12 rounded-2xl bg-muted hover:bg-muted/70 transition-colors flex items-center justify-center border border-border"
-            aria-label="Partager"
-          >
-            <Share2 className="w-4 h-4 text-muted-foreground" />
-          </motion.button>
+            {/* CTA */}
+            <button
+              onClick={(e) => { e.stopPropagation(); handleParticipate(); }}
+              className="rounded flex-shrink-0"
+              style={{
+                background: '#FFFFFF',
+                color: '#0A0A0A',
+                fontFamily: 'Poppins, sans-serif',
+                fontSize: '9px',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+                padding: '7px 13px',
+                borderRadius: '4px',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {ctaLabel}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -329,24 +440,19 @@ const EventCard: React.FC<EventCardProps> = ({
               </div>
 
               <div className="p-4 space-y-5 pb-safe">
-                {/* Description */}
                 <div>
-                  <h3 className="text-sm font-semibold text-foreground mb-1.5 uppercase tracking-wider text-muted-foreground">Description</h3>
+                  <h3 className="text-sm font-semibold mb-1.5 uppercase tracking-wider text-muted-foreground">Description</h3>
                   <p className="text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed">
-                    {event.description || "Aucune description disponible"}
+                    {event.description || 'Aucune description disponible'}
                   </p>
                 </div>
 
-                {/* Tags */}
                 {event.tags && event.tags.length > 0 && (
                   <div>
                     <h3 className="text-sm font-semibold mb-2 uppercase tracking-wider text-muted-foreground">Tags</h3>
                     <div className="flex flex-wrap gap-2">
-                      {event.tags.map((tag, index) => (
-                        <span
-                          key={index}
-                          className="px-3 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full"
-                        >
+                      {event.tags.map((tag, i) => (
+                        <span key={i} className="px-3 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full">
                           {tag}
                         </span>
                       ))}
@@ -354,7 +460,6 @@ const EventCard: React.FC<EventCardProps> = ({
                   </div>
                 )}
 
-                {/* Établissement */}
                 <div>
                   <h3 className="text-sm font-semibold mb-2 uppercase tracking-wider text-muted-foreground">Organisateur</h3>
                   <button
@@ -375,7 +480,6 @@ const EventCard: React.FC<EventCardProps> = ({
                   </button>
                 </div>
 
-                {/* Map */}
                 <div>
                   <h3 className="text-sm font-semibold mb-2 uppercase tracking-wider text-muted-foreground">Localisation</h3>
                   <button
@@ -384,7 +488,7 @@ const EventCard: React.FC<EventCardProps> = ({
                   >
                     {event.address ? (
                       <img
-                        src={getStaticMapUrl(getLyonCoordinates().lat, getLyonCoordinates().lon)}
+                        src={getMapUrl(getLyonCoordinates().lat, getLyonCoordinates().lon)}
                         alt={`Carte de ${event.location}`}
                         className="w-full h-full object-cover"
                       />
@@ -421,7 +525,7 @@ const EventCard: React.FC<EventCardProps> = ({
             className="fixed inset-0 bg-black z-50 flex items-center justify-center"
           >
             <img
-              src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/400/600?random=event"}
+              src={getProxiedImageUrl(event.image_url) || 'https://picsum.photos/400/600?random=event'}
               alt={event.title}
               className="max-w-full max-h-full object-contain"
               onError={handleImageError}

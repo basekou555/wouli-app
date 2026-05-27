@@ -36,6 +36,19 @@ export interface UnifiedEvent extends BaseEvent {
   
   // Image focus position for cropping
   image_focus_position?: 'top' | 'center' | 'bottom';
+
+  // Card visual fields — populated by scraper, always undefined until migration
+  energy?: 'SCENE' | 'CLUB' | 'JOURNEE';
+  color_card?: string;
+  subtitle?: string;
+  is_unique?: boolean;
+  is_recurring?: boolean;
+
+  // BusinessEvent enrichment fields surfaced for card rendering
+  music_style?: string;
+  activity_type?: string;
+  ambiance?: string;
+  venue_category?: string;
 }
 
 export type EventSource = 'user' | 'business' | 'all';
