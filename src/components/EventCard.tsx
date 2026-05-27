@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { UnifiedEvent } from '@/types/unified';
-import { X, MapPin, Bookmark, ChevronDown } from 'lucide-react';
+import { X, MapPin, Bookmark } from 'lucide-react';
 import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
 import { getPriceInfo, formatEventDateTime } from '@/utils/eventCardHelpers';
 import { getFocusClass } from '@/utils/imageHelpers';
@@ -138,6 +138,32 @@ function getTitleFontSize(title: string, isRecurring: boolean, energy: Energy): 
   return `${size}px`;
 }
 
+// Source names that can leak into venue/location fields from the scraper
+const SOURCE_NAMES = /^(instagram|facebook|twitter|tiktok)$/i;
+
+function getVenueName(event: UnifiedEvent): string {
+  for (const c of [event.venue, event.organizer, event.location]) {
+    if (c && c.trim() && !SOURCE_NAMES.test(c.trim())) return c.trim();
+  }
+  return 'Lyon';
+}
+
+function isBadTitleStart(title: string): boolean {
+  const first = title.codePointAt(0) ?? 0;
+  if (first >= 0x1F000) return true;                    // emoji (most ranges)
+  if (first >= 0x2600 && first <= 0x27FF) return true;  // misc symbols & dingbats
+  if (first >= 0x2190 && first <= 0x21FF) return true;  // arrows
+  const ch = title[0];
+  return ch === '#' || (ch >= '0' && ch <= '9');
+}
+
+function cleanTitle(event: UnifiedEvent): string {
+  const raw = (event.title || '').trim();
+  const words = raw.split(/\s+/).filter(Boolean);
+  if (raw.length > 0 && words.length <= 5 && !isBadTitleStart(raw)) return raw;
+  return getVenueName(event);
+}
+
 const getLyonCoordinates = () => ({ lat: 45.7640, lon: 4.8357 });
 
 const getMapUrl = (lat: number, lon: number) =>
@@ -210,7 +236,14 @@ const EventCard: React.FC<EventCardProps> = ({
   };
 
   const energy = deriveEnergy(event);
-  const subtitle = deriveSubtitle(event);
+  const rawTitle = (event.title || '').trim();
+  const displayTitle = cleanTitle(event);
+  const titleWasCleaned = displayTitle !== rawTitle;
+  let subtitle = deriveSubtitle(event);
+  if (!subtitle && titleWasCleaned && rawTitle.length > 0) {
+    subtitle = rawTitle.length > 60 ? rawTitle.slice(0, 57) + '…' : rawTitle;
+  }
+  const venueName = getVenueName(event);
   const priceInfo = getPriceInfo(event.price_text);
   const isRecurring = event.is_recurring === true;
 
@@ -232,10 +265,10 @@ const EventCard: React.FC<EventCardProps> = ({
   return (
     <div className="w-full h-full flex flex-col font-['Poppins']">
 
-      {/* Zone Photo — 58% */}
+      {/* Zone Photo — prend l'espace restant, min 55% */}
       <div
-        className="relative overflow-hidden flex-shrink-0 cursor-pointer"
-        style={{ height: '58%' }}
+        className="relative overflow-hidden flex-1 min-h-0 cursor-pointer"
+        style={{ minHeight: '55%' }}
         onClick={() => setShowImageModal(true)}
       >
         {/* Skeleton */}
@@ -281,10 +314,10 @@ const EventCard: React.FC<EventCardProps> = ({
         )}
       </div>
 
-      {/* Zone Adaptative — 42% */}
+      {/* Zone Adaptative — min 38%, s'adapte au contenu */}
       <div
-        className="flex-1 flex flex-col font-['Poppins'] transition-colors duration-300"
-        style={{ background: adaptiveBg }}
+        className="flex-shrink-0 flex flex-col font-['Poppins'] transition-colors duration-300"
+        style={{ background: adaptiveBg, minHeight: '38%' }}
       >
         {/* Contenu */}
         <div className="flex-1 flex flex-col px-4 pt-3 pb-2 gap-1 min-h-0 overflow-hidden">
@@ -294,8 +327,23 @@ const EventCard: React.FC<EventCardProps> = ({
             className={cn('text-white leading-tight line-clamp-2', titleClass)}
             style={{ fontSize: titleSize }}
           >
-            {event.title}
+            {displayTitle}
           </h1>
+
+          {/* Nom du lieu */}
+          {venueName && (
+            <p
+              className="leading-none uppercase truncate"
+              style={{
+                fontSize: '10px',
+                fontWeight: 500,
+                color: 'rgba(255,255,255,0.45)',
+                letterSpacing: '0.1em',
+              }}
+            >
+              {venueName}
+            </p>
+          )}
 
           {/* Sous-titre */}
           {subtitle && (
@@ -468,13 +516,13 @@ const EventCard: React.FC<EventCardProps> = ({
                   >
                     <div className="w-12 h-12 rounded-xl overflow-hidden bg-muted flex-shrink-0">
                       {event.venue_logo ? (
-                        <img src={event.venue_logo} alt={event.venue || event.location} className="w-full h-full object-cover" />
+                        <img src={event.venue_logo} alt={getVenueName(event)} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-xl bg-primary/10">🏢</div>
                       )}
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="font-semibold text-sm">{event.venue || event.location}</p>
+                      <p className="font-semibold text-sm">{getVenueName(event)}</p>
                       <p className="text-xs text-muted-foreground">Voir l'établissement →</p>
                     </div>
                   </button>
