@@ -159,10 +159,19 @@ function getVenueName(event: UnifiedEvent): string {
 }
 
 // For the venue display line — event.venue (business) ou event.location (scraped/admin)
-// Jamais l'organizer qui peut être 'Utilisateur'
+// Filtre : source names, city+country pattern ("Lyon, France 🇫🇷"), flag emojis
+function isLocationNoise(value: string): boolean {
+  if (SOURCE_NAMES.test(value.trim())) return true;
+  // "City, Country" pattern — contient une virgule → probablement pas un lieu précis
+  if (value.includes(',')) return true;
+  // Flag emoji (regional indicator symbols U+1F1E0–U+1F1FF)
+  if (/\p{RI}/u.test(value)) return true;
+  return false;
+}
+
 function getDisplayVenue(event: UnifiedEvent): string | null {
   for (const c of [event.venue, event.location]) {
-    if (c && c.trim() && !SOURCE_NAMES.test(c.trim())) return c.trim();
+    if (c && c.trim() && !isLocationNoise(c.trim())) return c.trim();
   }
   return null;
 }
@@ -255,15 +264,16 @@ const EventCard: React.FC<EventCardProps> = ({
   };
 
   const energy = deriveEnergy(event);
-  const rawTitle = (event.title || '').trim();
   const displayTitle = cleanTitle(event);
-  const titleWasCleaned = displayTitle !== rawTitle;
-  let subtitle = deriveSubtitle(event);
-  if (!subtitle && titleWasCleaned && rawTitle.length > 0) {
-    subtitle = rawTitle.length > 60 ? rawTitle.slice(0, 57) + '…' : rawTitle;
-  }
+  const subtitle = deriveSubtitle(event);
   const displayVenue = getDisplayVenue(event);
-  const priceInfo = getPriceInfo(event.price_text);
+  const rawPrice = getPriceInfo(event.price_text);
+  // Ajouter "€" si le service a converti price (numeric) en string sans symbole
+  const priceDisplay = rawPrice.isFree ? 'Gratuit'
+    : /^\d+(\.\d+)?$/.test(rawPrice.display)
+      ? `${Math.round(parseFloat(rawPrice.display))}€`
+      : rawPrice.display;
+  const priceInfo = { ...rawPrice, display: priceDisplay };
   const isRecurring = event.is_recurring === true;
 
   const FALLBACK_COLOR = '#1C1A1A';
