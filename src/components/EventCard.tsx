@@ -21,6 +21,154 @@ interface EventCardProps {
   onMapClick?: () => void;
 }
 
+// ============================================================================
+// Helpers purs — Design système carte (Phase 1)
+// ============================================================================
+
+// Signaux textuels pour la détection d'énergie
+const DJ_SIGNALS = ['dj', 'mix', 'b2b'];
+const SCENE_SIGNALS = ['concert', 'live', 'spectacle', 'théâtre', 'theatre'];
+
+/**
+ * Détermine l'énergie visuelle d'un événement.
+ * Priorité : champ serveur > signal DJ > signal SCÈNE > soirée tardive > défaut JOURNEE.
+ */
+function deriveEnergy(event: UnifiedEvent): 'SCENE' | 'CLUB' | 'JOURNEE' {
+  if (event.energy) return event.energy;
+
+  const haystack = `${event.title || ''} ${event.music_style || ''}`.toLowerCase();
+
+  // RÈGLE DJ — priorité absolue
+  if (DJ_SIGNALS.some((s) => haystack.includes(s))) return 'CLUB';
+
+  // RÈGLE SCÈNE
+  if (SCENE_SIGNALS.some((s) => haystack.includes(s))) return 'SCENE';
+
+  // RÈGLE CLUB — soirée tardive
+  const hour = parseInt(event.time?.split(':')[0] ?? '', 10);
+  if (event.event_type === 'soirees' && !Number.isNaN(hour) && hour >= 22) return 'CLUB';
+
+  // Défaut sûr
+  return 'JOURNEE';
+}
+
+/**
+ * Ajuste luminosité ET saturation d'une couleur hex via conversion HSL.
+ * Les deux offsets (en points de %) s'appliquent ensemble sur un seul appel.
+ * Si la couleur est très sombre (L < 30), l'offset de luminosité est réduit de
+ * moitié pour éviter un fond quasi-noir sur les affiches sombres.
+ */
+function adjustColor(hex: string, lightnessOffset: number, saturationOffset: number): string {
+  const m = hex.replace('#', '');
+  if (m.length !== 6) return hex;
+
+  const r = parseInt(m.slice(0, 2), 16) / 255;
+  const g = parseInt(m.slice(2, 4), 16) / 255;
+  const b = parseInt(m.slice(4, 6), 16) / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const d = max - min;
+  const l = (max + min) / 2;
+
+  let h = 0;
+  let s = 0;
+  if (d !== 0) {
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0);
+        break;
+      case g:
+        h = (b - r) / d + 2;
+        break;
+      default:
+        h = (r - g) / d + 4;
+        break;
+    }
+    h /= 6;
+  }
+
+  // Application des offsets (luminosité réduite de moitié si couleur sombre)
+  let lPct = l * 100;
+  const lOff = lPct < 30 ? lightnessOffset / 2 : lightnessOffset;
+  lPct = Math.max(0, Math.min(100, lPct + lOff));
+  const l2 = lPct / 100;
+
+  // Saturation : offset en points de %, appliqué conjointement
+  let sPct = s * 100;
+  sPct = Math.max(0, Math.min(100, sPct + saturationOffset));
+  s = sPct / 100;
+
+  // HSL → RGB
+  const hue2rgb = (p: number, q: number, t: number) => {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  };
+
+  let r2: number;
+  let g2: number;
+  let b2: number;
+  if (s === 0) {
+    r2 = g2 = b2 = l2;
+  } else {
+    const q = l2 < 0.5 ? l2 * (1 + s) : l2 + s - l2 * s;
+    const p = 2 * l2 - q;
+    r2 = hue2rgb(p, q, h + 1 / 3);
+    g2 = hue2rgb(p, q, h);
+    b2 = hue2rgb(p, q, h - 1 / 3);
+  }
+
+  const toHex = (x: number) => Math.round(x * 255).toString(16).padStart(2, '0');
+  return `#${toHex(r2)}${toHex(g2)}${toHex(b2)}`;
+}
+
+/**
+ * Extrait une couleur dominante depuis une image via canvas 10x10 (moyenne des pixels),
+ * puis l'assombrit pour servir de fond de zone. Retourne null si CORS bloque getImageData.
+ */
+function extractCardColor(imgEl: HTMLImageElement): string | null {
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 10;
+    canvas.height = 10;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    ctx.drawImage(imgEl, 0, 0, 10, 10);
+    const { data } = ctx.getImageData(0, 0, 10, 10);
+
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    let count = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      r += data[i];
+      g += data[i + 1];
+      b += data[i + 2];
+      count++;
+    }
+    if (count === 0) return null;
+
+    r = Math.round(r / count);
+    g = Math.round(g / count);
+    b = Math.round(b / count);
+
+    const toHex = (x: number) => x.toString(16).padStart(2, '0');
+    const avgHex = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+
+    // Assombrissement + désaturation pour servir de fond de zone adaptative
+    return adjustColor(avgHex, -25, -20);
+  } catch {
+    // CORS (images Instagram) → canvas tainted → échec attendu
+    return null;
+  }
+}
+
 // Coordonnées Lyon par défaut
 const getLyonCoordinates = () => ({ lat: 45.7640, lon: 4.8357 });
 
@@ -102,6 +250,21 @@ const EventCard: React.FC<EventCardProps> = ({
   const [showImageModal, setShowImageModal] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const isPWA = useIsPWA();
+
+  // --- Design système carte (Phase 1) ---
+  const energy = deriveEnergy(event);
+  // Fond de la zone infos. Défaut #1C1A1A (CLUB/SCENE), crème pour JOURNEE.
+  const defaultBg = energy === 'JOURNEE' ? '#F4EDE0' : '#1C1A1A';
+  // Priorité absolue au champ serveur color_card s'il est fourni.
+  const [adaptiveBg, setAdaptiveBg] = useState<string>(event.color_card || defaultBg);
+
+  // Extraction couleur depuis l'image chargée (fallback gracieux si CORS bloque).
+  const handleImageLoaded = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    setImageLoaded(true);
+    if (event.color_card) return; // le serveur prime, pas d'extraction
+    const extracted = extractCardColor(e.currentTarget);
+    if (extracted) setAdaptiveBg(extracted);
+  };
   
   // Smart Tracking Integration
   const { startViewTracking, stopViewTracking, trackInteraction } = useSmartTracking();
@@ -153,34 +316,43 @@ const EventCard: React.FC<EventCardProps> = ({
   return (
     <div className="w-full h-full bg-background flex flex-col">
 
-      {/* Contenu sans scroll - flexbox */}
-      <div 
-        ref={containerRef}
-        className="flex-1 flex flex-col overflow-hidden min-h-0"
+      {/* ════════════ ZONE PHOTO ════════════ */}
+      {/* flex-1, min-height 55%, relative, overflow hidden — cliquable plein écran */}
+      <div
+        className="relative flex-1 overflow-hidden cursor-pointer"
+        style={{ minHeight: '55%' }}
+        onClick={() => setShowImageModal(true)}
       >
-        {/* Image - prend l'espace flexible restant - cliquable pour fullscreen */}
-        <div 
-          className="relative flex-1 min-h-0 cursor-pointer"
-          onClick={() => setShowImageModal(true)}
-        >
-          {!imageLoaded && (
-            <div className="absolute inset-0 bg-muted animate-pulse" />
+        {!imageLoaded && (
+          <div className="absolute inset-0 bg-muted animate-pulse" />
+        )}
+        <img
+          src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/400/600?random=event"}
+          alt={event.title}
+          crossOrigin="anonymous"
+          className={cn(
+            "w-full h-full object-cover transition-opacity duration-300",
+            getFocusClass(event.image_focus_position),
+            imageLoaded ? "opacity-100" : "opacity-0"
           )}
-          <img
-            src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/400/600?random=event"}
-            alt={event.title}
-            className={cn(
-              "w-full h-full object-cover transition-opacity duration-300",
-              getFocusClass(event.image_focus_position),
-              imageLoaded ? "opacity-100" : "opacity-0"
-            )}
-            onLoad={() => setImageLoaded(true)}
-            onError={handleImageError}
-            loading="eager"
-          />
-        </div>
+          onLoad={handleImageLoaded}
+          onError={handleImageError}
+          loading="eager"
+        />
+      </div>
 
-        {/* Section infos fusionnée - Design Premium */}
+      {/* ════════════ ZONE INFOS ════════════ */}
+      {/* flex-shrink-0, min-height 38%, fond adaptatif (#1C1A1A par défaut) */}
+      {/* Structure uniquement — design appliqué en phase ultérieure */}
+      <div
+        ref={containerRef}
+        className="flex-shrink-0 flex flex-col overflow-hidden"
+        style={{
+          minHeight: '38%',
+          background: adaptiveBg,
+        }}
+      >
+        {/* Section infos fusionnée */}
         <div className="flex-shrink-0 px-4 py-3 bg-card border-b border-border">
           {/* Titre sur 2 lignes */}
           <h1 className="text-xl font-bold text-foreground line-clamp-2 leading-tight mb-1">
@@ -243,49 +415,49 @@ const EventCard: React.FC<EventCardProps> = ({
             Voir plus de détails →
           </button>
         </div>
-      </div>
 
-      {/* Boutons d'action - Fixed bottom */}
-      <div 
-        className="flex-shrink-0 px-4 py-3 bg-card border-t border-border"
-        style={{ 
-          paddingBottom: isPWA 
-            ? 'calc(0.75rem + env(safe-area-inset-bottom))' 
-            : 'calc(1.5rem + env(safe-area-inset-bottom))'
-        }}
-      >
-        <div className="flex gap-2 max-w-md mx-auto">
-          {/* Dislike */}
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={handleDislike}
-            className="flex-1 h-11 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
-            aria-label="Passer"
-          >
-            <X className="w-5 h-5 text-muted-foreground" />
-          </motion.button>
+        {/* Boutons d'action */}
+        <div
+          className="flex-shrink-0 px-4 py-3 bg-card border-t border-border mt-auto"
+          style={{
+            paddingBottom: isPWA
+              ? 'calc(0.75rem + env(safe-area-inset-bottom))'
+              : 'calc(1.5rem + env(safe-area-inset-bottom))'
+          }}
+        >
+          <div className="flex gap-2 max-w-md mx-auto">
+            {/* Dislike */}
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={handleDislike}
+              className="flex-1 h-11 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
+              aria-label="Passer"
+            >
+              <X className="w-5 h-5 text-muted-foreground" />
+            </motion.button>
 
-          {/* Participer */}
-          <ParticipateButton onClick={handleParticipate} />
+            {/* Participer */}
+            <ParticipateButton onClick={handleParticipate} />
 
-          {/* Like */}
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={handleLike}
-            className="flex-1 h-11 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
-            aria-label="J'aime"
-          >
-            <Heart className="w-5 h-5 text-pink-500" />
-          </motion.button>
+            {/* Like */}
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={handleLike}
+              className="flex-1 h-11 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
+              aria-label="J'aime"
+            >
+              <Heart className="w-5 h-5 text-pink-500" />
+            </motion.button>
 
-          {/* Partager */}
-          <button
-            onClick={handleShare}
-            className="flex-1 h-11 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
-            aria-label="Partager"
-          >
-            <Share2 className="w-5 h-5 text-muted-foreground" />
-          </button>
+            {/* Partager */}
+            <button
+              onClick={handleShare}
+              className="flex-1 h-11 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
+              aria-label="Partager"
+            >
+              <Share2 className="w-5 h-5 text-muted-foreground" />
+            </button>
+          </div>
         </div>
       </div>
 
