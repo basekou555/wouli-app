@@ -251,6 +251,12 @@ function titleFontSize(
   return size;
 }
 
+// Numéro d'édition pour un événement récurrent (null sinon)
+function getEditionNumber(event: UnifiedEvent): number | null {
+  if (!event.is_recurring) return null;
+  return event.edition_number ?? null;
+}
+
 // Coordonnées Lyon par défaut
 const getLyonCoordinates = () => ({ lat: 45.7640, lon: 4.8357 });
 
@@ -360,6 +366,10 @@ const EventCard: React.FC<EventCardProps> = ({
   const titleSize = titleFontSize(energy, title, recurring);
   const ambiance = event.music_style || event.tags?.[0] || categoryLabel(event);
 
+  // États superposables
+  const isUnique = !!event.is_unique;
+  const editionNumber = getEditionNumber(event);
+
   // Couleurs dérivées de la couleur adaptative
   const accentFull = adjustColor(adaptiveBg, 45, 10); // pleine luminosité (néon, bordure)
   const accentBright = adjustColor(adaptiveBg, 30, 0); // +30% lum (texte de tag)
@@ -375,20 +385,42 @@ const EventCard: React.FC<EventCardProps> = ({
   const ink = isJournee ? '#1A1208' : '#FFFFFF';
   const inkMuted = isJournee ? 'rgba(26,18,8,0.45)' : 'rgba(255,255,255,0.45)';
 
+  // Néon renforcé pour l'état UNIQUE (CLUB/SCENE)
+  const neonTop = isUnique ? adjustColor(accentFull, 20, 0) : accentFull;
+  const neonShadow = isUnique
+    ? `0 -3px 28px ${hexToRgba(accentFull, 0.75)}, 0 0 0 1px ${hexToRgba(accentFull, 0.2)}`
+    : `0 -2px 20px ${hexToRgba(accentFull, 0.6)}, inset 0 -1px 8px ${hexToRgba(accentFull, 0.3)}`;
+
   // Style de la zone infos selon énergie
   const zoneStyle: React.CSSProperties =
     energy === 'CLUB'
       ? {
           background: `linear-gradient(160deg, ${hexToRgba(adaptiveBg, 0.6)} 0%, rgba(8,8,8,0.98) 92%)`,
-          borderTop: `2px solid ${accentFull}`,
-          boxShadow: `0 -2px 20px ${hexToRgba(accentFull, 0.6)}, inset 0 -1px 8px ${hexToRgba(accentFull, 0.3)}`,
+          borderTop: `2px solid ${neonTop}`,
+          boxShadow: neonShadow,
         }
       : energy === 'SCENE'
-      ? { background: adaptiveBg }
+      ? {
+          background: adaptiveBg,
+          ...(isUnique ? { borderTop: `2px solid ${neonTop}`, boxShadow: neonShadow } : {}),
+        }
       : {
           background: journeeBg,
-          borderLeft: `3px solid ${adjustColor(adaptiveBg, 0, 25)}`,
+          // JOURNEE unique : trait gauche plus épais + glow
+          borderLeft: `${isUnique ? 4 : 3}px solid ${adjustColor(adaptiveBg, 0, 25)}`,
+          ...(isUnique ? { boxShadow: `-2px 0 12px ${hexToRgba(adjustColor(adaptiveBg, 0, 25), 0.35)}` } : {}),
         };
+
+  // Bordure de carte pour JOURNEE unique (sur le wrapper)
+  const wrapperStyle: React.CSSProperties =
+    isUnique && isJournee
+      ? { boxShadow: `0 0 0 1.5px ${hexToRgba(adjustColor(adaptiveBg, 0, 25), 0.45)}` }
+      : {};
+
+  // Style du badge UNIQUE selon énergie
+  const uniqueBadgeStyle: React.CSSProperties = isJournee
+    ? { color: '#1A1208', background: 'rgba(26,18,8,0.08)', border: '0.5px solid rgba(26,18,8,0.3)' }
+    : { color: accentBright, background: hexToRgba(accentFull, 0.15), border: `1px solid ${hexToRgba(accentFull, 0.6)}` };
 
   // Barre d'action : fond + libellé CTA selon énergie/prix
   const actionBarBg = isJournee ? 'rgba(26,18,8,0.06)' : 'rgba(0,0,0,0.20)';
@@ -447,7 +479,7 @@ const EventCard: React.FC<EventCardProps> = ({
   };
 
   return (
-    <div className="w-full h-full bg-background flex flex-col">
+    <div className="w-full h-full bg-background flex flex-col" style={wrapperStyle}>
 
       {/* ════════════ ZONE PHOTO ════════════ */}
       {/* flex-1 : reprend tout l'espace restant (proportions d'origine) */}
@@ -483,17 +515,26 @@ const EventCard: React.FC<EventCardProps> = ({
           />
         )}
 
-        {/* Détails (haut gauche) */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsDetailsOpen(true);
-          }}
-          className="absolute top-3 left-3 z-10 w-8 h-8 rounded-full bg-black/35 backdrop-blur flex items-center justify-center"
-          aria-label="Voir les détails"
-        >
-          <Info className="w-4 h-4 text-white" />
-        </button>
+        {/* Détails + badge UNIQUE (haut gauche) */}
+        <div className="absolute top-3 left-3 z-10 flex items-center gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsDetailsOpen(true);
+            }}
+            className="w-8 h-8 rounded-full bg-black/35 backdrop-blur flex items-center justify-center"
+            aria-label="Voir les détails"
+          >
+            <Info className="w-4 h-4 text-white" />
+          </button>
+          {isUnique && (
+            <span
+              style={{ fontSize: '6px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', borderRadius: '3px', padding: '3px 6px', fontFamily: POPPINS, ...uniqueBadgeStyle }}
+            >
+              Unique
+            </span>
+          )}
+        </div>
 
         {/* Partager + Passer (haut droite) */}
         <div className="absolute top-3 right-3 z-10 flex gap-2">
@@ -518,6 +559,33 @@ const EventCard: React.FC<EventCardProps> = ({
             <X className="w-4 h-4 text-white" />
           </button>
         </div>
+
+        {/* État RÉCURRENT : badge numéro d'édition (bas gauche) */}
+        {editionNumber !== null && (
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '8px',
+              left: '8px',
+              zIndex: 5,
+              background: 'rgba(0,0,0,0.40)',
+              backdropFilter: 'blur(4px)',
+              borderRadius: '2px',
+              padding: '3px 7px',
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: '2px',
+              fontFamily: POPPINS,
+            }}
+          >
+            <span style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255,255,255,0.65)', lineHeight: 1 }}>
+              #{editionNumber}
+            </span>
+            <span style={{ fontSize: '6px', fontWeight: 500, color: 'rgba(255,255,255,0.30)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+              Éd.
+            </span>
+          </div>
+        )}
       </div>
 
       {/* ════════════ ZONE INFOS — 3 énergies ════════════ */}

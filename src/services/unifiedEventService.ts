@@ -73,14 +73,22 @@ const mapEventToUnified = (event: any, configMap: Map<string, string>): UnifiedE
     'Utilisateur',
   organizer_type: event.created_by_type as 'user' | 'business',
   venue: undefined,
-  time: undefined,
+  // Heure extraite du timestamp si présente (ex. "2026-06-02T22:00:00" → "22:00")
+  time: (typeof event.date === 'string' && event.date.includes('T'))
+    ? event.date.split('T')[1]?.slice(0, 5)
+    : undefined,
   event_type: event.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
   price_text: event.price ? event.price.toString() : undefined,
   end_date: event.end_date,
   max_participants: event.max_participants,
   address: event.address,
   tags: event.tags,
-  external_url: event.external_url
+  external_url: event.external_url,
+  // Champs design système carte
+  music_style: event.music_style ?? undefined,
+  is_recurring: event.is_recurring ?? undefined,
+  edition_number: event.total_editions ?? undefined,
+  is_unique: event.is_unique ?? undefined,
 } as UnifiedEvent);
 
 export const fetchAllEventsPaginated = async (
