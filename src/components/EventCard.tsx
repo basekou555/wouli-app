@@ -450,10 +450,9 @@ const EventCard: React.FC<EventCardProps> = ({
     <div className="w-full h-full bg-background flex flex-col">
 
       {/* ════════════ ZONE PHOTO ════════════ */}
-      {/* flex-1, min-height 55%, relative, overflow hidden — cliquable plein écran */}
+      {/* flex-1 : reprend tout l'espace restant (proportions d'origine) */}
       <div
-        className="relative flex-1 overflow-hidden cursor-pointer"
-        style={{ minHeight: '55%' }}
+        className="relative flex-1 min-h-0 overflow-hidden cursor-pointer"
         onClick={() => setShowImageModal(true)}
       >
         {!imageLoaded && (
@@ -522,10 +521,11 @@ const EventCard: React.FC<EventCardProps> = ({
       </div>
 
       {/* ════════════ ZONE INFOS — 3 énergies ════════════ */}
+      {/* flex-shrink-0 à hauteur de contenu (proportions d'origine), design adaptatif conservé */}
       <div
         ref={containerRef}
         className="flex-shrink-0 flex flex-col overflow-hidden"
-        style={{ minHeight: '38%', fontFamily: POPPINS, ...zoneStyle }}
+        style={{ fontFamily: POPPINS, ...zoneStyle }}
       >
         {/* ---------- CLUB : deux colonnes ---------- */}
         {energy === 'CLUB' && (
