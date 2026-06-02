@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { UnifiedEvent } from '@/types/unified';
-import { X, Heart, Share2, Check } from 'lucide-react';
+import { X, Share2, Check, Bookmark, Info } from 'lucide-react';
 import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
-import { getSocialProofText, getPriceInfo, formatEventDateTime } from '@/utils/eventCardHelpers';
+import { getSocialProofText, getPriceInfo } from '@/utils/eventCardHelpers';
 import { getFocusClass } from '@/utils/imageHelpers';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -169,6 +169,88 @@ function extractCardColor(imgEl: HTMLImageElement): string | null {
   }
 }
 
+// Conversion hex → rgba(...)
+function hexToRgba(hex: string, alpha: number): string {
+  const m = hex.replace('#', '');
+  if (m.length !== 6) return hex;
+  const r = parseInt(m.slice(0, 2), 16);
+  const g = parseInt(m.slice(2, 4), 16);
+  const b = parseInt(m.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+// Luminosité 0-100 d'une couleur hex (composante L de HSL)
+function colorLuminance(hex: string): number {
+  const m = hex.replace('#', '');
+  if (m.length !== 6) return 50;
+  const r = parseInt(m.slice(0, 2), 16) / 255;
+  const g = parseInt(m.slice(2, 4), 16) / 255;
+  const b = parseInt(m.slice(4, 6), 16) / 255;
+  return ((Math.max(r, g, b) + Math.min(r, g, b)) / 2) * 100;
+}
+
+// Titre nettoyé (espaces normalisés)
+function cleanTitle(event: UnifiedEvent): string {
+  return (event.title || '').replace(/\s+/g, ' ').trim();
+}
+
+// Libellé d'activité FR depuis la catégorie
+function categoryLabel(event: UnifiedEvent): string {
+  const c = event.event_type || event.category;
+  switch (c) {
+    case 'a-boire':
+      return 'À BOIRE';
+    case 'a-manger':
+      return 'À MANGER';
+    case 'soirees':
+      return 'SOIRÉE';
+    case 'activites':
+      return 'ACTIVITÉ';
+    default:
+      return 'ÉVÉNEMENT';
+  }
+}
+
+// Heure "22h00" / "22h"
+function formatHeure(time?: string): string {
+  if (!time) return '';
+  const [h, m] = time.split(':');
+  const hh = parseInt(h, 10);
+  if (Number.isNaN(hh)) return time;
+  return m && m !== '00' ? `${hh}h${m}` : `${hh}h`;
+}
+
+// Date courte "sam 17"
+function formatDateShort(date: string): string {
+  const dt = new Date(date);
+  if (Number.isNaN(dt.getTime())) return '';
+  return dt
+    .toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' })
+    .replace(/\./g, '');
+}
+
+// Taille de titre (px) selon énergie, longueur, et récurrence (une taille en dessous)
+function titleFontSize(
+  energy: 'SCENE' | 'CLUB' | 'JOURNEE',
+  title: string,
+  recurring: boolean,
+): number {
+  const n = title.length;
+  let size: number;
+  if (energy === 'JOURNEE') {
+    size = n <= 16 ? 15 : 13;
+    if (recurring) size = size === 15 ? 13 : 11;
+  } else if (energy === 'SCENE') {
+    size = n <= 10 ? 22 : n <= 16 ? 19 : 17;
+    if (recurring) size = size === 22 ? 19 : size === 19 ? 17 : 14;
+  } else {
+    // CLUB
+    size = n <= 10 ? 20 : n <= 16 ? 17 : 14;
+    if (recurring) size = size === 20 ? 17 : size === 17 ? 14 : 12;
+  }
+  return size;
+}
+
 // Coordonnées Lyon par défaut
 const getLyonCoordinates = () => ({ lat: 45.7640, lon: 4.8357 });
 
@@ -265,6 +347,57 @@ const EventCard: React.FC<EventCardProps> = ({
     const extracted = extractCardColor(e.currentTarget);
     if (extracted) setAdaptiveBg(extracted);
   };
+
+  // --- Design système carte (Phase 2 : 3 énergies) ---
+  const POPPINS = "'Poppins', sans-serif";
+  const isJournee = energy === 'JOURNEE';
+  const title = cleanTitle(event);
+  const venue = event.venue || event.location || '';
+  const recurring = !!event.is_recurring;
+  const price = getPriceInfo(event.price_text);
+  const heure = formatHeure(event.time);
+  const dateShort = formatDateShort(event.date);
+  const titleSize = titleFontSize(energy, title, recurring);
+  const ambiance = event.music_style || event.tags?.[0] || categoryLabel(event);
+
+  // Couleurs dérivées de la couleur adaptative
+  const accentFull = adjustColor(adaptiveBg, 45, 10); // pleine luminosité (néon, bordure)
+  const accentBright = adjustColor(adaptiveBg, 30, 0); // +30% lum (texte de tag)
+  const journeeBg = (() => {
+    const L = colorLuminance(adaptiveBg);
+    if (L > 50) return '#FAF7F0';
+    if (L >= 35) return '#F4EDE0';
+    if (L >= 20) return '#EFD99A';
+    return '#E5C878';
+  })();
+
+  // Encre selon énergie : blanc sur CLUB/SCENE, encre sombre sur JOURNEE
+  const ink = isJournee ? '#1A1208' : '#FFFFFF';
+  const inkMuted = isJournee ? 'rgba(26,18,8,0.45)' : 'rgba(255,255,255,0.45)';
+
+  // Style de la zone infos selon énergie
+  const zoneStyle: React.CSSProperties =
+    energy === 'CLUB'
+      ? {
+          background: `linear-gradient(160deg, ${hexToRgba(adaptiveBg, 0.6)} 0%, rgba(8,8,8,0.98) 92%)`,
+          borderTop: `2px solid ${accentFull}`,
+          boxShadow: `0 -2px 20px ${hexToRgba(accentFull, 0.6)}, inset 0 -1px 8px ${hexToRgba(accentFull, 0.3)}`,
+        }
+      : energy === 'SCENE'
+      ? { background: adaptiveBg }
+      : {
+          background: journeeBg,
+          borderLeft: `3px solid ${adjustColor(adaptiveBg, 0, 25)}`,
+        };
+
+  // Barre d'action : fond + libellé CTA selon énergie/prix
+  const actionBarBg = isJournee ? 'rgba(26,18,8,0.06)' : 'rgba(0,0,0,0.20)';
+  const priceColor = price.isFree
+    ? isJournee
+      ? adjustColor(adaptiveBg, -10, 0)
+      : adjustColor(adaptiveBg, 20, 0)
+    : ink;
+  const ctaLabel = price.isFree ? "C'est gratuit ce soir →" : "J'y vais →";
   
   // Smart Tracking Integration
   const { startViewTracking, stopViewTracking, trackInteraction } = useSmartTracking();
@@ -339,124 +472,224 @@ const EventCard: React.FC<EventCardProps> = ({
           onError={handleImageError}
           loading="eager"
         />
+
+        {/* SCENE : fondu du bas de la photo vers la couleur extraite */}
+        {energy === 'SCENE' && (
+          <div
+            className="absolute bottom-0 left-0 right-0 pointer-events-none"
+            style={{
+              height: '60px',
+              background: `linear-gradient(to bottom, transparent, ${adaptiveBg})`,
+            }}
+          />
+        )}
+
+        {/* Détails (haut gauche) */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsDetailsOpen(true);
+          }}
+          className="absolute top-3 left-3 z-10 w-8 h-8 rounded-full bg-black/35 backdrop-blur flex items-center justify-center"
+          aria-label="Voir les détails"
+        >
+          <Info className="w-4 h-4 text-white" />
+        </button>
+
+        {/* Partager + Passer (haut droite) */}
+        <div className="absolute top-3 right-3 z-10 flex gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleShare();
+            }}
+            className="w-8 h-8 rounded-full bg-black/35 backdrop-blur flex items-center justify-center"
+            aria-label="Partager"
+          >
+            <Share2 className="w-4 h-4 text-white" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDislike();
+            }}
+            className="w-8 h-8 rounded-full bg-black/35 backdrop-blur flex items-center justify-center"
+            aria-label="Passer"
+          >
+            <X className="w-4 h-4 text-white" />
+          </button>
+        </div>
       </div>
 
-      {/* ════════════ ZONE INFOS ════════════ */}
-      {/* flex-shrink-0, min-height 38%, fond adaptatif (#1C1A1A par défaut) */}
-      {/* Structure uniquement — design appliqué en phase ultérieure */}
+      {/* ════════════ ZONE INFOS — 3 énergies ════════════ */}
       <div
         ref={containerRef}
         className="flex-shrink-0 flex flex-col overflow-hidden"
-        style={{
-          minHeight: '38%',
-          background: adaptiveBg,
-        }}
+        style={{ minHeight: '38%', fontFamily: POPPINS, ...zoneStyle }}
       >
-        {/* Section infos fusionnée */}
-        <div className="flex-shrink-0 px-4 py-3 bg-card border-b border-border">
-          {/* Titre sur 2 lignes */}
-          <h1 className="text-xl font-bold text-foreground line-clamp-2 leading-tight mb-1">
-            {event.title}
-          </h1>
-          {/* Lieu */}
-          <p className="text-sm text-muted-foreground mb-3">
-            📍 {event.venue || event.location}
-          </p>
-          {/* Chips colorés premium */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-3 py-1.5 bg-primary/10 text-primary text-xs font-semibold rounded-full">
-              📅 {formatEventDateTime(event.date, event.time)}
-            </span>
-            <span className="px-3 py-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold rounded-full">
-              {getPriceInfo(event.price_text).display}
-            </span>
-            <span className="px-3 py-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-semibold rounded-full">
-              👥 {event.totalParticipants || event.participants || 0}
-            </span>
-          </div>
-        </div>
-
-        {/* Social Proof - compact */}
-        {(event.friendsParticipating && event.friendsParticipating.length > 0) && (
-          <div className="flex-shrink-0 px-4 py-2 bg-card border-b border-border">
-            <div className="flex items-center gap-2">
-              <div className="flex -space-x-2">
-                {event.friendsParticipating.slice(0, 3).map((friend) => (
-                  friend.avatar ? (
-                    <img
-                      key={friend.id}
-                      src={friend.avatar}
-                      alt={friend.name}
-                      className="w-6 h-6 rounded-full border-2 border-card object-cover"
-                    />
-                  ) : (
-                    <div
-                      key={friend.id}
-                      className="w-6 h-6 rounded-full border-2 border-card bg-primary/20 flex items-center justify-center text-xs font-medium text-primary"
-                    >
-                      {friend.name.charAt(0).toUpperCase()}
-                    </div>
-                  )
-                ))}
-              </div>
-              <span className="text-xs text-muted-foreground">
-                {getSocialProofText(event.friendsParticipating, event.totalParticipants || 0)}
+        {/* ---------- CLUB : deux colonnes ---------- */}
+        {energy === 'CLUB' && (
+          <div className="flex-1 flex gap-3 px-4 pt-3 pb-2 min-h-0">
+            <div className="flex-1 min-w-0 flex flex-col justify-center">
+              <span
+                style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: inkMuted }}
+                className="truncate"
+              >
+                {venue}
+              </span>
+              <h1
+                className="line-clamp-2"
+                style={{ fontSize: `${titleSize}px`, fontWeight: 900, textTransform: 'uppercase', color: ink, lineHeight: 1.05, margin: '4px 0' }}
+              >
+                {title}
+              </h1>
+              {heure && (
+                <span style={{ fontSize: '11px', fontWeight: 600, color: inkMuted }}>{heure}</span>
+              )}
+            </div>
+            <div style={{ width: '0.5px', background: 'rgba(255,255,255,0.08)' }} />
+            <div className="flex flex-col items-end justify-center" style={{ minWidth: '32%' }}>
+              <span
+                style={{ fontSize: '6px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', border: `0.5px solid ${hexToRgba(accentFull, 0.45)}`, color: accentBright, borderRadius: '2px', padding: '2px 5px' }}
+                className="truncate max-w-full"
+              >
+                {ambiance}
               </span>
             </div>
           </div>
         )}
 
-        {/* Bouton voir plus - compact */}
-        <div className="flex-shrink-0 px-4 py-2 bg-card border-b border-border">
-          <button
-            onClick={() => setIsDetailsOpen(true)}
-            className="w-full py-2 bg-accent hover:bg-accent/80 rounded-lg text-sm font-medium transition-colors"
-          >
-            Voir plus de détails →
-          </button>
-        </div>
+        {/* ---------- SCENE : style ticket ---------- */}
+        {energy === 'SCENE' && (
+          <div className="flex-1 flex flex-col justify-center px-4 pt-3 pb-2 min-h-0">
+            <div className="flex items-stretch gap-2 mb-2">
+              {[
+                { label: 'Date', value: dateShort },
+                { label: 'Lieu', value: venue },
+                { label: 'Heure', value: heure },
+              ].map((cell, i) => (
+                <React.Fragment key={cell.label}>
+                  {i > 0 && <div style={{ width: '0.5px', background: 'rgba(255,255,255,0.12)', alignSelf: 'stretch' }} />}
+                  <div className="min-w-0">
+                    <div style={{ fontSize: '5px', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'rgba(255,255,255,0.28)' }}>
+                      {cell.label}
+                    </div>
+                    <div className="truncate" style={{ fontSize: '6px', fontWeight: 600, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase' }}>
+                      {cell.value}
+                    </div>
+                  </div>
+                </React.Fragment>
+              ))}
+            </div>
+            <h1
+              className="line-clamp-2"
+              style={{ fontSize: `${titleSize}px`, fontWeight: 900, textTransform: 'uppercase', color: ink, lineHeight: 1.05 }}
+            >
+              {title}
+            </h1>
+          </div>
+        )}
 
-        {/* Boutons d'action */}
+        {/* ---------- JOURNEE : deux colonnes papier ---------- */}
+        {energy === 'JOURNEE' && (
+          <div className="flex-1 flex gap-3 px-4 pt-3 pb-2 min-h-0">
+            <div className="flex-1 min-w-0 flex flex-col justify-center">
+              <span
+                style={{ alignSelf: 'flex-start', fontSize: '6px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', border: `0.5px solid ${hexToRgba(adjustColor(adaptiveBg, 0, 25), 0.4)}`, color: adjustColor(adaptiveBg, -10, 0), borderRadius: '2px', padding: '2px 5px' }}
+              >
+                {categoryLabel(event)}
+              </span>
+              <h1
+                className="line-clamp-2"
+                style={{ fontSize: `${titleSize}px`, fontWeight: 700, color: ink, lineHeight: 1.1, marginTop: '6px' }}
+              >
+                {title}
+              </h1>
+            </div>
+            <div style={{ width: '0.5px', background: 'rgba(26,18,8,0.12)' }} />
+            <div className="flex flex-col justify-center gap-1.5" style={{ minWidth: '36%' }}>
+              {[
+                { label: 'Jour', value: dateShort },
+                { label: 'Heure', value: heure },
+                { label: 'Lieu', value: venue },
+              ].map((meta) => (
+                <div key={meta.label} className="min-w-0">
+                  <div style={{ fontSize: '5px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(26,18,8,0.28)' }}>
+                    {meta.label}
+                  </div>
+                  <div className="truncate" style={{ fontSize: '7px', fontWeight: 600, color: 'rgba(26,18,8,0.7)', textTransform: 'uppercase' }}>
+                    {meta.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ---------- Couche sociale ---------- */}
+        {(event.friendsParticipating && event.friendsParticipating.length > 0) && (
+          <div className="flex items-center gap-2 px-4" style={{ height: '20px', flexShrink: 0 }}>
+            <div className="flex -space-x-1">
+              {event.friendsParticipating.slice(0, 3).map((friend) => (
+                friend.avatar ? (
+                  <img
+                    key={friend.id}
+                    src={friend.avatar}
+                    alt={friend.name}
+                    className="w-4 h-4 rounded-full object-cover"
+                    style={{ border: `1px solid ${isJournee ? journeeBg : adaptiveBg}` }}
+                  />
+                ) : (
+                  <div
+                    key={friend.id}
+                    className="w-4 h-4 rounded-full flex items-center justify-center"
+                    style={{ fontSize: '7px', fontWeight: 600, color: ink, background: hexToRgba(isJournee ? '#1A1208' : '#FFFFFF', 0.18), border: `1px solid ${isJournee ? journeeBg : adaptiveBg}` }}
+                  >
+                    {friend.name.charAt(0).toUpperCase()}
+                  </div>
+                )
+              ))}
+            </div>
+            <span style={{ fontSize: '9px', color: inkMuted }} className="truncate">
+              {getSocialProofText(event.friendsParticipating, event.totalParticipants || 0)}
+            </span>
+          </div>
+        )}
+
+        {/* ---------- Barre d'action : Prix | Bookmark + CTA ---------- */}
         <div
-          className="flex-shrink-0 px-4 py-3 bg-card border-t border-border mt-auto"
+          className="flex items-center justify-between mt-auto"
           style={{
-            paddingBottom: isPWA
-              ? 'calc(0.75rem + env(safe-area-inset-bottom))'
-              : 'calc(1.5rem + env(safe-area-inset-bottom))'
+            height: '52px',
+            flexShrink: 0,
+            background: actionBarBg,
+            padding: '0 14px',
+            paddingBottom: isPWA ? 'env(safe-area-inset-bottom)' : undefined,
           }}
         >
-          <div className="flex gap-2 max-w-md mx-auto">
-            {/* Dislike */}
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={handleDislike}
-              className="flex-1 h-11 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
-              aria-label="Passer"
-            >
-              <X className="w-5 h-5 text-muted-foreground" />
-            </motion.button>
-
-            {/* Participer */}
-            <ParticipateButton onClick={handleParticipate} />
-
-            {/* Like */}
+          <span style={{ fontSize: '13px', fontWeight: 700, color: priceColor }}>
+            {price.display}
+          </span>
+          <div className="flex items-center gap-2">
+            {/* Bookmark = like / enregistrer */}
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={handleLike}
-              className="flex-1 h-11 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
-              aria-label="J'aime"
+              className="flex items-center justify-center rounded-full"
+              style={{ width: '30px', height: '30px', border: isJournee ? '0.5px solid rgba(26,18,8,0.2)' : '0.5px solid rgba(255,255,255,0.18)' }}
+              aria-label="Enregistrer"
             >
-              <Heart className="w-5 h-5 text-pink-500" />
+              <Bookmark style={{ width: '13px', height: '13px', color: ink }} />
             </motion.button>
-
-            {/* Partager */}
-            <button
-              onClick={handleShare}
-              className="flex-1 h-11 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
-              aria-label="Partager"
+            {/* CTA = participer */}
+            <motion.button
+              whileTap={{ scale: 0.96 }}
+              onClick={handleParticipate}
+              style={{ background: isJournee ? '#1A1208' : '#FFFFFF', color: isJournee ? '#F5F0E8' : '#0A0A0A', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', borderRadius: '4px', padding: '7px 13px' }}
+              aria-label="Participer"
             >
-              <Share2 className="w-5 h-5 text-muted-foreground" />
-            </button>
+              {ctaLabel}
+            </motion.button>
           </div>
         </div>
       </div>
