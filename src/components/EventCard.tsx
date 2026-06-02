@@ -521,11 +521,12 @@ const EventCard: React.FC<EventCardProps> = ({
       </div>
 
       {/* ════════════ ZONE INFOS — 3 énergies ════════════ */}
-      {/* flex-shrink-0 à hauteur de contenu (proportions d'origine), design adaptatif conservé */}
+      {/* Plancher à 30% (intermédiaire) mais extensible : flex-shrink-0 laisse */}
+      {/* la zone grandir si le contenu augmente, la photo flex-1 absorbe le reste. */}
       <div
         ref={containerRef}
         className="flex-shrink-0 flex flex-col overflow-hidden"
-        style={{ fontFamily: POPPINS, ...zoneStyle }}
+        style={{ minHeight: '30%', fontFamily: POPPINS, ...zoneStyle }}
       >
         {/* ---------- CLUB : deux colonnes ---------- */}
         {energy === 'CLUB' && (
