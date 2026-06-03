@@ -73,10 +73,12 @@ const mapEventToUnified = (event: any, configMap: Map<string, string>): UnifiedE
     'Utilisateur',
   organizer_type: event.created_by_type as 'user' | 'business',
   venue: undefined,
-  // Heure extraite du timestamp si présente (ex. "2026-06-02T22:00:00" → "22:00")
-  time: (typeof event.date === 'string' && event.date.includes('T'))
-    ? event.date.split('T')[1]?.slice(0, 5)
-    : undefined,
+  // Heure : colonne dédiée si présente, sinon extraite du timestamp date
+  time: event.time
+    ? String(event.time).slice(0, 5)
+    : (typeof event.date === 'string' && event.date.includes('T'))
+      ? event.date.split('T')[1]?.slice(0, 5)
+      : undefined,
   event_type: event.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
   price_text: event.price ? event.price.toString() : undefined,
   end_date: event.end_date,
@@ -84,11 +86,12 @@ const mapEventToUnified = (event: any, configMap: Map<string, string>): UnifiedE
   address: event.address,
   tags: event.tags,
   external_url: event.external_url,
-  // Champs design système carte
+  // Design système carte — unique/récurrent dérivés du compteur d'occurrences
+  // du titre (vue active_events), pas d'une colonne is_unique.
   music_style: event.music_style ?? undefined,
-  is_recurring: event.is_recurring ?? undefined,
-  edition_number: event.total_editions ?? undefined,
-  is_unique: event.is_unique ?? undefined,
+  edition_number: event.edition_number ?? undefined,
+  is_recurring: (event.title_occurrences ?? 1) > 1,
+  is_unique: (event.title_occurrences ?? 1) === 1,
 } as UnifiedEvent);
 
 export const fetchAllEventsPaginated = async (
