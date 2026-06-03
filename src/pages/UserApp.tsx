@@ -338,26 +338,20 @@ const UserApp = () => {
               </div>
             )}
 
-            {/* Écran de fin */}
+            {/* Carte de fin de scroll — restart / reset filtres / partage */}
             {!hasMore && (
               <div
-                className="h-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 p-8"
-                style={{ scrollSnapAlign: 'start' }}
+                className="h-full"
+                style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always' }}
               >
-                <div className="text-center text-white space-y-5">
-                  <span className="text-5xl">🎉</span>
-                  <h2 className="text-2xl font-bold">C'est tout pour aujourd'hui !</h2>
-                  <p className="text-white/80 max-w-xs mx-auto">
-                    {hasActiveFilters
-                      ? "Essaie d'élargir tes filtres pour voir plus d'événements !"
-                      : "Reviens demain pour de nouvelles sorties !"}
-                  </p>
-                  {hasActiveFilters && (
-                    <Button variant="secondary" onClick={handleResetFilters}>
-                      Réinitialiser les filtres
-                    </Button>
-                  )}
-                </div>
+                <SwipeFeedEmpty
+                  hasActiveFilters={hasActiveFilters}
+                  onResetFilters={handleResetFilters}
+                  onRestart={() => {
+                    setCurrentIndex(0);
+                    scrollToEvent(0);
+                  }}
+                />
               </div>
             )}
           </>
