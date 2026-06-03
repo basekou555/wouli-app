@@ -92,6 +92,8 @@ serve(async (req) => {
     const anthropic = new Anthropic({ apiKey: anthropicKey });
 
     const body = await req.json().catch(() => ({}));
+    // Mode dry-run : appelle le modèle et calcule l'énergie SANS rien écrire en base.
+    const dryRun = body.dryRun === true;
 
     // Mode batch : traite les N événements les plus récents pas encore extraits.
     let ids: string[];
@@ -112,7 +114,7 @@ serve(async (req) => {
     const results = [];
     for (const id of ids) {
       try {
-        results.push(await extractOne(supabase, anthropic, id));
+        results.push(await extractOne(supabase, anthropic, id, dryRun));
       } catch (e) {
         results.push({ id, ok: false, error: String(e?.message ?? e) });
       }
@@ -125,7 +127,7 @@ serve(async (req) => {
   }
 });
 
-async function extractOne(supabase: any, anthropic: Anthropic, id: string) {
+async function extractOne(supabase: any, anthropic: Anthropic, id: string, dryRun = false) {
   const { data: ev, error } = await supabase
     .from("events")
     .select("id, title, description, location, image_url, account_username")
@@ -205,6 +207,26 @@ async function extractOne(supabase: any, anthropic: Anthropic, id: string) {
   };
   if (time) update.time = time;
   if (price !== null) update.price = price;
+
+  // Dry-run : on ne touche RIEN en base, on renvoie juste l'aperçu pour jugement.
+  if (dryRun) {
+    return {
+      id, ok: true, dryRun: true,
+      venue_profile: profile,
+      location: ev.location,
+      energy,
+      energy_model: out.energy,
+      energy_reason: out.energy_reason,
+      title_avant: ev.title,
+      title_apres: update.title,
+      music_style: out.music_style,
+      time, price,
+      event_type: out.event_type,
+      source_used: out.source_used,
+      confidence: out.confidence,
+      review: reasons,
+    };
+  }
 
   const { error: upErr } = await supabase.from("events").update(update).eq("id", id);
   if (upErr) throw upErr;
