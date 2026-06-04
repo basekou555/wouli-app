@@ -95,18 +95,27 @@ serve(async (req) => {
     // Mode dry-run : appelle le modèle et calcule l'énergie SANS rien écrire en base.
     const dryRun = body.dryRun === true;
 
-    // Mode batch : traite les N événements les plus récents pas encore extraits.
+    // Mode batch : traite les N événements pas encore extraits.
     let ids: string[];
     if (body.eventId) {
       ids = [body.eventId];
     } else {
       const limit = Math.min(Number(body.limit) || 10, 50);
-      const { data, error } = await supabase
+      // IMPORTANT : .neq écarte les lignes où parsing_method est NULL (NULL <> x => NULL).
+      // On veut justement les non-extraits (NULL), d'où le .or(...).
+      let q = supabase
         .from("events")
         .select("id")
-        .neq("parsing_method", "claude-vision-v1")
-        .order("created_at", { ascending: false })
-        .limit(limit);
+        .or("parsing_method.is.null,parsing_method.neq.claude-vision-v1");
+      // Par défaut, on cible les events réellement affichés (mêmes filtres que active_events).
+      // body.all === true => on élargit à toute la table.
+      if (body.all !== true) {
+        q = q
+          .in("status", ["active", "validated"])
+          .is("archived_at", null)
+          .gte("date", new Date().toISOString());
+      }
+      const { data, error } = await q.order("created_at", { ascending: false }).limit(limit);
       if (error) throw error;
       ids = (data ?? []).map((r: { id: string }) => r.id);
     }
