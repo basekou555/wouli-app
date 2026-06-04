@@ -8,8 +8,14 @@
 //
 // L'énergie est tranchée par le REGISTRE DE LIEUX quand le lieu est déterministe
 // (scene / club), et seulement par l'event quand le lieu est mixte/inconnu.
+//
+// Fournisseur configurable :
+//   EXTRACT_PROVIDER = "gemini" (défaut, free tier Google) | "anthropic"
+//   EXTRACT_MODEL    = surcharge du modèle (défaut gemini-2.5-flash / claude-opus-4-8)
+// Fallback Haiku = mettre EXTRACT_PROVIDER=anthropic + EXTRACT_MODEL=claude-haiku-4-5.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 import Anthropic from "npm:@anthropic-ai/sdk";
 
 const corsHeaders = {
@@ -17,9 +23,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Modèle surchargeable (par défaut le plus capable). Mettre EXTRACT_MODEL=claude-haiku-4-5
-// dans les secrets pour réduire le coût sur du gros volume.
-const MODEL = Deno.env.get("EXTRACT_MODEL") ?? "claude-opus-4-8";
+const PROVIDER = (Deno.env.get("EXTRACT_PROVIDER") ?? "gemini").toLowerCase();
+const MODEL = Deno.env.get("EXTRACT_MODEL") ??
+  (PROVIDER === "anthropic" ? "claude-opus-4-8" : "gemini-2.5-flash");
 
 // Préfixe des URLs d'images persistées en Storage (les seules fiables pour la vision ;
 // les URLs Instagram expirent).
@@ -45,10 +51,19 @@ Le style musical est une TENDANCE, jamais une preuve : tout style peut tomber da
 NETTOYAGE TEXTE : titre <= 60 caractères, accrocheur, sans hashtags ni @mentions ni "lien en bio". Description aérée, sans spam Instagram. Conserve les vraies infos.
 
 HEURE : ne renvoie une heure QUE si elle est explicitement écrite (format "HH:MM"). N'invente jamais une heure.
-PRIX : nombre en euros si écrit ; "prix libre"/"gratuit" => is_free=true, price_eur=0 ; sinon null.`;
+PRIX : nombre en euros si écrit ; "prix libre"/"gratuit" => is_free=true, price_eur=0 ; sinon null.
 
-// Schéma de sortie structurée.
-const SCHEMA = {
+Réponds UNIQUEMENT par un objet JSON conforme au schéma demandé, sans texte autour.`;
+
+// Champs attendus, dans l'ordre (sert au schéma des deux fournisseurs).
+const FIELDS = [
+  "title", "subtitle", "description", "energy", "energy_reason",
+  "venue_name", "music_style", "artists", "time", "price_eur",
+  "is_free", "event_type", "is_recurring", "source_used", "confidence",
+] as const;
+
+// Schéma JSON Schema (Anthropic).
+const ANTHROPIC_SCHEMA = {
   type: "object",
   additionalProperties: false,
   properties: {
@@ -68,11 +83,31 @@ const SCHEMA = {
     source_used: { type: "string", enum: ["description", "image", "both", "none"] },
     confidence: { type: "number" },
   },
-  required: [
-    "title", "subtitle", "description", "energy", "energy_reason",
-    "venue_name", "music_style", "artists", "time", "price_eur",
-    "is_free", "event_type", "is_recurring", "source_used", "confidence",
-  ],
+  required: [...FIELDS],
+};
+
+// Schéma format Gemini (types MAJUSCULES, nullable, propertyOrdering).
+const GEMINI_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    title: { type: "STRING" },
+    subtitle: { type: "STRING", nullable: true },
+    description: { type: "STRING" },
+    energy: { type: "STRING", enum: ["CLUB", "SCENE", "JOURNEE"] },
+    energy_reason: { type: "STRING" },
+    venue_name: { type: "STRING", nullable: true },
+    music_style: { type: "STRING", nullable: true },
+    artists: { type: "ARRAY", items: { type: "STRING" } },
+    time: { type: "STRING", nullable: true },
+    price_eur: { type: "NUMBER", nullable: true },
+    is_free: { type: "BOOLEAN" },
+    event_type: { type: "STRING", nullable: true },
+    is_recurring: { type: "BOOLEAN" },
+    source_used: { type: "STRING", enum: ["description", "image", "both", "none"] },
+    confidence: { type: "NUMBER" },
+  },
+  required: [...FIELDS],
+  propertyOrdering: [...FIELDS],
 };
 
 serve(async (req) => {
@@ -82,20 +117,15 @@ serve(async (req) => {
     if (!req.headers.get("Authorization")) {
       return json({ error: "Authorization required" }, 401);
     }
-    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!anthropicKey) throw new Error("ANTHROPIC_API_KEY not configured");
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
-    const anthropic = new Anthropic({ apiKey: anthropicKey });
 
     const body = await req.json().catch(() => ({}));
-    // Mode dry-run : appelle le modèle et calcule l'énergie SANS rien écrire en base.
     const dryRun = body.dryRun === true;
 
-    // Mode batch : traite les N événements pas encore extraits.
     let ids: string[];
     if (body.eventId) {
       ids = [body.eventId];
@@ -107,8 +137,6 @@ serve(async (req) => {
         .from("events")
         .select("id")
         .or("parsing_method.is.null,parsing_method.neq.claude-vision-v1");
-      // Par défaut, on cible les events réellement affichés (mêmes filtres que active_events).
-      // body.all === true => on élargit à toute la table.
       if (body.all !== true) {
         q = q
           .in("status", ["active", "validated"])
@@ -123,20 +151,20 @@ serve(async (req) => {
     const results = [];
     for (const id of ids) {
       try {
-        results.push(await extractOne(supabase, anthropic, id, dryRun));
+        results.push(await extractOne(supabase, id, dryRun));
       } catch (e) {
         results.push({ id, ok: false, error: String(e?.message ?? e) });
       }
     }
 
-    return json({ processed: results.length, results }, 200);
+    return json({ processed: results.length, provider: PROVIDER, model: MODEL, dryRun, results }, 200);
   } catch (error) {
     console.error("extract-event error:", error);
     return json({ error: String((error as Error)?.message ?? error) }, 500);
   }
 });
 
-async function extractOne(supabase: any, anthropic: Anthropic, id: string, dryRun = false) {
+async function extractOne(supabase: any, id: string, dryRun = false) {
   const { data: ev, error } = await supabase
     .from("events")
     .select("id, title, description, location, image_url, account_username")
@@ -152,52 +180,30 @@ async function extractOne(supabase: any, anthropic: Anthropic, id: string, dryRu
   const hasUsableImage =
     typeof ev.image_url === "string" && ev.image_url.startsWith(STORAGE_PUBLIC_PREFIX);
 
-  const userContent: any[] = [];
-  if (hasUsableImage) {
-    userContent.push({ type: "image", source: { type: "url", url: ev.image_url } });
-  }
-  userContent.push({
-    type: "text",
-    text:
-      `PROFIL DU LIEU (registre) : ${profile ?? "inconnu"}\n` +
-      `LIEU : ${ev.location ?? "(non renseigné)"}\n` +
-      `COMPTE SOURCE : @${ev.account_username ?? "?"}\n` +
-      `FLYER FOURNI : ${hasUsableImage ? "oui" : "non"}\n\n` +
-      `TITRE BRUT : ${ev.title ?? ""}\n` +
-      `DESCRIPTION BRUTE :\n${ev.description ?? "(aucune)"}`,
-  });
+  const userText =
+    `PROFIL DU LIEU (registre) : ${profile ?? "inconnu"}\n` +
+    `LIEU : ${ev.location ?? "(non renseigné)"}\n` +
+    `COMPTE SOURCE : @${ev.account_username ?? "?"}\n` +
+    `FLYER FOURNI : ${hasUsableImage ? "oui" : "non"}\n\n` +
+    `TITRE BRUT : ${ev.title ?? ""}\n` +
+    `DESCRIPTION BRUTE :\n${ev.description ?? "(aucune)"}`;
 
-  const resp = await anthropic.messages.create({
-    model: MODEL,
-    max_tokens: 1500,
-    output_config: {
-      effort: "low",
-      format: { type: "json_schema", schema: SCHEMA },
-    },
-    system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: userContent }],
-  } as any);
-
-  const textBlock = resp.content.find((b: any) => b.type === "text") as any;
-  if (!textBlock?.text) throw new Error("réponse vide du modèle");
-  const out = JSON.parse(textBlock.text);
+  const out = PROVIDER === "anthropic"
+    ? await callAnthropic(userText, hasUsableImage ? ev.image_url : null)
+    : await callGemini(userText, hasUsableImage ? ev.image_url : null);
 
   // Réconciliation de l'énergie : le registre prime sur le modèle pour les lieux déterministes.
   let energy: string = out.energy;
   if (profile === "scene") energy = "SCENE";
   else if (profile === "club") energy = "CLUB";
   else if (profile === "journee") energy = "JOURNEE";
-  // profil "mixte" ou inconnu => on garde la décision du modèle.
 
   // Revue manuelle si : lieu inconnu (à taguer au registre) ou confiance basse.
   const reasons: string[] = [];
   if (!profile) reasons.push("lieu_inconnu");
   if (typeof out.confidence === "number" && out.confidence < 0.5) reasons.push("confiance_basse");
 
-  const price =
-    out.is_free ? 0 : (typeof out.price_eur === "number" ? out.price_eur : null);
-
-  // time : on n'écrit que si "HH:MM" valide explicitement détecté.
+  const price = out.is_free ? 0 : (typeof out.price_eur === "number" ? out.price_eur : null);
   const time = /^\d{2}:\d{2}$/.test(out.time ?? "") ? out.time : null;
 
   const update: Record<string, unknown> = {
@@ -217,7 +223,6 @@ async function extractOne(supabase: any, anthropic: Anthropic, id: string, dryRu
   if (time) update.time = time;
   if (price !== null) update.price = price;
 
-  // Dry-run : on ne touche RIEN en base, on renvoie juste l'aperçu pour jugement.
   if (dryRun) {
     return {
       id, ok: true, dryRun: true,
@@ -241,14 +246,81 @@ async function extractOne(supabase: any, anthropic: Anthropic, id: string, dryRu
   if (upErr) throw upErr;
 
   return {
-    id,
-    ok: true,
-    energy,
+    id, ok: true, energy,
     venue_profile: profile,
     source_used: out.source_used,
     confidence: out.confidence,
     review: reasons,
   };
+}
+
+// ---------- Fournisseur Gemini (free tier) ----------
+async function callGemini(userText: string, imageUrl: string | null): Promise<any> {
+  const key = Deno.env.get("GOOGLE_API_KEY") ?? Deno.env.get("GEMINI_API_KEY");
+  if (!key) throw new Error("GOOGLE_API_KEY non configurée");
+
+  const parts: any[] = [];
+  if (imageUrl) {
+    const imgResp = await fetch(imageUrl);
+    if (!imgResp.ok) throw new Error(`flyer inaccessible (${imgResp.status})`);
+    const bytes = new Uint8Array(await imgResp.arrayBuffer());
+    const mimeType = imgResp.headers.get("content-type")?.split(";")[0] || "image/jpeg";
+    parts.push({ inlineData: { mimeType, data: encodeBase64(bytes) } });
+  }
+  parts.push({ text: userText });
+
+  const url =
+    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`;
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      contents: [{ role: "user", parts }],
+      generationConfig: {
+        temperature: 0,
+        responseMimeType: "application/json",
+        responseSchema: GEMINI_SCHEMA,
+      },
+    }),
+  });
+
+  const data = await resp.json();
+  if (!resp.ok) {
+    throw new Error(`${resp.status} ${JSON.stringify(data?.error ?? data)}`);
+  }
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) {
+    const reason = data?.promptFeedback?.blockReason ?? data?.candidates?.[0]?.finishReason ?? "vide";
+    throw new Error(`réponse Gemini sans contenu (${reason})`);
+  }
+  return JSON.parse(text);
+}
+
+// ---------- Fournisseur Anthropic (fallback Haiku/Opus) ----------
+async function callAnthropic(userText: string, imageUrl: string | null): Promise<any> {
+  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY non configurée");
+  const anthropic = new Anthropic({ apiKey });
+
+  const content: any[] = [];
+  if (imageUrl) content.push({ type: "image", source: { type: "url", url: imageUrl } });
+  content.push({ type: "text", text: userText });
+
+  const resp = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: 1500,
+    output_config: {
+      effort: "low",
+      format: { type: "json_schema", schema: ANTHROPIC_SCHEMA },
+    },
+    system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+    messages: [{ role: "user", content }],
+  } as any);
+
+  const textBlock = resp.content.find((b: any) => b.type === "text") as any;
+  if (!textBlock?.text) throw new Error("réponse vide du modèle");
+  return JSON.parse(textBlock.text);
 }
 
 function json(payload: unknown, status: number) {
