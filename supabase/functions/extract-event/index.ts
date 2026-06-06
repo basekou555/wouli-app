@@ -61,7 +61,7 @@ Le style musical est une TENDANCE, jamais une preuve.
 - "end_time" : heure de FIN "HH:MM" si écrite, sinon null.
 
 == LINEUP / ARTISTES ==
-- "lineup" : liste des artistes / DJs / groupes cités (noms propres uniquement), sinon [].
+- "lineup" : artistes / DJs / groupes qui SE PRODUISENT réellement (concert live ou aux platines), noms propres. N'inclus PAS les artistes seulement cités comme référence musicale : une soirée "classiques 90s" qui passe du Beyoncé / 50 Cent => lineup VIDE. Sinon [].
 
 == LIEU ==
 - "venue_name" : nom du lieu tel que lisible (sert à enrichir le registre), sinon null.
@@ -71,7 +71,7 @@ Le style musical est une TENDANCE, jamais une preuve.
 - nombre en euros si écrit ; "prix libre"/"gratuit"/"free"/"entrée libre" => is_free=true, price_eur=0 ; sinon null.
 
 == NETTOYAGE TEXTE ==
-- "title" : <= 60 caractères, accrocheur, SANS hashtags ni @mentions ni "lien en bio" ni date/heure.
+- "title" : <= 60 caractères, accrocheur, SANS hashtags ni @mentions ni "lien en bio" ni date/heure ni nom du lieu (le lieu est affiché à part).
   Si le titre brut est inutilisable (juste une date, un emoji...), reconstruis-en un depuis la description.
 - "subtitle" : sous-titre court (accroche d'une ligne) si pertinent, sinon null.
 - "description" : aérée, sans spam Instagram, infos réelles conservées.
@@ -326,22 +326,32 @@ async function callGemini(userText: string, imageUrl: string | null): Promise<an
 
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`;
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      contents: [{ role: "user", parts }],
-      generationConfig: {
-        temperature: 0,
-        responseMimeType: "application/json",
-        responseSchema: GEMINI_SCHEMA,
-      },
-    }),
+  const reqBody = JSON.stringify({
+    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    contents: [{ role: "user", parts }],
+    generationConfig: {
+      temperature: 0,
+      responseMimeType: "application/json",
+      responseSchema: GEMINI_SCHEMA,
+    },
   });
 
-  const data = await resp.json();
-  if (!resp.ok) throw new Error(`${resp.status} ${JSON.stringify(data?.error ?? data)}`);
+  // Retry avec backoff sur les surcharges du free tier (503/429/500).
+  let resp: Response, data: any;
+  for (let attempt = 0; ; attempt++) {
+    resp = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: reqBody,
+    });
+    data = await resp.json();
+    if (resp.ok) break;
+    const retryable = resp.status === 503 || resp.status === 429 || resp.status === 500;
+    if (!retryable || attempt >= 3) {
+      throw new Error(`${resp.status} ${JSON.stringify(data?.error ?? data)}`);
+    }
+    await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt))); // 1s, 2s, 4s
+  }
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) {
     const reason = data?.promptFeedback?.blockReason ?? data?.candidates?.[0]?.finishReason ?? "vide";
