@@ -1,8 +1,8 @@
-// extract-event — Extraction structurée d'un événement scrapé.
+// extract-event — Extraction structurée DENSE d'un événement scrapé.
 //
 // Remplace l'approche "deviner à l'affichage" par une vraie extraction à la source :
-// lit la description + le flyer (vision) et renvoie TOUS les champs structurés
-// (energy, music_style, heure réelle, prix, lineup, type...) avec une confiance.
+// lit la description + le flyer (vision) et remplit AU PROPRE tous les champs d'un
+// événement (date réelle, heure, fin, lieu, lineup, prix, catégorie, énergie...).
 //
 // "L'image fait le travail" : si un champ manque dans la description, on le lit sur le flyer.
 //
@@ -12,7 +12,7 @@
 // Fournisseur configurable :
 //   EXTRACT_PROVIDER = "gemini" (défaut, free tier Google) | "anthropic"
 //   EXTRACT_MODEL    = surcharge du modèle (défaut gemini-2.5-flash / claude-opus-4-8)
-// Fallback Haiku = mettre EXTRACT_PROVIDER=anthropic + EXTRACT_MODEL=claude-haiku-4-5.
+// Fallback Haiku = EXTRACT_PROVIDER=anthropic + EXTRACT_MODEL=claude-haiku-4-5.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
@@ -27,40 +27,73 @@ const PROVIDER = (Deno.env.get("EXTRACT_PROVIDER") ?? "gemini").toLowerCase();
 const MODEL = Deno.env.get("EXTRACT_MODEL") ??
   (PROVIDER === "anthropic" ? "claude-opus-4-8" : "gemini-2.5-flash");
 
-// Préfixe des URLs d'images persistées en Storage (les seules fiables pour la vision ;
-// les URLs Instagram expirent).
 const STORAGE_PUBLIC_PREFIX =
   `${Deno.env.get("SUPABASE_URL") ?? ""}/storage/v1/object/public/`;
 
 const SYSTEM_PROMPT = `Tu es l'extracteur de données de "Wouli", une app de découverte d'événements à Lyon (public 18-28 ans).
 
-À partir du contenu BRUT d'un post (texte de description + flyer image quand fourni), tu extrais des données STRUCTURÉES propres. Tu n'inventes jamais : si une info est absente du texte ET de l'image, tu mets null.
+À partir du contenu BRUT d'un post (texte de description + flyer image quand fourni), tu remplis AU PROPRE tous les champs d'un événement. Tu n'inventes JAMAIS : si une info est absente du texte ET de l'image, tu mets null (ou [] pour une liste).
 
-PRIORITÉ DES SOURCES : lis d'abord la description. Pour tout champ manquant ou douteux, lis le FLYER (date, heure, prix, lineup, lieu y figurent presque toujours). Indique dans "source_used" d'où vient l'essentiel de l'info.
+PRIORITÉ DES SOURCES : lis d'abord la description. Pour tout champ manquant ou douteux, lis le FLYER (date, heure, prix, lineup, lieu, adresse y figurent presque toujours). Renseigne "source_used" (d'où vient l'essentiel de l'info).
 
-ÉNERGIE (energy) — 3 ambiances :
+== ÉNERGIE (energy) — 3 ambiances ==
 - "CLUB"    : clubbing, DJ sets, soirée dansante, techno/house/électro en club.
-- "SCENE"   : concert / live / spectacle assis ou debout (groupe, artiste, salle, théâtre).
+- "SCENE"   : concert / live / spectacle (groupe, artiste, salle, théâtre, impro).
 - "JOURNEE" : activité de jour (marché, expo, atelier, brunch, festival diurne, visite).
-On te donne le PROFIL DU LIEU issu d'un registre validé :
-- profil "scene" ou "club" => l'énergie est IMPOSÉE par le lieu, recopie-la (SCENE / CLUB).
-- profil "mixte" ou "inconnu" => tranche toi-même via le titre, la description et le flyer
-  (concert/live/tournée => SCENE ; dj/clubbing/soirée dansante => CLUB ; sinon JOURNEE).
-Le style musical est une TENDANCE, jamais une preuve : tout style peut tomber dans tout lieu.
+PROFIL DU LIEU (registre validé) fourni en entrée :
+- profil "scene" ou "club" => énergie IMPOSÉE par le lieu, recopie-la (SCENE / CLUB).
+- profil "mixte" ou "inconnu" => tranche via titre, description et flyer.
+Le style musical est une TENDANCE, jamais une preuve.
 
-NETTOYAGE TEXTE : titre <= 60 caractères, accrocheur, sans hashtags ni @mentions ni "lien en bio". Description aérée, sans spam Instagram. Conserve les vraies infos.
+== CATÉGORIE (category) — exactement une valeur ==
+- "soirees"   : soirées, clubbing, concerts, lives, spectacles du soir.
+- "a-boire"   : bars, dégustations, afterworks, événements centrés boisson.
+- "a-manger"  : food, brunch, marché gourmand, restauration.
+- "activites" : ateliers, expos, sport, jeux, visites, activités de jour.
 
-HEURE : ne renvoie une heure QUE si elle est explicitement écrite (format "HH:MM"). N'invente jamais une heure.
-PRIX : nombre en euros si écrit ; "prix libre"/"gratuit" => is_free=true, price_eur=0 ; sinon null.
+== DATE & HEURE (le plus important) ==
+- "date" : date de DÉBUT au format "YYYY-MM-DD". RÈGLE D'ANNÉE : si l'année n'est pas
+  écrite, utilise l'ANNÉE COURANTE fournie en entrée. Si elle est écrite, respecte-la.
+- "date_confidence" : "explicit" (date clairement écrite), "inferred" (déduite d'un jour
+  type "vendredi 8" sans année), "none" (introuvable).
+- "date_source_text" : le texte brut de la date trouvé (ex: "VEN 8 MAI"), sinon null.
+- "time" : heure de DÉBUT "HH:MM" si écrite, sinon null. N'invente jamais.
+- "end_time" : heure de FIN "HH:MM" si écrite, sinon null.
+
+== LINEUP / ARTISTES ==
+- "lineup" : liste des artistes / DJs / groupes cités (noms propres uniquement), sinon [].
+
+== LIEU ==
+- "venue_name" : nom du lieu tel que lisible (sert à enrichir le registre), sinon null.
+- "address" : adresse postale si lisible sur le flyer, sinon null.
+
+== PRIX ==
+- nombre en euros si écrit ; "prix libre"/"gratuit"/"free"/"entrée libre" => is_free=true, price_eur=0 ; sinon null.
+
+== NETTOYAGE TEXTE ==
+- "title" : <= 60 caractères, accrocheur, SANS hashtags ni @mentions ni "lien en bio" ni date/heure.
+  Si le titre brut est inutilisable (juste une date, un emoji...), reconstruis-en un depuis la description.
+- "subtitle" : sous-titre court (accroche d'une ligne) si pertinent, sinon null.
+- "description" : aérée, sans spam Instagram, infos réelles conservées.
+
+== DIVERS ==
+- "is_recurring" : true si l'événement est récurrent (hebdo, "chaque jeudi"...), sinon false.
+- "event_type" : type court et lisible (ex: "Concert", "Soirée DJ", "Atelier", "Impro").
+- "confidence" : 0 à 1, ta confiance globale sur l'extraction.
 
 Réponds UNIQUEMENT par un objet JSON conforme au schéma demandé, sans texte autour.`;
 
-// Champs attendus, dans l'ordre (sert au schéma des deux fournisseurs).
 const FIELDS = [
-  "title", "subtitle", "description", "energy", "energy_reason",
-  "venue_name", "music_style", "artists", "time", "price_eur",
-  "is_free", "event_type", "is_recurring", "source_used", "confidence",
+  "title", "subtitle", "description", "category", "energy", "energy_reason",
+  "date", "date_confidence", "date_source_text", "time", "end_time",
+  "music_style", "lineup", "venue_name", "address",
+  "price_eur", "is_free", "event_type", "is_recurring", "source_used", "confidence",
 ] as const;
+
+const ENERGY = ["CLUB", "SCENE", "JOURNEE"];
+const CATEGORY = ["soirees", "a-boire", "a-manger", "activites"];
+const DATE_CONF = ["explicit", "inferred", "none"];
+const SOURCE = ["description", "image", "both", "none"];
 
 // Schéma JSON Schema (Anthropic).
 const ANTHROPIC_SCHEMA = {
@@ -70,17 +103,23 @@ const ANTHROPIC_SCHEMA = {
     title: { type: "string" },
     subtitle: { type: ["string", "null"] },
     description: { type: "string" },
-    energy: { type: "string", enum: ["CLUB", "SCENE", "JOURNEE"] },
+    category: { type: "string", enum: CATEGORY },
+    energy: { type: "string", enum: ENERGY },
     energy_reason: { type: "string" },
-    venue_name: { type: ["string", "null"] },
-    music_style: { type: ["string", "null"] },
-    artists: { type: "array", items: { type: "string" } },
+    date: { type: ["string", "null"] },
+    date_confidence: { type: "string", enum: DATE_CONF },
+    date_source_text: { type: ["string", "null"] },
     time: { type: ["string", "null"] },
+    end_time: { type: ["string", "null"] },
+    music_style: { type: ["string", "null"] },
+    lineup: { type: "array", items: { type: "string" } },
+    venue_name: { type: ["string", "null"] },
+    address: { type: ["string", "null"] },
     price_eur: { type: ["number", "null"] },
     is_free: { type: "boolean" },
     event_type: { type: ["string", "null"] },
     is_recurring: { type: "boolean" },
-    source_used: { type: "string", enum: ["description", "image", "both", "none"] },
+    source_used: { type: "string", enum: SOURCE },
     confidence: { type: "number" },
   },
   required: [...FIELDS],
@@ -93,17 +132,23 @@ const GEMINI_SCHEMA = {
     title: { type: "STRING" },
     subtitle: { type: "STRING", nullable: true },
     description: { type: "STRING" },
-    energy: { type: "STRING", enum: ["CLUB", "SCENE", "JOURNEE"] },
+    category: { type: "STRING", enum: CATEGORY },
+    energy: { type: "STRING", enum: ENERGY },
     energy_reason: { type: "STRING" },
-    venue_name: { type: "STRING", nullable: true },
-    music_style: { type: "STRING", nullable: true },
-    artists: { type: "ARRAY", items: { type: "STRING" } },
+    date: { type: "STRING", nullable: true },
+    date_confidence: { type: "STRING", enum: DATE_CONF },
+    date_source_text: { type: "STRING", nullable: true },
     time: { type: "STRING", nullable: true },
+    end_time: { type: "STRING", nullable: true },
+    music_style: { type: "STRING", nullable: true },
+    lineup: { type: "ARRAY", items: { type: "STRING" } },
+    venue_name: { type: "STRING", nullable: true },
+    address: { type: "STRING", nullable: true },
     price_eur: { type: "NUMBER", nullable: true },
     is_free: { type: "BOOLEAN" },
     event_type: { type: "STRING", nullable: true },
     is_recurring: { type: "BOOLEAN" },
-    source_used: { type: "STRING", enum: ["description", "image", "both", "none"] },
+    source_used: { type: "STRING", enum: SOURCE },
     confidence: { type: "NUMBER" },
   },
   required: [...FIELDS],
@@ -131,8 +176,6 @@ serve(async (req) => {
       ids = [body.eventId];
     } else {
       const limit = Math.min(Number(body.limit) || 10, 50);
-      // IMPORTANT : .neq écarte les lignes où parsing_method est NULL (NULL <> x => NULL).
-      // On veut justement les non-extraits (NULL), d'où le .or(...).
       let q = supabase
         .from("events")
         .select("id")
@@ -167,20 +210,23 @@ serve(async (req) => {
 async function extractOne(supabase: any, id: string, dryRun = false) {
   const { data: ev, error } = await supabase
     .from("events")
-    .select("id, title, description, location, image_url, account_username")
+    .select("id, title, description, location, image_url, account_username, date")
     .eq("id", id)
     .single();
   if (error || !ev) throw new Error(`event ${id} introuvable`);
 
-  // Profil du lieu via le registre (source de vérité pour l'énergie).
   const { data: profileRow } = await supabase.rpc("venue_profile", { loc: ev.location ?? "" });
   const profile: string | null = profileRow ?? null;
 
-  // On ne passe le flyer à la vision QUE s'il est persisté en Storage (URL fiable).
   const hasUsableImage =
     typeof ev.image_url === "string" && ev.image_url.startsWith(STORAGE_PUBLIC_PREFIX);
 
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  const year = now.getUTCFullYear();
+
   const userText =
+    `DATE DU JOUR : ${today} (année courante ${year} — si l'année n'est pas écrite, utilise ${year})\n` +
     `PROFIL DU LIEU (registre) : ${profile ?? "inconnu"}\n` +
     `LIEU : ${ev.location ?? "(non renseigné)"}\n` +
     `COMPTE SOURCE : @${ev.account_username ?? "?"}\n` +
@@ -198,20 +244,48 @@ async function extractOne(supabase: any, id: string, dryRun = false) {
   else if (profile === "club") energy = "CLUB";
   else if (profile === "journee") energy = "JOURNEE";
 
-  // Revue manuelle si : lieu inconnu (à taguer au registre) ou confiance basse.
+  // Normalisations.
+  const time = /^\d{2}:\d{2}$/.test(out.time ?? "") ? out.time : null;
+  const endTime = /^\d{2}:\d{2}$/.test(out.end_time ?? "") ? out.end_time : null;
+  const isoDate = /^\d{4}-\d{2}-\d{2}$/.test(out.date ?? "") ? out.date : null;
+  const price = out.is_free ? 0 : (typeof out.price_eur === "number" ? out.price_eur : null);
+  const lineup = Array.isArray(out.lineup) ? out.lineup.filter((s: any) => typeof s === "string") : [];
+
+  // Revue manuelle.
   const reasons: string[] = [];
   if (!profile) reasons.push("lieu_inconnu");
   if (typeof out.confidence === "number" && out.confidence < 0.5) reasons.push("confiance_basse");
+  if (!isoDate || out.date_confidence === "none") reasons.push("date_incertaine");
 
-  const price = out.is_free ? 0 : (typeof out.price_eur === "number" ? out.price_eur : null);
-  const time = /^\d{2}:\d{2}$/.test(out.time ?? "") ? out.time : null;
+  if (dryRun) {
+    return {
+      id, ok: true, dryRun: true,
+      venue_profile: profile,
+      location: ev.location,
+      energy, energy_model: out.energy, category: out.category,
+      title_avant: ev.title, title_apres: (out.title ?? "").slice(0, 100),
+      subtitle: out.subtitle,
+      date_avant: ev.date, date_apres: isoDate,
+      date_confidence: out.date_confidence, date_source_text: out.date_source_text,
+      time, end_time: endTime,
+      music_style: out.music_style, lineup,
+      venue_name: out.venue_name, address: out.address,
+      price, event_type: out.event_type, is_recurring: out.is_recurring,
+      source_used: out.source_used, confidence: out.confidence,
+      review: reasons,
+    };
+  }
 
+  // Écriture (passe réelle). NB : date/end_time/lineup câblés à part une fois la
+  // colonne lineup créée + le fuseau horaire géré (étape suivante).
   const update: Record<string, unknown> = {
     title: (out.title ?? ev.title ?? "").slice(0, 100),
     subtitle: out.subtitle ?? null,
     description: out.description ?? ev.description,
+    category: out.category,
     energy,
     music_style: out.music_style ?? null,
+    address: out.address ?? null,
     event_type: out.event_type ?? null,
     is_recurring: !!out.is_recurring,
     is_unique: !out.is_recurring,
@@ -223,30 +297,11 @@ async function extractOne(supabase: any, id: string, dryRun = false) {
   if (time) update.time = time;
   if (price !== null) update.price = price;
 
-  if (dryRun) {
-    return {
-      id, ok: true, dryRun: true,
-      venue_profile: profile,
-      location: ev.location,
-      energy,
-      energy_model: out.energy,
-      energy_reason: out.energy_reason,
-      title_avant: ev.title,
-      title_apres: update.title,
-      music_style: out.music_style,
-      time, price,
-      event_type: out.event_type,
-      source_used: out.source_used,
-      confidence: out.confidence,
-      review: reasons,
-    };
-  }
-
   const { error: upErr } = await supabase.from("events").update(update).eq("id", id);
   if (upErr) throw upErr;
 
   return {
-    id, ok: true, energy,
+    id, ok: true, energy, category: out.category,
     venue_profile: profile,
     source_used: out.source_used,
     confidence: out.confidence,
@@ -286,9 +341,7 @@ async function callGemini(userText: string, imageUrl: string | null): Promise<an
   });
 
   const data = await resp.json();
-  if (!resp.ok) {
-    throw new Error(`${resp.status} ${JSON.stringify(data?.error ?? data)}`);
-  }
+  if (!resp.ok) throw new Error(`${resp.status} ${JSON.stringify(data?.error ?? data)}`);
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) {
     const reason = data?.promptFeedback?.blockReason ?? data?.candidates?.[0]?.finishReason ?? "vide";
@@ -309,7 +362,7 @@ async function callAnthropic(userText: string, imageUrl: string | null): Promise
 
   const resp = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 1500,
+    max_tokens: 2000,
     output_config: {
       effort: "low",
       format: { type: "json_schema", schema: ANTHROPIC_SCHEMA },
