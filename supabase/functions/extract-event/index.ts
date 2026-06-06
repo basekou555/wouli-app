@@ -53,8 +53,10 @@ Distinction clé : "soirees" = on vient FAIRE LA FÊTE / DANSER ; "activites" = 
 - "a-manger"  : food, brunch, marché gourmand, restauration.
 
 == DATE & HEURE (le plus important) ==
-- "date" : date de DÉBUT au format "YYYY-MM-DD". RÈGLE D'ANNÉE : si l'année n'est pas
-  écrite, utilise l'ANNÉE COURANTE fournie en entrée. Si elle est écrite, respecte-la.
+- "date" : date de DÉBUT au format "YYYY-MM-DD". RÈGLE D'ANNÉE : si l'année EST écrite, respecte-la.
+  Si elle N'EST PAS écrite, choisis l'année qui rend la date FUTURE par rapport à la DATE DU JOUR :
+  année courante si ce jour/mois n'est pas encore passé cette année, sinon année SUIVANTE.
+  (Ex : on est en juin 2026, le flyer dit "7 janvier" sans année => 2027-01-07, car janvier 2026 est déjà passé.)
 - "date_confidence" : "explicit" (date clairement écrite), "inferred" (déduite d'un jour
   type "vendredi 8" sans année), "none" (introuvable).
 - "date_source_text" : le texte brut de la date trouvé (ex: "VEN 8 MAI"), sinon null.
@@ -228,7 +230,7 @@ async function extractOne(supabase: any, id: string, dryRun = false) {
   const year = now.getUTCFullYear();
 
   const userText =
-    `DATE DU JOUR : ${today} (année courante ${year} — si l'année n'est pas écrite, utilise ${year})\n` +
+    `DATE DU JOUR : ${today} (année courante ${year})\n` +
     `PROFIL DU LIEU (registre) : ${profile ?? "inconnu"}\n` +
     `LIEU : ${ev.location ?? "(non renseigné)"}\n` +
     `COMPTE SOURCE : @${ev.account_username ?? "?"}\n` +
@@ -258,6 +260,7 @@ async function extractOne(supabase: any, id: string, dryRun = false) {
   if (!profile) reasons.push("lieu_inconnu");
   if (typeof out.confidence === "number" && out.confidence < 0.5) reasons.push("confiance_basse");
   if (!isoDate || out.date_confidence === "none") reasons.push("date_incertaine");
+  if (isoDate && isoDate < today) reasons.push("date_passee"); // garde-fou règle d'année
 
   if (dryRun) {
     return {
