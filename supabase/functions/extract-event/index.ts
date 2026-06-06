@@ -46,10 +46,11 @@ PROFIL DU LIEU (registre validé) fourni en entrée :
 Le style musical est une TENDANCE, jamais une preuve.
 
 == CATÉGORIE (category) — exactement une valeur ==
-- "soirees"   : soirées, clubbing, concerts, lives, spectacles du soir.
-- "a-boire"   : bars, dégustations, afterworks, événements centrés boisson.
+Distinction clé : "soirees" = on vient FAIRE LA FÊTE / DANSER ; "activites" = on est SPECTATEUR / CONSOMMATEUR de quelque chose (on regarde, on assiste, on participe).
+- "soirees"   : clubbing, soirée dansante, DJ set, soirée à thème festive.
+- "activites" : concert, live, spectacle, impro, théâtre, expo, atelier, sport, jeu, projection, visite.
+- "a-boire"   : bars, dégustations, afterworks centrés boisson.
 - "a-manger"  : food, brunch, marché gourmand, restauration.
-- "activites" : ateliers, expos, sport, jeux, visites, activités de jour.
 
 == DATE & HEURE (le plus important) ==
 - "date" : date de DÉBUT au format "YYYY-MM-DD". RÈGLE D'ANNÉE : si l'année n'est pas
@@ -62,6 +63,7 @@ Le style musical est une TENDANCE, jamais une preuve.
 
 == LINEUP / ARTISTES ==
 - "lineup" : artistes / DJs / groupes qui SE PRODUISENT réellement (concert live ou aux platines), noms propres. N'inclus PAS les artistes seulement cités comme référence musicale : une soirée "classiques 90s" qui passe du Beyoncé / 50 Cent => lineup VIDE. Sinon [].
+  INDICE FORT : les artistes présents sont souvent tagués par un @mention (ex: @djxxx). Un concert (SCENE) a souvent 1 artiste ; une soirée club peut en avoir 2-3. ATTENTION : tous les @ ne sont pas des artistes (le lieu, des partenaires, des sponsors sont aussi tagués) — ne garde que les artistes/DJs.
 
 == LIEU ==
 - "venue_name" : nom du lieu tel que lisible (sert à enrichir le registre), sinon null.
