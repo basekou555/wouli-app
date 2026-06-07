@@ -20,7 +20,7 @@ const REVIEW_FLAG_LABELS: Record<string, { label: string; cls: string }> = {
 const AMBER = 'border-amber-300 text-amber-700 bg-amber-50';
 
 // Transforme manual_review_reason ("a,b") + needs_manual_image en badges affichables.
-export function getReviewFlags(event: PendingEvent): { code: string; label: string; cls: string }[] {
+function getReviewFlags(event: PendingEvent): { code: string; label: string; cls: string }[] {
   const flags: { code: string; label: string; cls: string }[] = [];
   const reasons = (event.manual_review_reason ?? '')
     .split(',').map((s) => s.trim()).filter(Boolean);

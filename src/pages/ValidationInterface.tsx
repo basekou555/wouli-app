@@ -25,6 +25,7 @@ import { getEventStatus } from '@/utils/eventStatus';
 import { AdminEventPreview } from '@/components/admin/AdminEventPreview';
 import { AdminEventTableRow } from '@/components/admin/AdminEventTableRow';
 import { ValidationWorkload } from '@/components/admin/ValidationWorkload';
+import { DuplicatesPanel, DuplicatePair, DuplicateEvent } from '@/components/admin/DuplicatesPanel';
 import { useAdminStats } from '@/hooks/useAdminStats';
 
 interface PendingEvent {
@@ -98,6 +99,23 @@ const ValidationInterface = () => {
   const [scraperErrors, setScraperErrors] = useState<any[]>([]);
   const [loadingErrors, setLoadingErrors] = useState(false);
   const [retryingError, setRetryingError] = useState<string | null>(null);
+
+  // State pour doublons potentiels
+  const [duplicatePairs, setDuplicatePairs] = useState<DuplicatePair[]>([]);
+  const [loadingDuplicates, setLoadingDuplicates] = useState(false);
+
+  const loadDuplicates = async () => {
+    setLoadingDuplicates(true);
+    try {
+      const { data, error } = await supabase.rpc('find_duplicate_pairs', { p_days: 400 });
+      if (error) throw error;
+      setDuplicatePairs((data as DuplicatePair[]) || []);
+    } catch (error) {
+      console.error('Erreur détection doublons:', error);
+    } finally {
+      setLoadingDuplicates(false);
+    }
+  };
 
   // Initialiser les formulaires quand la modale s'ouvre
   useEffect(() => {
@@ -175,7 +193,8 @@ const ValidationInterface = () => {
   useEffect(() => {
     fetchEvents();
     loadScraperErrors();
-    
+    loadDuplicates();
+
     // Realtime subscription sur la table events
     const eventsChannel = supabase
       .channel('events_changes')
@@ -328,7 +347,24 @@ const ValidationInterface = () => {
 
   const onStatusChangeSuccess = async () => {
     await fetchEvents(0, false);
+    loadDuplicates();
     setSelectedIds(new Set());
+  };
+
+  // Archiver un doublon (réversible, via le même flux que les autres changements de statut).
+  const handleArchiveDuplicate = (event: DuplicateEvent) => {
+    handleStatusChange([event.id], event.status, 'archived');
+  };
+
+  // Ouvrir l'aperçu d'un event par son id (les doublons ne sont pas forcément dans la liste chargée).
+  const openPreviewById = async (eventId: string) => {
+    const inList = events.find(e => e.id === eventId);
+    if (inList) {
+      setShowDetails(inList);
+      return;
+    }
+    const { data } = await supabase.from('events').select('*').eq('id', eventId).single();
+    if (data) setShowDetails(data as PendingEvent);
   };
 
   const calculateScore = (event: PendingEvent) => {
@@ -603,6 +639,7 @@ const ValidationInterface = () => {
             isLoading={statsLoading}
             activeTab={activeTab}
             onTabChange={setActiveTab}
+            duplicatesCount={duplicatePairs.length}
           />
 
           {/* Alerte urgente */}
@@ -779,6 +816,16 @@ const ValidationInterface = () => {
               </div>
             )}
           </div>
+        )}
+
+        {/* DOUBLONS - Paires potentielles */}
+        {activeTab === 'doublons' && (
+          <DuplicatesPanel
+            pairs={duplicatePairs}
+            loading={loadingDuplicates}
+            onArchive={handleArchiveDuplicate}
+            onPreview={openPreviewById}
+          />
         )}
 
         {/* PENDING - À valider */}
