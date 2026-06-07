@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, Clock, CheckCircle, Flame, List, Copy } from 'lucide-react';
+import { AlertCircle, Clock, CheckCircle, Flame, List, Copy, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface WorkloadCardProps {
@@ -70,6 +70,7 @@ interface ValidationWorkloadProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   duplicatesCount?: number;
+  venuesCount?: number;
 }
 
 export const ValidationWorkload = ({
@@ -77,12 +78,13 @@ export const ValidationWorkload = ({
   isLoading,
   activeTab,
   onTabChange,
-  duplicatesCount = 0
+  duplicatesCount = 0,
+  venuesCount = 0
 }: ValidationWorkloadProps) => {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
-        {[1, 2, 3, 4, 5, 6].map((i) => (
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+        {[1, 2, 3, 4, 5, 6, 7].map((i) => (
           <Skeleton key={i} className="h-20 rounded-lg" />
         ))}
       </div>
@@ -93,7 +95,7 @@ export const ValidationWorkload = ({
   const totalCount = (stats?.pendingEvents || 0) + (stats?.activeEvents || 0) + (stats?.rejectedEvents || 0) + urgentCount;
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
+    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
       <WorkloadCard
         label="Urgents"
         count={urgentCount}
@@ -133,6 +135,14 @@ export const ValidationWorkload = ({
         variant="info"
         onClick={() => onTabChange('doublons')}
         isActive={activeTab === 'doublons'}
+      />
+      <WorkloadCard
+        label="Lieux"
+        count={venuesCount}
+        icon={<MapPin className="w-5 h-5 text-blue-500" />}
+        variant="info"
+        onClick={() => onTabChange('lieux')}
+        isActive={activeTab === 'lieux'}
       />
       <WorkloadCard
         label="Tous"

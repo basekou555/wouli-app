@@ -4,6 +4,7 @@ import { X, Share2, Check, Bookmark, Info } from 'lucide-react';
 import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
 import { getSocialProofText, getPriceInfo } from '@/utils/eventCardHelpers';
 import { getFocusClass } from '@/utils/imageHelpers';
+import { normalizeAmbiance } from '@/utils/ambiance';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useIsPWA } from '@/hooks/useIsPWA';
@@ -364,7 +365,7 @@ const EventCard: React.FC<EventCardProps> = ({
   const heure = formatHeure(event.time);
   const dateShort = formatDateShort(event.date);
   const titleSize = titleFontSize(energy, title, recurring);
-  const ambiance = event.music_style || event.tags?.[0] || categoryLabel(event);
+  const ambiance = normalizeAmbiance(event.music_style, event.tags, categoryLabel(event));
 
   // États superposables
   const isUnique = !!event.is_unique;

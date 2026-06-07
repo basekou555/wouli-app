@@ -26,6 +26,7 @@ import { AdminEventPreview } from '@/components/admin/AdminEventPreview';
 import { AdminEventTableRow } from '@/components/admin/AdminEventTableRow';
 import { ValidationWorkload } from '@/components/admin/ValidationWorkload';
 import { DuplicatesPanel, DuplicatePair, DuplicateEvent } from '@/components/admin/DuplicatesPanel';
+import { VenuesPanel, UnknownVenue, VenueProfile } from '@/components/admin/VenuesPanel';
 import { useAdminStats } from '@/hooks/useAdminStats';
 
 interface PendingEvent {
@@ -117,6 +118,40 @@ const ValidationInterface = () => {
     }
   };
 
+  // State pour lieux hors registre
+  const [unknownVenues, setUnknownVenues] = useState<UnknownVenue[]>([]);
+  const [loadingVenues, setLoadingVenues] = useState(false);
+  const [classifyingVenue, setClassifyingVenue] = useState<string | null>(null);
+
+  const loadUnknownVenues = async () => {
+    setLoadingVenues(true);
+    try {
+      const { data, error } = await supabase.rpc('unknown_venues', { p_days: 400 });
+      if (error) throw error;
+      setUnknownVenues((data as UnknownVenue[]) || []);
+    } catch (error) {
+      console.error('Erreur chargement lieux:', error);
+    } finally {
+      setLoadingVenues(false);
+    }
+  };
+
+  const handleClassifyVenue = async (location: string, profile: VenueProfile) => {
+    setClassifyingVenue(location);
+    try {
+      const { error } = await supabase.rpc('classify_venue', { p_name: location, p_profile: profile });
+      if (error) throw error;
+      // Le lieu sort de la liste des inconnus.
+      setUnknownVenues((prev) => prev.filter((v) => v.location !== location));
+      toast({ title: 'Lieu classé', description: `"${location}" → ${profile}` });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Classement impossible';
+      toast({ title: 'Erreur', description: message, variant: 'destructive' });
+    } finally {
+      setClassifyingVenue(null);
+    }
+  };
+
   // Initialiser les formulaires quand la modale s'ouvre
   useEffect(() => {
     if (processManualReview) {
@@ -194,6 +229,7 @@ const ValidationInterface = () => {
     fetchEvents();
     loadScraperErrors();
     loadDuplicates();
+    loadUnknownVenues();
 
     // Realtime subscription sur la table events
     const eventsChannel = supabase
@@ -640,6 +676,7 @@ const ValidationInterface = () => {
             activeTab={activeTab}
             onTabChange={setActiveTab}
             duplicatesCount={duplicatePairs.length}
+            venuesCount={unknownVenues.length}
           />
 
           {/* Alerte urgente */}
@@ -825,6 +862,16 @@ const ValidationInterface = () => {
             loading={loadingDuplicates}
             onArchive={handleArchiveDuplicate}
             onPreview={openPreviewById}
+          />
+        )}
+
+        {/* LIEUX - Registre des lieux */}
+        {activeTab === 'lieux' && (
+          <VenuesPanel
+            venues={unknownVenues}
+            loading={loadingVenues}
+            pendingLocation={classifyingVenue}
+            onClassify={handleClassifyVenue}
           />
         )}
 
