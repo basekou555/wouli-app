@@ -384,7 +384,15 @@ const EventCard: React.FC<EventCardProps> = ({
 
   // Encre selon énergie : blanc sur CLUB/SCENE, encre sombre sur JOURNEE
   const ink = isJournee ? '#1A1208' : '#FFFFFF';
-  const inkMuted = isJournee ? 'rgba(26,18,8,0.45)' : 'rgba(255,255,255,0.45)';
+  const inkMuted = isJournee ? 'rgba(26,18,8,0.55)' : 'rgba(255,255,255,0.62)';
+
+  // Fond SCENE : garanti assez sombre pour du texte blanc lisible, quelle que soit
+  // la couleur extraite de l'image (sinon titre blanc sur fond clair = illisible).
+  const ensureDark = (hex: string) => {
+    const L = colorLuminance(hex);
+    return L > 30 ? adjustColor(hex, 30 - L, 0) : hex;
+  };
+  const sceneBg = ensureDark(adaptiveBg);
 
   // Néon renforcé pour l'état UNIQUE (CLUB/SCENE)
   const neonTop = isUnique ? adjustColor(accentFull, 20, 0) : accentFull;
@@ -402,7 +410,7 @@ const EventCard: React.FC<EventCardProps> = ({
         }
       : energy === 'SCENE'
       ? {
-          background: adaptiveBg,
+          background: sceneBg,
           ...(isUnique ? { borderTop: `2px solid ${neonTop}`, boxShadow: neonShadow } : {}),
         }
       : {
@@ -510,8 +518,8 @@ const EventCard: React.FC<EventCardProps> = ({
           <div
             className="absolute bottom-0 left-0 right-0 pointer-events-none"
             style={{
-              height: '60px',
-              background: `linear-gradient(to bottom, transparent, ${adaptiveBg})`,
+              height: '72px',
+              background: `linear-gradient(to bottom, transparent, ${sceneBg})`,
             }}
           />
         )}
@@ -530,7 +538,7 @@ const EventCard: React.FC<EventCardProps> = ({
           </button>
           {isUnique && (
             <span
-              style={{ fontSize: '6px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', borderRadius: '3px', padding: '3px 6px', fontFamily: POPPINS, ...uniqueBadgeStyle }}
+              style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', borderRadius: '4px', padding: '3px 7px', fontFamily: POPPINS, ...uniqueBadgeStyle }}
             >
               Unique
             </span>
@@ -579,10 +587,10 @@ const EventCard: React.FC<EventCardProps> = ({
               fontFamily: POPPINS,
             }}
           >
-            <span style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255,255,255,0.65)', lineHeight: 1 }}>
+            <span style={{ fontSize: '13px', fontWeight: 800, color: 'rgba(255,255,255,0.85)', lineHeight: 1 }}>
               #{editionNumber}
             </span>
-            <span style={{ fontSize: '6px', fontWeight: 500, color: 'rgba(255,255,255,0.30)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+            <span style={{ fontSize: '8px', fontWeight: 500, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
               Éd.
             </span>
           </div>
@@ -599,28 +607,36 @@ const EventCard: React.FC<EventCardProps> = ({
       >
         {/* ---------- CLUB : deux colonnes ---------- */}
         {energy === 'CLUB' && (
-          <div className="flex-1 flex gap-3 px-4 pt-3 pb-2 min-h-0">
+          <div className="flex-1 flex gap-3 px-4 pt-3.5 pb-2.5 min-h-0">
             <div className="flex-1 min-w-0 flex flex-col justify-center">
               <span
-                style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: inkMuted }}
+                style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: inkMuted }}
                 className="truncate"
               >
                 {venue}
               </span>
               <h1
                 className="line-clamp-2"
-                style={{ fontSize: `${titleSize}px`, fontWeight: 900, textTransform: 'uppercase', color: ink, lineHeight: 1.05, margin: '4px 0' }}
+                style={{ fontSize: `${titleSize}px`, fontWeight: 900, textTransform: 'uppercase', color: ink, lineHeight: 1.08, margin: '5px 0' }}
               >
                 {title}
               </h1>
               {heure && (
-                <span style={{ fontSize: '11px', fontWeight: 600, color: inkMuted }}>{heure}</span>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: inkMuted }}>{heure}</span>
               )}
             </div>
-            <div style={{ width: '0.5px', background: 'rgba(255,255,255,0.08)' }} />
-            <div className="flex flex-col items-end justify-center" style={{ minWidth: '32%' }}>
+            <div style={{ width: '1px', background: 'rgba(255,255,255,0.14)' }} />
+            <div className="flex flex-col items-end justify-center gap-1.5" style={{ minWidth: '32%' }}>
+              {dateShort && (
+                <span
+                  style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: ink }}
+                  className="truncate max-w-full"
+                >
+                  {dateShort}
+                </span>
+              )}
               <span
-                style={{ fontSize: '6px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', border: `0.5px solid ${hexToRgba(accentFull, 0.45)}`, color: accentBright, borderRadius: '2px', padding: '2px 5px' }}
+                style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', border: `1px solid ${hexToRgba(accentFull, 0.5)}`, color: accentBright, borderRadius: '3px', padding: '3px 7px' }}
                 className="truncate max-w-full"
               >
                 {ambiance}
@@ -631,63 +647,63 @@ const EventCard: React.FC<EventCardProps> = ({
 
         {/* ---------- SCENE : style ticket ---------- */}
         {energy === 'SCENE' && (
-          <div className="flex-1 flex flex-col justify-center px-4 pt-3 pb-2 min-h-0">
-            <div className="flex items-stretch gap-2 mb-2">
+          <div className="flex-1 flex flex-col justify-center px-4 pt-3.5 pb-2.5 min-h-0">
+            <h1
+              className="line-clamp-2"
+              style={{ fontSize: `${titleSize}px`, fontWeight: 900, textTransform: 'uppercase', color: ink, lineHeight: 1.08, marginBottom: '10px' }}
+            >
+              {title}
+            </h1>
+            <div className="flex items-stretch gap-3">
               {[
                 { label: 'Date', value: dateShort },
                 { label: 'Lieu', value: venue },
                 { label: 'Heure', value: heure },
-              ].map((cell, i) => (
+              ].filter((cell) => cell.value).map((cell, i) => (
                 <React.Fragment key={cell.label}>
-                  {i > 0 && <div style={{ width: '0.5px', background: 'rgba(255,255,255,0.12)', alignSelf: 'stretch' }} />}
+                  {i > 0 && <div style={{ width: '1px', background: 'rgba(255,255,255,0.16)', alignSelf: 'stretch' }} />}
                   <div className="min-w-0">
-                    <div style={{ fontSize: '5px', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'rgba(255,255,255,0.28)' }}>
+                    <div style={{ fontSize: '9px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'rgba(255,255,255,0.5)', marginBottom: '2px' }}>
                       {cell.label}
                     </div>
-                    <div className="truncate" style={{ fontSize: '6px', fontWeight: 600, color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase' }}>
+                    <div className="truncate" style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.92)', textTransform: 'uppercase' }}>
                       {cell.value}
                     </div>
                   </div>
                 </React.Fragment>
               ))}
             </div>
-            <h1
-              className="line-clamp-2"
-              style={{ fontSize: `${titleSize}px`, fontWeight: 900, textTransform: 'uppercase', color: ink, lineHeight: 1.05 }}
-            >
-              {title}
-            </h1>
           </div>
         )}
 
         {/* ---------- JOURNEE : deux colonnes papier ---------- */}
         {energy === 'JOURNEE' && (
-          <div className="flex-1 flex gap-3 px-4 pt-3 pb-2 min-h-0">
+          <div className="flex-1 flex gap-3 px-4 pt-3.5 pb-2.5 min-h-0">
             <div className="flex-1 min-w-0 flex flex-col justify-center">
               <span
-                style={{ alignSelf: 'flex-start', fontSize: '6px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', border: `0.5px solid ${hexToRgba(adjustColor(adaptiveBg, 0, 25), 0.4)}`, color: adjustColor(adaptiveBg, -10, 0), borderRadius: '2px', padding: '2px 5px' }}
+                style={{ alignSelf: 'flex-start', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', border: `1px solid ${hexToRgba(adjustColor(adaptiveBg, 0, 25), 0.45)}`, color: adjustColor(adaptiveBg, -10, 0), borderRadius: '3px', padding: '3px 7px' }}
               >
                 {categoryLabel(event)}
               </span>
               <h1
                 className="line-clamp-2"
-                style={{ fontSize: `${titleSize}px`, fontWeight: 700, color: ink, lineHeight: 1.1, marginTop: '6px' }}
+                style={{ fontSize: `${titleSize}px`, fontWeight: 700, color: ink, lineHeight: 1.12, marginTop: '8px' }}
               >
                 {title}
               </h1>
             </div>
-            <div style={{ width: '0.5px', background: 'rgba(26,18,8,0.12)' }} />
-            <div className="flex flex-col justify-center gap-1.5" style={{ minWidth: '36%' }}>
+            <div style={{ width: '1px', background: 'rgba(26,18,8,0.16)' }} />
+            <div className="flex flex-col justify-center gap-2" style={{ minWidth: '36%' }}>
               {[
                 { label: 'Jour', value: dateShort },
                 { label: 'Heure', value: heure },
                 { label: 'Lieu', value: venue },
-              ].map((meta) => (
+              ].filter((meta) => meta.value).map((meta) => (
                 <div key={meta.label} className="min-w-0">
-                  <div style={{ fontSize: '5px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(26,18,8,0.28)' }}>
+                  <div style={{ fontSize: '9px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(26,18,8,0.5)', marginBottom: '1px' }}>
                     {meta.label}
                   </div>
-                  <div className="truncate" style={{ fontSize: '7px', fontWeight: 600, color: 'rgba(26,18,8,0.7)', textTransform: 'uppercase' }}>
+                  <div className="truncate" style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(26,18,8,0.85)', textTransform: 'uppercase' }}>
                     {meta.value}
                   </div>
                 </div>
@@ -698,7 +714,7 @@ const EventCard: React.FC<EventCardProps> = ({
 
         {/* ---------- Couche sociale ---------- */}
         {(event.friendsParticipating && event.friendsParticipating.length > 0) && (
-          <div className="flex items-center gap-2 px-4" style={{ height: '20px', flexShrink: 0 }}>
+          <div className="flex items-center gap-2 px-4 pb-1" style={{ flexShrink: 0 }}>
             <div className="flex -space-x-1">
               {event.friendsParticipating.slice(0, 3).map((friend) => (
                 friend.avatar ? (
@@ -720,7 +736,7 @@ const EventCard: React.FC<EventCardProps> = ({
                 )
               ))}
             </div>
-            <span style={{ fontSize: '9px', color: inkMuted }} className="truncate">
+            <span style={{ fontSize: '11px', fontWeight: 500, color: inkMuted }} className="truncate">
               {getSocialProofText(event.friendsParticipating, event.totalParticipants || 0)}
             </span>
           </div>
@@ -737,7 +753,7 @@ const EventCard: React.FC<EventCardProps> = ({
             paddingBottom: isPWA ? 'env(safe-area-inset-bottom)' : undefined,
           }}
         >
-          <span style={{ fontSize: '13px', fontWeight: 700, color: priceColor }}>
+          <span style={{ fontSize: '16px', fontWeight: 800, color: priceColor }}>
             {price.display}
           </span>
           <div className="flex items-center gap-2">
@@ -746,16 +762,16 @@ const EventCard: React.FC<EventCardProps> = ({
               whileTap={{ scale: 0.9 }}
               onClick={handleLike}
               className="flex items-center justify-center rounded-full"
-              style={{ width: '30px', height: '30px', border: isJournee ? '0.5px solid rgba(26,18,8,0.2)' : '0.5px solid rgba(255,255,255,0.18)' }}
+              style={{ width: '34px', height: '34px', border: isJournee ? '1px solid rgba(26,18,8,0.22)' : '1px solid rgba(255,255,255,0.22)' }}
               aria-label="Enregistrer"
             >
-              <Bookmark style={{ width: '13px', height: '13px', color: ink }} />
+              <Bookmark style={{ width: '15px', height: '15px', color: ink }} />
             </motion.button>
             {/* CTA = participer */}
             <motion.button
               whileTap={{ scale: 0.96 }}
               onClick={handleParticipate}
-              style={{ background: isJournee ? '#1A1208' : '#FFFFFF', color: isJournee ? '#F5F0E8' : '#0A0A0A', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', borderRadius: '4px', padding: '7px 13px' }}
+              style={{ background: isJournee ? '#1A1208' : '#FFFFFF', color: isJournee ? '#F5F0E8' : '#0A0A0A', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.03em', borderRadius: '6px', padding: '9px 16px' }}
               aria-label="Participer"
             >
               {ctaLabel}
