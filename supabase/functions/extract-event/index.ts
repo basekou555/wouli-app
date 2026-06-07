@@ -12,6 +12,7 @@
 // Fournisseur configurable :
 //   EXTRACT_PROVIDER = "gemini" (défaut, free tier Google) | "anthropic"
 //   EXTRACT_MODEL    = surcharge du modèle (défaut gemini-2.5-flash / claude-opus-4-8)
+//   EXTRACT_SECRET   = si défini, exigé via le header x-extract-secret (sécurise l'écriture)
 // Fallback Haiku = EXTRACT_PROVIDER=anthropic + EXTRACT_MODEL=claude-haiku-4-5.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
@@ -20,7 +21,7 @@ import Anthropic from "npm:@anthropic-ai/sdk";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-extract-secret",
 };
 
 const PROVIDER = (Deno.env.get("EXTRACT_PROVIDER") ?? "gemini").toLowerCase();
@@ -59,6 +60,7 @@ Distinction clé : "soirees" = on vient FAIRE LA FÊTE / DANSER ; "activites" = 
   (Ex : on est en juin 2026, le flyer dit "7 janvier" sans année => 2027-01-07, car janvier 2026 est déjà passé.)
 - "date_confidence" : "explicit" (date clairement écrite), "inferred" (déduite d'un jour
   type "vendredi 8" sans année), "none" (introuvable).
+- "end_date" : pour un événement sur PLUSIEURS JOURS (ex: "du 4 au 9 mai", festival), date de FIN "YYYY-MM-DD" (même règle d'année). Pour un événement d'un seul jour => null.
 - "date_source_text" : le texte brut de la date trouvé (ex: "VEN 8 MAI"), sinon null.
 - "time" : heure de DÉBUT "HH:MM" si écrite, sinon null. N'invente jamais.
 - "end_time" : heure de FIN "HH:MM" si écrite, sinon null.
@@ -66,6 +68,9 @@ Distinction clé : "soirees" = on vient FAIRE LA FÊTE / DANSER ; "activites" = 
 == LINEUP / ARTISTES ==
 - "lineup" : artistes / DJs / groupes qui SE PRODUISENT réellement (concert live ou aux platines), noms propres. N'inclus PAS les artistes seulement cités comme référence musicale : une soirée "classiques 90s" qui passe du Beyoncé / 50 Cent => lineup VIDE. Sinon [].
   INDICE FORT : les artistes présents sont souvent tagués par un @mention (ex: @djxxx). Un concert (SCENE) a souvent 1 artiste ; une soirée club peut en avoir 2-3. ATTENTION : tous les @ ne sont pas des artistes (le lieu, des partenaires, des sponsors sont aussi tagués) — ne garde que les artistes/DJs.
+
+== TAGS ==
+- "tags" : 3 à 6 mots-clés courts en minuscules qui caractérisent l'événement (ambiance, public, thème, style), ex: ["techno","gratuit","etudiants","rooftop"]. Pas de hashtags, pas de @. Sinon [].
 
 == LIEU ==
 - "venue_name" : nom du lieu tel que lisible (sert à enrichir le registre), sinon null.
@@ -89,8 +94,8 @@ Réponds UNIQUEMENT par un objet JSON conforme au schéma demandé, sans texte a
 
 const FIELDS = [
   "title", "subtitle", "description", "category", "energy", "energy_reason",
-  "date", "date_confidence", "date_source_text", "time", "end_time",
-  "music_style", "lineup", "venue_name", "address",
+  "date", "end_date", "date_confidence", "date_source_text", "time", "end_time",
+  "music_style", "tags", "lineup", "venue_name", "address",
   "price_eur", "is_free", "event_type", "is_recurring", "source_used", "confidence",
 ] as const;
 
@@ -111,11 +116,13 @@ const ANTHROPIC_SCHEMA = {
     energy: { type: "string", enum: ENERGY },
     energy_reason: { type: "string" },
     date: { type: ["string", "null"] },
+    end_date: { type: ["string", "null"] },
     date_confidence: { type: "string", enum: DATE_CONF },
     date_source_text: { type: ["string", "null"] },
     time: { type: ["string", "null"] },
     end_time: { type: ["string", "null"] },
     music_style: { type: ["string", "null"] },
+    tags: { type: "array", items: { type: "string" } },
     lineup: { type: "array", items: { type: "string" } },
     venue_name: { type: ["string", "null"] },
     address: { type: ["string", "null"] },
@@ -140,11 +147,13 @@ const GEMINI_SCHEMA = {
     energy: { type: "STRING", enum: ENERGY },
     energy_reason: { type: "STRING" },
     date: { type: "STRING", nullable: true },
+    end_date: { type: "STRING", nullable: true },
     date_confidence: { type: "STRING", enum: DATE_CONF },
     date_source_text: { type: "STRING", nullable: true },
     time: { type: "STRING", nullable: true },
     end_time: { type: "STRING", nullable: true },
     music_style: { type: "STRING", nullable: true },
+    tags: { type: "ARRAY", items: { type: "STRING" } },
     lineup: { type: "ARRAY", items: { type: "STRING" } },
     venue_name: { type: "STRING", nullable: true },
     address: { type: "STRING", nullable: true },
@@ -165,6 +174,11 @@ serve(async (req) => {
   try {
     if (!req.headers.get("Authorization")) {
       return json({ error: "Authorization required" }, 401);
+    }
+    // Sécurité : si un secret est configuré, on l'exige (bloque la clé anon publique).
+    const secret = Deno.env.get("EXTRACT_SECRET");
+    if (secret && req.headers.get("x-extract-secret") !== secret) {
+      return json({ error: "Forbidden: secret invalide ou manquant (header x-extract-secret)" }, 403);
     }
 
     const supabase = createClient(
@@ -214,7 +228,7 @@ serve(async (req) => {
 async function extractOne(supabase: any, id: string, dryRun = false) {
   const { data: ev, error } = await supabase
     .from("events")
-    .select("id, title, description, location, image_url, account_username, date")
+    .select("id, title, description, location, image_url, account_username, date, time, end_date, extraction_backup")
     .eq("id", id)
     .single();
   if (error || !ev) throw new Error(`event ${id} introuvable`);
@@ -252,8 +266,10 @@ async function extractOne(supabase: any, id: string, dryRun = false) {
   const time = /^\d{2}:\d{2}$/.test(out.time ?? "") ? out.time : null;
   const endTime = /^\d{2}:\d{2}$/.test(out.end_time ?? "") ? out.end_time : null;
   const isoDate = /^\d{4}-\d{2}-\d{2}$/.test(out.date ?? "") ? out.date : null;
+  const endDateIso = /^\d{4}-\d{2}-\d{2}$/.test(out.end_date ?? "") ? out.end_date : null;
   const price = out.is_free ? 0 : (typeof out.price_eur === "number" ? out.price_eur : null);
   const lineup = Array.isArray(out.lineup) ? out.lineup.filter((s: any) => typeof s === "string") : [];
+  const tags = Array.isArray(out.tags) ? out.tags.filter((s: any) => typeof s === "string") : [];
 
   // Revue manuelle.
   const reasons: string[] = [];
@@ -270,10 +286,10 @@ async function extractOne(supabase: any, id: string, dryRun = false) {
       energy, energy_model: out.energy, category: out.category,
       title_avant: ev.title, title_apres: (out.title ?? "").slice(0, 100),
       subtitle: out.subtitle,
-      date_avant: ev.date, date_apres: isoDate,
+      date_avant: ev.date, date_apres: isoDate, end_date: endDateIso,
       date_confidence: out.date_confidence, date_source_text: out.date_source_text,
       time, end_time: endTime,
-      music_style: out.music_style, lineup,
+      music_style: out.music_style, tags, lineup,
       venue_name: out.venue_name, address: out.address,
       price, event_type: out.event_type, is_recurring: out.is_recurring,
       source_used: out.source_used, confidence: out.confidence,
@@ -281,8 +297,7 @@ async function extractOne(supabase: any, id: string, dryRun = false) {
     };
   }
 
-  // Écriture (passe réelle). NB : date/end_time/lineup câblés à part une fois la
-  // colonne lineup créée + le fuseau horaire géré (étape suivante).
+  // Écriture (passe réelle).
   const update: Record<string, unknown> = {
     title: (out.title ?? ev.title ?? "").slice(0, 100),
     subtitle: out.subtitle ?? null,
@@ -290,6 +305,8 @@ async function extractOne(supabase: any, id: string, dryRun = false) {
     category: out.category,
     energy,
     music_style: out.music_style ?? null,
+    tags: tags.length ? tags : null,
+    lineup: lineup.length ? lineup : null,
     address: out.address ?? null,
     event_type: out.event_type ?? null,
     is_recurring: !!out.is_recurring,
@@ -299,8 +316,30 @@ async function extractOne(supabase: any, id: string, dryRun = false) {
     needs_manual_image: !hasUsableImage,
     manual_review_reason: reasons.length ? reasons.join(",") : null,
   };
-  if (time) update.time = time;
   if (price !== null) update.price = price;
+
+  // Backup capture-once du brut scrapé (avant toute écriture IA).
+  if (!ev.extraction_backup) {
+    update.extraction_backup = {
+      title: ev.title, description: ev.description,
+      date: ev.date, time: ev.time, end_date: ev.end_date, location: ev.location,
+    };
+  }
+
+  // Dates en fuseau Europe/Paris (DST-correct via helper SQL).
+  if (isoDate) {
+    const { data: ts } = await supabase.rpc("to_paris_ts", { d: isoDate, t: time });
+    if (ts) update.date = ts;
+  }
+  if (endDateIso) {
+    const { data: ets } = await supabase.rpc("to_paris_ts", { d: endDateIso, t: endTime });
+    if (ets) update.end_date = ets;
+  }
+  if (time) update.time = time;
+  if (endTime && (endDateIso || isoDate)) {
+    const { data: ett } = await supabase.rpc("to_paris_ts", { d: endDateIso ?? isoDate, t: endTime });
+    if (ett) update.end_time = ett;
+  }
 
   const { error: upErr } = await supabase.from("events").update(update).eq("id", id);
   if (upErr) throw upErr;
