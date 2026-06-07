@@ -46,7 +46,14 @@ interface PendingEvent {
   account_username?: string;
   event_type?: string;
   manual_review_reason?: string;
+  parsing_method?: string | null;
+  parsing_confidence?: number | null;
+  needs_manual_image?: boolean | null;
 }
+
+// Un event mérite un coup d'œil si l'IA a posé un drapeau ou n'a pas d'image exploitable.
+const hasReviewFlags = (e: PendingEvent) =>
+  !!e.manual_review_reason?.trim() || !!e.needs_manual_image;
 
 const ValidationInterface = () => {
   const [events, setEvents] = useState<PendingEvent[]>([]);
@@ -419,6 +426,11 @@ const ValidationInterface = () => {
         case 'date': return new Date(a.date).getTime() - new Date(b.date).getTime();
         case 'score': return calculateScore(b) - calculateScore(a);
         case 'created': return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'review': {
+          // Events flaggés par l'IA en premier, puis par date d'événement.
+          const diff = (hasReviewFlags(b) ? 1 : 0) - (hasReviewFlags(a) ? 1 : 0);
+          return diff !== 0 ? diff : new Date(a.date).getTime() - new Date(b.date).getTime();
+        }
         default: return 0;
       }
     });
@@ -1166,6 +1178,7 @@ const ValidationInterface = () => {
                   <SelectItem value="date">Date événement</SelectItem>
                   <SelectItem value="created">Date création</SelectItem>
                   <SelectItem value="score">Score qualité</SelectItem>
+                  <SelectItem value="review">À réviser en priorité</SelectItem>
                 </SelectContent>
               </Select>
             </div>
