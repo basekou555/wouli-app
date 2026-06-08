@@ -241,7 +241,7 @@ export default function ScraperControl() {
       setCurrentRun(newRun as ScraperRun);
 
       toast.info('Run créé - En attente du scraper...', {
-        description: 'Lancez node scraper-v5.js dans votre terminal'
+        description: 'Le watcher local va le lancer automatiquement'
       });
 
     } catch (error: any) {
@@ -274,7 +274,7 @@ export default function ScraperControl() {
   };
 
   const copyCommand = () => {
-    navigator.clipboard.writeText('node scraper-v5.js');
+    navigator.clipboard.writeText('node scraper-watcher.js');
     toast.success('Commande copiée !');
   };
 
@@ -491,10 +491,11 @@ export default function ScraperControl() {
                   ⏳ En attente du scraper
                 </p>
                 <p className="text-sm text-muted-foreground mb-3">
-                  Ouvrez votre terminal et lancez la commande suivante :
+                  Le watcher local va détecter ce run et lancer le scraper automatiquement.
+                  Vérifiez qu'il tourne sur votre machine :
                 </p>
                 <div className="flex items-center gap-2 bg-zinc-900 rounded-lg p-3 font-mono text-sm">
-                  <code className="text-green-400 flex-1">node scraper-v5.js</code>
+                  <code className="text-green-400 flex-1">node scraper-watcher.js</code>
                   <Button variant="ghost" size="sm" onClick={copyCommand} className="h-7 px-2">
                     <Copy className="w-4 h-4" />
                   </Button>
