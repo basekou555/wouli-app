@@ -105,8 +105,6 @@ const UserApp = () => {
     };
   }, [flushNow]);
 
-  const isPWA = useIsPWA();
-
   const currentEvent = filteredEvents[currentIndex];
   const nextEvent = filteredEvents[currentIndex + 1];
   const isAtEnd = !currentEvent && !hasMore;
