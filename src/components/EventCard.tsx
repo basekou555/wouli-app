@@ -371,16 +371,20 @@ const EventCard: React.FC<EventCardProps> = ({
   const isUnique = !!event.is_unique;
   const editionNumber = getEditionNumber(event);
 
-  // Couleurs dérivées de la couleur adaptative
+  // Couleurs dérivées de la couleur adaptative (CLUB / SCÈNE : tirées de la photo)
   const accentFull = adjustColor(adaptiveBg, 45, 10); // pleine luminosité (néon, bordure)
   const accentBright = adjustColor(adaptiveBg, 30, 0); // +30% lum (texte de tag)
-  const journeeBg = (() => {
-    const L = colorLuminance(adaptiveBg);
-    if (L > 50) return '#FAF7F0';
-    if (L >= 35) return '#F4EDE0';
-    if (L >= 20) return '#EFD99A';
-    return '#E5C878';
-  })();
+
+  // JOURNÉE : identité de jour portée par le TYPE d'événement, pas par la photo.
+  // Fond papier crème fixe + accent sémantique selon le sous-type (≠ couleur dominante).
+  const JOURNEE_ACCENTS: Record<string, string> = {
+    'a-manger': '#C9683B', // terracotta
+    'a-boire': '#D99A2B',  // ambre
+    'activites': '#7E8C5A', // sauge
+  };
+  const journeeAccent = JOURNEE_ACCENTS[(event.event_type || event.category) as string] ?? '#B5853F';
+  const journeeAccentInk = adjustColor(journeeAccent, -8, 0); // assombri pour texte lisible sur crème
+  const journeeBg = '#F4EDE0';
 
   // Encre selon énergie : blanc sur CLUB/SCENE, encre sombre sur JOURNEE
   const ink = isJournee ? '#1A1208' : '#FFFFFF';
@@ -415,15 +419,15 @@ const EventCard: React.FC<EventCardProps> = ({
         }
       : {
           background: journeeBg,
-          // JOURNEE unique : trait gauche plus épais + glow
-          borderLeft: `${isUnique ? 4 : 3}px solid ${adjustColor(adaptiveBg, 0, 25)}`,
-          ...(isUnique ? { boxShadow: `-2px 0 12px ${hexToRgba(adjustColor(adaptiveBg, 0, 25), 0.35)}` } : {}),
+          // JOURNEE unique : trait gauche plus épais + glow (accent sémantique du sous-type)
+          borderLeft: `${isUnique ? 4 : 3}px solid ${journeeAccent}`,
+          ...(isUnique ? { boxShadow: `-2px 0 12px ${hexToRgba(journeeAccent, 0.35)}` } : {}),
         };
 
   // Bordure de carte pour JOURNEE unique (sur le wrapper)
   const wrapperStyle: React.CSSProperties =
     isUnique && isJournee
-      ? { boxShadow: `0 0 0 1.5px ${hexToRgba(adjustColor(adaptiveBg, 0, 25), 0.45)}` }
+      ? { boxShadow: `0 0 0 1.5px ${hexToRgba(journeeAccent, 0.45)}` }
       : {};
 
   // Style du badge UNIQUE selon énergie
@@ -435,7 +439,7 @@ const EventCard: React.FC<EventCardProps> = ({
   const actionBarBg = isJournee ? 'rgba(26,18,8,0.06)' : 'rgba(0,0,0,0.20)';
   const priceColor = price.isFree
     ? isJournee
-      ? adjustColor(adaptiveBg, -10, 0)
+      ? journeeAccentInk
       : adjustColor(adaptiveBg, 20, 0)
     : ink;
   const ctaLabel = price.isFree ? "C'est gratuit ce soir →" : "J'y vais →";
@@ -681,7 +685,7 @@ const EventCard: React.FC<EventCardProps> = ({
           <div className="flex-1 flex gap-3 px-4 pt-3.5 pb-2.5 min-h-0">
             <div className="flex-1 min-w-0 flex flex-col justify-center">
               <span
-                style={{ alignSelf: 'flex-start', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', border: `1px solid ${hexToRgba(adjustColor(adaptiveBg, 0, 25), 0.45)}`, color: adjustColor(adaptiveBg, -10, 0), borderRadius: '3px', padding: '3px 7px' }}
+                style={{ alignSelf: 'flex-start', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', border: `1px solid ${hexToRgba(journeeAccent, 0.45)}`, color: journeeAccentInk, borderRadius: '3px', padding: '3px 7px' }}
               >
                 {categoryLabel(event)}
               </span>
