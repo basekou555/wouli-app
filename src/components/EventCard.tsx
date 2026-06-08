@@ -29,28 +29,51 @@ interface EventCardProps {
 // Signaux textuels pour la détection d'énergie
 const DJ_SIGNALS = ['dj', 'mix', 'b2b'];
 const SCENE_SIGNALS = ['concert', 'live', 'spectacle', 'théâtre', 'theatre'];
+// Salles de concert / scènes lyonnaises connues → énergie SCÈNE garantie.
+const SCENE_VENUES = ['transbordeur', 'radiant', 'ninkasi', 'théâtre', 'theatre', 'salle'];
 
 /**
  * Détermine l'énergie visuelle d'un événement.
- * Priorité : champ serveur > signal DJ > signal SCÈNE > soirée tardive > défaut JOURNEE.
+ * Priorité : champ serveur > signal DJ > signaux SCÈNE (texte/tags/salle) > soirée
+ * (tardive = CLUB, plus tôt = SCÈNE concert) > défaut JOURNEE.
  */
 function deriveEnergy(event: UnifiedEvent): 'SCENE' | 'CLUB' | 'JOURNEE' {
   if (event.energy) return event.energy;
 
-  const haystack = `${event.title || ''} ${event.music_style || ''}`.toLowerCase();
-
-  // RÈGLE DJ — priorité absolue
-  if (DJ_SIGNALS.some((s) => haystack.includes(s))) return 'CLUB';
-
-  // RÈGLE SCÈNE
-  if (SCENE_SIGNALS.some((s) => haystack.includes(s))) return 'SCENE';
-
-  // RÈGLE CLUB — soirée tardive
+  // Le haystack inclut désormais les tags (souvent 'concert', 'live'...) en plus du titre.
+  const tags = (event.tags || []).join(' ');
+  const haystack = `${event.title || ''} ${event.music_style || ''} ${tags}`.toLowerCase();
+  const venue = `${event.venue || ''} ${event.location || ''}`.toLowerCase();
   const hour = parseInt(event.time?.split(':')[0] ?? '', 10);
-  if (event.event_type === 'soirees' && !Number.isNaN(hour) && hour >= 22) return 'CLUB';
 
-  // Défaut sûr
-  return 'JOURNEE';
+  const energy: 'SCENE' | 'CLUB' | 'JOURNEE' = (() => {
+    // RÈGLE DJ — priorité absolue
+    if (DJ_SIGNALS.some((s) => haystack.includes(s))) return 'CLUB';
+
+    // RÈGLE SCÈNE — signaux texte / tags
+    if (SCENE_SIGNALS.some((s) => haystack.includes(s))) return 'SCENE';
+
+    // RÈGLE SCÈNE — salle de concert connue
+    if (SCENE_VENUES.some((v) => venue.includes(v))) return 'SCENE';
+
+    // RÈGLE SOIRÉE — tardive (>= 22h) = CLUB, plus tôt = SCÈNE (concert/live en salle)
+    if (event.event_type === 'soirees' && !Number.isNaN(hour)) {
+      return hour >= 22 ? 'CLUB' : 'SCENE';
+    }
+
+    // Défaut sûr
+    return 'JOURNEE';
+  })();
+
+  // Debug : trace l'énergie dérivée et les signaux utilisés (à retirer une fois calibré).
+  console.log(`[deriveEnergy] "${event.title}" → ${energy}`, {
+    event_type: event.event_type,
+    hour: Number.isNaN(hour) ? null : hour,
+    tags: event.tags,
+    venue,
+  });
+
+  return energy;
 }
 
 /**
@@ -190,9 +213,23 @@ function colorLuminance(hex: string): number {
   return ((Math.max(r, g, b) + Math.min(r, g, b)) / 2) * 100;
 }
 
-// Titre nettoyé (espaces normalisés)
+// Nom de lieu propre (sans la partie après une virgule : "Ninkasi, Gerland" → "Ninkasi").
+function getVenueName(event: UnifiedEvent): string {
+  const raw = event.venue || event.location || '';
+  return raw.split(',')[0].replace(/\s+/g, ' ').trim();
+}
+
+// Titre nettoyé (espaces normalisés). Si le titre ressemble à une caption Instagram
+// (présence de " – " ou " : " ET plus de 5 mots), on retombe sur le nom du lieu.
 function cleanTitle(event: UnifiedEvent): string {
-  return (event.title || '').replace(/\s+/g, ' ').trim();
+  const cleaned = (event.title || '').replace(/\s+/g, ' ').trim();
+  const looksLikeCaption =
+    /\s[–—:]\s/.test(cleaned) && cleaned.split(' ').length > 5;
+  if (looksLikeCaption) {
+    const venueName = getVenueName(event);
+    if (venueName) return venueName;
+  }
+  return cleaned;
 }
 
 // Libellé d'activité FR depuis la catégorie
