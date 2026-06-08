@@ -38,6 +38,10 @@ class WouliScraperV5 {
     this.ADMIN_UUID = process.env.SUPABASE_ADMIN_UUID || 'b8750c46-6717-4427-aac4-3e5c1e5a86c5';
     this.FILTERING_MODE = process.env.FILTERING_MODE || 'balanced';
 
+    // Si lancé par le watcher (bouton admin), on reporte la progression dans cette ligne.
+    // Absent en lancement manuel pur -> tout le reporting devient un no-op.
+    this.RUN_ID = process.env.SCRAPER_RUN_ID || null;
+
     this.events = [];
     this.accounts = [];
     this.config = {};
@@ -96,7 +100,18 @@ class WouliScraperV5 {
       const data = await fs.readFile(accountsPath, 'utf8');
       const jsonData = JSON.parse(data);
 
-      this.accounts = (jsonData.accounts || []).filter(acc => acc.enabled);
+      // Un handle Instagram réel ne contient que lettres, chiffres, '.' et '_'.
+      // On écarte les entrées placeholder ("pas sur maps", "fermé def", accents…)
+      // qui sinon déclenchent de fausses alertes throttling + pauses inutiles.
+      const HANDLE_VALIDE = /^[a-zA-Z0-9._]+$/;
+      this.accounts = (jsonData.accounts || []).filter(acc => {
+        if (!acc.enabled) return false;
+        if (!HANDLE_VALIDE.test(acc.username || '')) {
+          console.log(`   ⏭️  Ignoré (handle invalide) : @${acc.username} - ${acc.venue_name}`);
+          return false;
+        }
+        return true;
+      });
       this.config = jsonData.configuration || {};
 
       if (this.TEST_MODE) {
@@ -962,6 +977,40 @@ class WouliScraperV5 {
   }
 
   // ============================================
+  // REPORTING ADMIN (actif seulement si lancé par le watcher)
+  // ============================================
+
+  // Pousse une ligne dans la console temps réel de l'admin (RPC atomique).
+  async reportLog(level, message, account) {
+    if (!this.RUN_ID) return;
+    try {
+      await this.supabase.rpc('append_scraper_log', {
+        run_id: this.RUN_ID,
+        log_entry: {
+          timestamp: new Date().toISOString(),
+          level, // 'info' | 'success' | 'warning' | 'error'
+          message: this.cleanUnicode(message || '').substring(0, 300),
+          ...(account ? { account } : {})
+        }
+      });
+    } catch (_) { /* non bloquant : ne jamais faire échouer le scraper */ }
+  }
+
+  // Met à jour les compteurs affichés dans l'admin.
+  async reportStats(extra = {}) {
+    if (!this.RUN_ID) return;
+    try {
+      await this.supabase.from('scraper_runs').update({
+        posts_analyzed: this.stats.posts_analyzed,
+        events_found: this.events.length,
+        events_manual_review: this.events.filter(e => e.manual_review_reason).length,
+        error_count: this.stats.errors.length,
+        ...extra
+      }).eq('id', this.RUN_ID);
+    } catch (_) { /* non bloquant */ }
+  }
+
+  // ============================================
   // SAUVEGARDE SUPABASE
   // ============================================
 
@@ -1002,6 +1051,10 @@ class WouliScraperV5 {
       const manualCount = this.events.filter(e => e.status === 'manual_review').length;
       console.log(`   → ${pendingCount} événements en 'pending'`);
       if (manualCount > 0) console.log(`   → ${manualCount} événements en 'manual_review'`);
+
+      // Reporting admin : nombre réellement sauvegardé
+      await this.reportStats({ events_saved: saved });
+      await this.reportLog('success', `${saved} événement(s) sauvegardé(s) dans Supabase.`);
     } catch (e) {
       console.error('\nErreur générale de sauvegarde:', e.message);
     }
@@ -1097,14 +1150,25 @@ async function runScraperV5() {
     const toScrape = sorted.filter(acc => !completedAccounts.includes(acc.username));
 
     console.log(`\nDébut du scraping de ${toScrape.length} compte(s) restants...\n`);
+    await scraper.reportLog('info', `Démarrage : ${toScrape.length} compte(s) à scraper.`);
 
     let consecutiveErrors = 0;
     const MAX_CONSECUTIVE = 6;
 
     for (const acc of toScrape) {
       const errorsBefore = scraper.stats.errors.length;
+      const eventsBefore = scraper.events.length;
       await scraper.scrapeAccount(acc);
       const hadError = scraper.stats.errors.length > errorsBefore;
+      const added = scraper.events.length - eventsBefore;
+
+      // Reporting admin temps réel (no-op si lancé manuellement)
+      await scraper.reportLog(
+        hadError ? 'warning' : (added > 0 ? 'success' : 'info'),
+        hadError ? 'Erreur ou compte injoignable' : `${added} événement(s) trouvé(s)`,
+        acc.username
+      );
+      await scraper.reportStats();
 
       // Checkpoint après chaque compte (succès ou erreur)
       completedAccounts.push(acc.username);
