@@ -17,6 +17,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
+import { decode, Image } from "https://deno.land/x/imagescript@1.2.17/mod.ts";
 import Anthropic from "npm:@anthropic-ai/sdk";
 
 const corsHeaders = {
@@ -225,10 +226,103 @@ serve(async (req) => {
   }
 });
 
+// Ajuste luminosité + saturation d'une couleur hex (port exact du client EventCard.tsx).
+// Sert à assombrir/désaturer la couleur dominante pour en faire un fond de zone lisible.
+function adjustColor(hex: string, lightnessOffset: number, saturationOffset: number): string {
+  const m = hex.replace("#", "");
+  if (m.length !== 6) return hex;
+  const r = parseInt(m.slice(0, 2), 16) / 255;
+  const g = parseInt(m.slice(2, 4), 16) / 255;
+  const b = parseInt(m.slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const d = max - min;
+  const l = (max + min) / 2;
+  let h = 0;
+  let s = 0;
+  if (d !== 0) {
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      default: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  let lPct = l * 100;
+  const lOff = lPct < 30 ? lightnessOffset / 2 : lightnessOffset;
+  lPct = Math.max(0, Math.min(100, lPct + lOff));
+  const l2 = lPct / 100;
+  let sPct = s * 100;
+  sPct = Math.max(0, Math.min(100, sPct + saturationOffset));
+  s = sPct / 100;
+  const hue2rgb = (p: number, q: number, t: number) => {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  };
+  let r2: number;
+  let g2: number;
+  let b2: number;
+  if (s === 0) {
+    r2 = g2 = b2 = l2;
+  } else {
+    const q = l2 < 0.5 ? l2 * (1 + s) : l2 + s - l2 * s;
+    const p = 2 * l2 - q;
+    r2 = hue2rgb(p, q, h + 1 / 3);
+    g2 = hue2rgb(p, q, h);
+    b2 = hue2rgb(p, q, h - 1 / 3);
+  }
+  const toHex = (x: number) => Math.round(x * 255).toString(16).padStart(2, "0");
+  return `#${toHex(r2)}${toHex(g2)}${toHex(b2)}`;
+}
+
+// Couleur dominante d'une image -> fond de carte adaptatif (color_card).
+// Côté serveur (Deno), fetch n'a PAS de restriction CORS : marche même sur une
+// URL Instagram brute, là où l'extraction côté navigateur échouait. Retourne null
+// si l'image est inaccessible/indécodable (fallback gracieux : couleur par défaut).
+async function computeColorCard(imageUrl: string | null | undefined): Promise<string | null> {
+  if (!imageUrl || typeof imageUrl !== "string") return null;
+  try {
+    const res = await fetch(imageUrl);
+    if (!res.ok) return null;
+    const buf = new Uint8Array(await res.arrayBuffer());
+    const decoded = await decode(buf);
+    // GIF -> on prend la première frame ; sinon Image directement.
+    const image: Image = decoded instanceof Image ? decoded : (decoded as any)[0];
+    if (!image) return null;
+    const small = image.resize(10, 10);
+    const bmp = small.bitmap; // RGBA, 8 bits/canal
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    let count = 0;
+    for (let i = 0; i < bmp.length; i += 4) {
+      r += bmp[i];
+      g += bmp[i + 1];
+      b += bmp[i + 2];
+      count++;
+    }
+    if (count === 0) return null;
+    r = Math.round(r / count);
+    g = Math.round(g / count);
+    b = Math.round(b / count);
+    const toHex = (x: number) => x.toString(16).padStart(2, "0");
+    const avgHex = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    // Mêmes offsets que extractCardColor côté client (-25 lum, -20 sat).
+    return adjustColor(avgHex, -25, -20);
+  } catch {
+    return null;
+  }
+}
+
 async function extractOne(supabase: any, id: string, dryRun = false) {
   const { data: ev, error } = await supabase
     .from("events")
-    .select("id, title, description, location, image_url, account_username, date, time, end_date, extraction_backup")
+    .select("id, title, description, location, image_url, account_username, date, time, end_date, extraction_backup, color_card")
     .eq("id", id)
     .single();
   if (error || !ev) throw new Error(`event ${id} introuvable`);
@@ -262,6 +356,10 @@ async function extractOne(supabase: any, id: string, dryRun = false) {
   else if (profile === "club") energy = "CLUB";
   else if (profile === "journee") energy = "JOURNEE";
 
+  // Couleur de carte adaptative : calculée une fois à la source si absente.
+  // Évite le fallback "couleur unique" à l'affichage (CORS Instagram côté navigateur).
+  const colorCard = ev.color_card ?? (await computeColorCard(ev.image_url));
+
   // Normalisations.
   const time = /^\d{2}:\d{2}$/.test(out.time ?? "") ? out.time : null;
   const endTime = /^\d{2}:\d{2}$/.test(out.end_time ?? "") ? out.end_time : null;
@@ -284,6 +382,7 @@ async function extractOne(supabase: any, id: string, dryRun = false) {
       venue_profile: profile,
       location: ev.location,
       energy, energy_model: out.energy, category: out.category,
+      color_card: colorCard,
       title_avant: ev.title, title_apres: (out.title ?? "").slice(0, 100),
       subtitle: out.subtitle,
       date_avant: ev.date, date_apres: isoDate, end_date: endDateIso,
@@ -317,6 +416,7 @@ async function extractOne(supabase: any, id: string, dryRun = false) {
     manual_review_reason: reasons.length ? reasons.join(",") : null,
   };
   if (price !== null) update.price = price;
+  if (colorCard) update.color_card = colorCard;
 
   // Backup capture-once du brut scrapé (avant toute écriture IA).
   if (!ev.extraction_backup) {
