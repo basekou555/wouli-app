@@ -285,7 +285,7 @@ const UserApp = () => {
         {/* Next card peeking behind — stationary, no interaction */}
         {nextEvent && (
           <div className="absolute inset-0 scale-95 opacity-60 pointer-events-none origin-bottom">
-            <div className="absolute inset-0 bg-card rounded-t-2xl" />
+            <div className="absolute inset-0 bg-neutral-900 rounded-t-2xl" />
           </div>
         )}
 

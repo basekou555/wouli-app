@@ -29,6 +29,17 @@ const getStaticMapUrl = (lat: number, lon: number) => {
   return `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lon}&zoom=15&size=600x300&markers=${lat},${lon},red-pushpin`;
 };
 
+// Métadonnées d'énergie (badge immersif en haut de carte)
+const ENERGY_META: Record<string, { label: string; icon: string }> = {
+  CLUB: { label: 'Club', icon: '🔥' },
+  SCENE: { label: 'Scène', icon: '🎤' },
+  JOURNEE: { label: 'Journée', icon: '☀️' },
+};
+
+// Style commun des chips "verre dépoli" posés sur l'image
+const GLASS_CHIP =
+  'flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/15 text-white text-xs font-semibold whitespace-nowrap';
+
 // Composant ParticipateButton avec animation spéciale
 const ParticipateButton: React.FC<{ onClick: () => void }> = ({ onClick }) => {
   const [isAnimating, setIsAnimating] = useState(false);
@@ -36,7 +47,7 @@ const ParticipateButton: React.FC<{ onClick: () => void }> = ({ onClick }) => {
   const handleClick = () => {
     setIsAnimating(true);
     onClick();
-    
+
     setTimeout(() => {
       setIsAnimating(false);
     }, 1000);
@@ -46,7 +57,7 @@ const ParticipateButton: React.FC<{ onClick: () => void }> = ({ onClick }) => {
       <motion.button
         whileTap={{ scale: 0.9 }}
         onClick={handleClick}
-        className="flex-[2] h-11 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold transition-all shadow-lg flex items-center justify-center gap-2 relative overflow-hidden"
+        className="flex-[2] h-12 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold transition-all shadow-lg flex items-center justify-center gap-2 relative overflow-hidden"
         aria-label="Participer"
       >
       {/* Animation success */}
@@ -56,13 +67,13 @@ const ParticipateButton: React.FC<{ onClick: () => void }> = ({ onClick }) => {
             initial={{ scale: 0, opacity: 1 }}
             animate={{ scale: 3, opacity: 0 }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
-            className="absolute inset-0 bg-white rounded-xl"
+            className="absolute inset-0 bg-white rounded-2xl"
           />
           {[...Array(4)].map((_, i) => (
             <motion.div
               key={i}
               initial={{ scale: 0, x: 0, y: 0, opacity: 1 }}
-              animate={{ 
+              animate={{
                 scale: [0, 1, 0],
                 x: Math.cos(i * Math.PI / 2) * 40,
                 y: Math.sin(i * Math.PI / 2) * 40,
@@ -75,7 +86,7 @@ const ParticipateButton: React.FC<{ onClick: () => void }> = ({ onClick }) => {
           ))}
         </>
       )}
-      
+
       <motion.div
         animate={isAnimating ? { scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] } : {}}
         transition={{ duration: 0.4 }}
@@ -100,9 +111,8 @@ const EventCard: React.FC<EventCardProps> = ({
   const [imageLoaded, setImageLoaded] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
   const isPWA = useIsPWA();
-  
+
   // Smart Tracking Integration
   const { startViewTracking, stopViewTracking, trackInteraction } = useSmartTracking();
   const hasTrackedView = useRef(false);
@@ -150,142 +160,155 @@ const EventCard: React.FC<EventCardProps> = ({
     onShare?.();
   };
 
+  // Champs enrichis par l'IA (présents selon la requête) — accès tolérant.
+  const colorCard = (event as any).color_card as string | undefined;
+  const subtitle = (event as any).subtitle as string | undefined;
+  const energy = (event as any).energy as string | undefined;
+  const energyMeta = energy ? ENERGY_META[energy] : undefined;
+
+  const imageSrc = getProxiedImageUrl(event.image_url) || 'https://picsum.photos/400/600?random=event';
+  const friends = event.friendsParticipating ?? [];
+  const participantCount = event.totalParticipants || event.participants || 0;
+
   return (
-    <div className="w-full h-full bg-background flex flex-col">
-
-      {/* Contenu sans scroll - flexbox */}
-      <div 
-        ref={containerRef}
-        className="flex-1 flex flex-col overflow-hidden min-h-0"
-      >
-        {/* Image - prend l'espace flexible restant - cliquable pour fullscreen */}
-        <div 
-          className="relative flex-1 min-h-0 cursor-pointer"
-          onClick={() => setShowImageModal(true)}
-        >
-          {!imageLoaded && (
-            <div className="absolute inset-0 bg-muted animate-pulse" />
-          )}
-          <img
-            src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/400/600?random=event"}
-            alt={event.title}
-            className={cn(
-              "w-full h-full object-cover transition-opacity duration-300",
-              getFocusClass(event.image_focus_position),
-              imageLoaded ? "opacity-100" : "opacity-0"
-            )}
-            onLoad={() => setImageLoaded(true)}
-            onError={handleImageError}
-            loading="eager"
+    <div className="relative w-full h-full overflow-hidden bg-black select-none">
+      {/* Flyer plein cadre — cliquable pour le plein écran */}
+      <div className="absolute inset-0" onClick={() => setShowImageModal(true)}>
+        {!imageLoaded && (
+          <div
+            className="absolute inset-0 animate-pulse"
+            style={{ backgroundColor: colorCard || '#18181b' }}
           />
-        </div>
+        )}
+        <img
+          src={imageSrc}
+          alt={event.title}
+          className={cn(
+            'w-full h-full object-cover transition-opacity duration-300',
+            getFocusClass(event.image_focus_position),
+            imageLoaded ? 'opacity-100' : 'opacity-0'
+          )}
+          onLoad={() => setImageLoaded(true)}
+          onError={handleImageError}
+          loading="eager"
+        />
+      </div>
 
-        {/* Section infos fusionnée - Design Premium */}
-        <div className="flex-shrink-0 px-4 py-3 bg-card border-b border-border">
-          {/* Titre sur 2 lignes */}
-          <h1 className="text-xl font-bold text-foreground line-clamp-2 leading-tight mb-1">
-            {event.title}
-          </h1>
-          {/* Lieu */}
-          <p className="text-sm text-muted-foreground mb-3">
-            📍 {event.venue || event.location}
-          </p>
-          {/* Chips colorés premium */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-3 py-1.5 bg-primary/10 text-primary text-xs font-semibold rounded-full">
-              📅 {formatEventDateTime(event.date, event.time)}
-            </span>
-            <span className="px-3 py-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold rounded-full">
-              {getPriceInfo(event.price_text).display}
-            </span>
-            <span className="px-3 py-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-semibold rounded-full">
-              👥 {event.totalParticipants || event.participants || 0}
-            </span>
-          </div>
-        </div>
+      {/* Dégradé haut — lisibilité des contrôles */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/55 to-transparent" />
 
-        {/* Social Proof - compact */}
-        {(event.friendsParticipating && event.friendsParticipating.length > 0) && (
-          <div className="flex-shrink-0 px-4 py-2 bg-card border-b border-border">
+      {/* Badge énergie — haut gauche */}
+      {energyMeta && (
+        <div className={cn(GLASS_CHIP, 'absolute top-4 left-4 z-10')}>
+          <span>{energyMeta.icon}</span>
+          <span>{energyMeta.label}</span>
+        </div>
+      )}
+
+      {/* Bouton partage — haut droite */}
+      <button
+        onClick={handleShare}
+        className="absolute top-3.5 right-4 z-10 w-10 h-10 rounded-full bg-black/30 backdrop-blur-md border border-white/20 flex items-center justify-center text-white active:bg-black/50 transition-colors"
+        aria-label="Partager"
+      >
+        <Share2 className="w-5 h-5" />
+      </button>
+
+      {/* Bloc bas : dégradé + infos + actions, posé sur l'image */}
+      <div className="absolute inset-x-0 bottom-0 z-10">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black via-black/75 to-transparent" />
+
+        <div
+          className="relative px-4 pt-12 flex flex-col gap-3"
+          style={{
+            paddingBottom: isPWA
+              ? 'calc(1rem + env(safe-area-inset-bottom))'
+              : 'calc(1.25rem + env(safe-area-inset-bottom))',
+          }}
+        >
+          {/* Social proof */}
+          {friends.length > 0 && (
             <div className="flex items-center gap-2">
               <div className="flex -space-x-2">
-                {event.friendsParticipating.slice(0, 3).map((friend) => (
+                {friends.slice(0, 3).map((friend) =>
                   friend.avatar ? (
                     <img
                       key={friend.id}
                       src={friend.avatar}
                       alt={friend.name}
-                      className="w-6 h-6 rounded-full border-2 border-card object-cover"
+                      className="w-6 h-6 rounded-full border-2 border-white/60 object-cover"
                     />
                   ) : (
                     <div
                       key={friend.id}
-                      className="w-6 h-6 rounded-full border-2 border-card bg-primary/20 flex items-center justify-center text-xs font-medium text-primary"
+                      className="w-6 h-6 rounded-full border-2 border-white/60 bg-white/20 flex items-center justify-center text-xs font-medium text-white"
                     >
                       {friend.name.charAt(0).toUpperCase()}
                     </div>
                   )
-                ))}
+                )}
               </div>
-              <span className="text-xs text-muted-foreground">
-                {getSocialProofText(event.friendsParticipating, event.totalParticipants || 0)}
+              <span className="text-xs text-white/85">
+                {getSocialProofText(friends, participantCount)}
               </span>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Bouton voir plus - compact */}
-        <div className="flex-shrink-0 px-4 py-2 bg-card border-b border-border">
+          {/* Titre + sous-titre + lieu */}
+          <div>
+            <h1 className="text-2xl font-bold text-white leading-tight line-clamp-2 drop-shadow-lg">
+              {event.title}
+            </h1>
+            {subtitle && (
+              <p className="text-sm text-white/75 mt-0.5 line-clamp-1">{subtitle}</p>
+            )}
+            <p className="text-sm text-white/85 mt-1 drop-shadow">
+              📍 {event.venue || event.location}
+            </p>
+          </div>
+
+          {/* Chips verre dépoli */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={GLASS_CHIP}>
+              📅 {formatEventDateTime(event.date, event.time)}
+            </span>
+            <span className={GLASS_CHIP}>{getPriceInfo(event.price_text).display}</span>
+            <span className={GLASS_CHIP}>👥 {participantCount}</span>
+          </div>
+
+          {/* Voir plus de détails */}
           <button
             onClick={() => setIsDetailsOpen(true)}
-            className="w-full py-2 bg-accent hover:bg-accent/80 rounded-lg text-sm font-medium transition-colors"
+            className="self-start px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-white text-xs font-medium active:bg-white/20 transition-colors"
           >
             Voir plus de détails →
           </button>
-        </div>
-      </div>
 
-      {/* Boutons d'action - Fixed bottom */}
-      <div 
-        className="flex-shrink-0 px-4 py-3 bg-card border-t border-border"
-        style={{ 
-          paddingBottom: isPWA 
-            ? 'calc(0.75rem + env(safe-area-inset-bottom))' 
-            : 'calc(1.5rem + env(safe-area-inset-bottom))'
-        }}
-      >
-        <div className="flex gap-2 max-w-md mx-auto">
-          {/* Dislike */}
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={handleDislike}
-            className="flex-1 h-11 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
-            aria-label="Passer"
-          >
-            <X className="w-5 h-5 text-muted-foreground" />
-          </motion.button>
+          {/* Boutons d'action flottants */}
+          <div className="flex items-center gap-3 max-w-md mx-auto w-full pt-1">
+            {/* Passer */}
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={handleDislike}
+              className="flex-1 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center active:bg-white/20 transition-colors"
+              aria-label="Passer"
+            >
+              <X className="w-6 h-6 text-white" />
+            </motion.button>
 
-          {/* Participer */}
-          <ParticipateButton onClick={handleParticipate} />
+            {/* Participer */}
+            <ParticipateButton onClick={handleParticipate} />
 
-          {/* Like */}
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={handleLike}
-            className="flex-1 h-11 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
-            aria-label="J'aime"
-          >
-            <Heart className="w-5 h-5 text-pink-500" />
-          </motion.button>
-
-          {/* Partager */}
-          <button
-            onClick={handleShare}
-            className="flex-1 h-11 rounded-xl bg-muted hover:bg-muted/80 transition-colors flex items-center justify-center border border-border"
-            aria-label="Partager"
-          >
-            <Share2 className="w-5 h-5 text-muted-foreground" />
-          </button>
+            {/* J'aime */}
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={handleLike}
+              className="flex-1 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center active:bg-white/20 transition-colors"
+              aria-label="J'aime"
+            >
+              <Heart className="w-6 h-6 text-pink-400" />
+            </motion.button>
+          </div>
         </div>
       </div>
 
@@ -300,7 +323,7 @@ const EventCard: React.FC<EventCardProps> = ({
               onClick={() => setIsDetailsOpen(false)}
               className="fixed inset-0 bg-black/60 z-40"
             />
-            
+
             <motion.div
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
@@ -317,7 +340,7 @@ const EventCard: React.FC<EventCardProps> = ({
                   ✕
                 </button>
               </div>
-              
+
               <div className="p-4 space-y-6 pb-safe">
                 {/* Description */}
                 <div>
@@ -422,7 +445,7 @@ const EventCard: React.FC<EventCardProps> = ({
               className="fixed inset-0 bg-black z-50 flex items-center justify-center"
             >
               <img
-                src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/400/600?random=event"}
+                src={imageSrc}
                 alt={event.title}
                 className="max-w-full max-h-full object-contain"
                 onError={handleImageError}
