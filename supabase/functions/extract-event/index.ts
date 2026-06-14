@@ -336,6 +336,27 @@ async function computeColorCard(imageUrl: string | null | undefined): Promise<st
   }
 }
 
+// Persiste un flyer distant (URL Instagram, qui expire) dans le Storage Supabase.
+// Rend l'URL stable -> l'IA peut lire le flyer, color_card fiable, image app pérenne.
+// Retourne l'URL Storage publique, ou null si l'image est inaccessible (URL déjà expirée).
+async function persistFlyer(supabase: any, id: string, srcUrl: string): Promise<string | null> {
+  try {
+    const res = await fetch(srcUrl);
+    if (!res.ok) return null;
+    const contentType = res.headers.get("content-type")?.split(";")[0] || "image/jpeg";
+    const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    const path = `events/event-${id}-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage
+      .from("events-images")
+      .upload(path, bytes, { contentType, upsert: true });
+    if (error) return null;
+    return `${STORAGE_PUBLIC_PREFIX}events-images/${path}`;
+  } catch {
+    return null;
+  }
+}
+
 async function extractOne(supabase: any, id: string, dryRun = false) {
   const { data: ev, error } = await supabase
     .from("events")
@@ -343,6 +364,14 @@ async function extractOne(supabase: any, id: string, dryRun = false) {
     .eq("id", id)
     .single();
   if (error || !ev) throw new Error(`event ${id} introuvable`);
+
+  // Protège la donnée image : si le flyer n'est pas déjà dans notre Storage (URL
+  // Instagram brute qui expire), on le télécharge et on l'y dépose. Tout le reste
+  // (lecture IA du flyer, color_card, affichage app) utilise alors une URL stable.
+  if (!dryRun && typeof ev.image_url === "string" && !ev.image_url.startsWith(STORAGE_PUBLIC_PREFIX)) {
+    const stored = await persistFlyer(supabase, id, ev.image_url);
+    if (stored) ev.image_url = stored;
+  }
 
   const { data: profileRow } = await supabase.rpc("venue_profile", { loc: ev.location ?? "" });
   const profile: string | null = profileRow ?? null;
@@ -434,6 +463,10 @@ async function extractOne(supabase: any, id: string, dryRun = false) {
   };
   if (price !== null) update.price = price;
   if (colorCard) update.color_card = colorCard;
+  // Pointe l'event sur l'URL Storage stable si le flyer vient d'être persisté.
+  if (typeof ev.image_url === "string" && ev.image_url.startsWith(STORAGE_PUBLIC_PREFIX)) {
+    update.image_url = ev.image_url;
+  }
 
   // Backup capture-once du brut scrapé (avant toute écriture IA).
   if (!ev.extraction_backup) {
