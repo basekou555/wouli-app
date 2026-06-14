@@ -211,14 +211,15 @@ serve(async (req) => {
         // justement extract-event qui la corrige).
         q = q.eq("status", "pending").is("archived_at", null);
       } else if (body.all !== true) {
-        // Défaut : tout ce qui peut s'afficher côté user (pending inclus), à venir
-        // (depuis le début de journée pour ne pas rater les events du jour), non archivé.
-        const startOfToday = new Date();
-        startOfToday.setUTCHours(0, 0, 0, 0);
+        // Pipeline UNIFIÉ (fusion des 2 anciens workers) : on enrichit en une seule
+        // passe les events `pending` (fraîchement scrapés -> PAS de filtre date, car
+        // leur date brute est encore peu fiable) OU `active`/`validated` à venir.
+        // Trié au plus récent ci-dessous, donc les fraîchement scrapés passent d'abord.
+        const today = new Date().toISOString().slice(0, 10);
         q = q
           .in("status", ["active", "validated", "pending"])
           .is("archived_at", null)
-          .gte("date", startOfToday.toISOString());
+          .or(`status.eq.pending,date.gte.${today}`);
       }
       const { data, error } = await q.order("created_at", { ascending: false }).limit(limit);
       if (error) throw error;
