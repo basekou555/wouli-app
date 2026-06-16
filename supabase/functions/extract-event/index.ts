@@ -198,13 +198,14 @@ serve(async (req) => {
       ids = [body.eventId];
     } else {
       const limit = Math.min(Number(body.limit) || 10, 50);
-      // Cible : events pas encore enrichis par l'IA = color_card OU energy manquant.
-      // (energy est toujours écrit lors de l'enrichissement ; color_card peut rester
-      // null si l'image est inaccessible, on le retente donc tant qu'il manque.)
+      // Cible : events PAS ENCORE enrichis par l'IA = `energy IS NULL`.
+      // (energy est toujours écrit lors de l'enrichissement : c'est le marqueur fiable
+      // de "déjà traité". On ne se base PAS sur color_card, sinon on boucle à l'infini
+      // sur les events dont l'image a expiré et dont la couleur ne reviendra jamais.)
       let q = supabase
         .from("events")
         .select("id")
-        .or("color_card.is.null,energy.is.null");
+        .is("energy", null);
       if (body.pending === true) {
         // File d'attente du cron : events fraîchement scrapés (status "pending").
         // Pas de filtre sur la date (la date brute du scraper est peu fiable, c'est
@@ -233,7 +234,11 @@ serve(async (req) => {
       try {
         results.push(await extractOne(supabase, ids[i], dryRun));
       } catch (e) {
-        results.push({ id: ids[i], ok: false, error: String(e?.message ?? e) });
+        const msg = String(e?.message ?? e);
+        results.push({ id: ids[i], ok: false, error: msg });
+        // Quota Gemini à plat : inutile d'insister sur les suivants, on arrête le
+        // batch (le cron reprendra au prochain cycle). Évite les timeouts 150s.
+        if (msg.includes("429")) break;
       }
     }
 
@@ -543,7 +548,9 @@ async function callGemini(userText: string, imageUrl: string | null): Promise<an
     });
     data = await resp.json();
     if (resp.ok) break;
-    const retryable = resp.status === 503 || resp.status === 429 || resp.status === 500;
+    // 429 = quota/limite Gemini : on NE retry PAS (sinon, quota à plat, les attentes
+    // empilées dépassent le timeout 150s de la fonction). Le cron reprendra plus tard.
+    const retryable = resp.status === 503 || resp.status === 500;
     if (!retryable || attempt >= 3) {
       throw new Error(`${resp.status} ${JSON.stringify(data?.error ?? data)}`);
     }
