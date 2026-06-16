@@ -2,12 +2,37 @@ import React from 'react';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
+import {
   Check, X, Edit, Eye, History, RotateCcw, FileEdit,
-  Calendar, MapPin, Euro, ExternalLink, Instagram 
+  Calendar, MapPin, Euro, ExternalLink, Instagram, Sparkles
 } from 'lucide-react';
 import { PendingEvent } from '@/hooks/utils/adminEventMappers';
 import { getCategoryById } from '@/data/wouliCategories';
+
+// Libellés lisibles des drapeaux de revue posés par l'extraction IA (extract-event).
+const REVIEW_FLAG_LABELS: Record<string, { label: string; cls: string }> = {
+  date_passee: { label: 'Date passée', cls: 'border-red-300 text-red-700 bg-red-50' },
+  date_incertaine: { label: 'Date incertaine', cls: 'border-amber-300 text-amber-700 bg-amber-50' },
+  lieu_inconnu: { label: 'Lieu inconnu', cls: 'border-amber-300 text-amber-700 bg-amber-50' },
+  confiance_basse: { label: 'Confiance basse', cls: 'border-amber-300 text-amber-700 bg-amber-50' },
+};
+
+const AMBER = 'border-amber-300 text-amber-700 bg-amber-50';
+
+// Transforme manual_review_reason ("a,b") + needs_manual_image en badges affichables.
+function getReviewFlags(event: PendingEvent): { code: string; label: string; cls: string }[] {
+  const flags: { code: string; label: string; cls: string }[] = [];
+  const reasons = (event.manual_review_reason ?? '')
+    .split(',').map((s) => s.trim()).filter(Boolean);
+  for (const code of reasons) {
+    const meta = REVIEW_FLAG_LABELS[code];
+    flags.push(meta ? { code, ...meta } : { code, label: code, cls: AMBER });
+  }
+  if (event.needs_manual_image) {
+    flags.push({ code: 'needs_manual_image', label: 'Image à vérifier', cls: AMBER });
+  }
+  return flags;
+}
 
 interface AdminEventTableRowProps {
   event: PendingEvent;
@@ -136,6 +161,34 @@ export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
                 {formatPrice(event.price)}
               </div>
             </div>
+
+            {/* Drapeaux de revue IA + statut d'enrichissement */}
+            {(() => {
+              const flags = getReviewFlags(event);
+              if (!flags.length && event.parsing_method === undefined) return null;
+              return (
+                <div className="flex flex-wrap items-center gap-1 mt-2">
+                  {event.parsing_method === 'claude-vision-v1' ? (
+                    <Badge variant="outline" className="text-[10px] border-green-300 text-green-700 bg-green-50">
+                      <Sparkles className="w-2.5 h-2.5 mr-0.5" />
+                      Enrichi IA
+                      {typeof event.parsing_confidence === 'number'
+                        ? ` ${Math.round(event.parsing_confidence * 100)}%`
+                        : ''}
+                    </Badge>
+                  ) : event.parsing_method === null ? (
+                    <Badge variant="outline" className="text-[10px] text-muted-foreground" title="Pas encore traité par l'extraction IA">
+                      Brut
+                    </Badge>
+                  ) : null}
+                  {flags.map((f) => (
+                    <Badge key={f.code} variant="outline" className={`text-[10px] ${f.cls}`}>
+                      {f.label}
+                    </Badge>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         </div>
       </TableCell>

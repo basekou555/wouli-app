@@ -59,7 +59,12 @@ export const getPriceDisplay = (priceText?: string): string => {
 export const getPriceInfo = (priceText?: string): { display: string; isFree: boolean } => {
   if (!priceText) return { display: 'Gratuit', isFree: true };
   if (priceText.toLowerCase().includes('gratuit') || priceText === '0€') return { display: 'Gratuit', isFree: true };
-  return { display: priceText, isFree: false };
+  // Ajoute le symbole "€" si le prix est numérique mais sans devise (ex: "30" → "30€").
+  let display = priceText.trim();
+  if (/\d/.test(display) && !/[€$£]/.test(display) && !/eur/i.test(display)) {
+    display = `${display}€`;
+  }
+  return { display, isFree: false };
 };
 
 export const getLocationDisplay = (venue?: string, location?: string): string => {

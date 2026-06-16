@@ -73,14 +73,25 @@ const mapEventToUnified = (event: any, configMap: Map<string, string>): UnifiedE
     'Utilisateur',
   organizer_type: event.created_by_type as 'user' | 'business',
   venue: undefined,
-  time: undefined,
+  // Heure : colonne dédiée si présente, sinon extraite du timestamp date
+  time: event.time
+    ? String(event.time).slice(0, 5)
+    : (typeof event.date === 'string' && event.date.includes('T'))
+      ? event.date.split('T')[1]?.slice(0, 5)
+      : undefined,
   event_type: event.category as 'a-boire' | 'a-manger' | 'soirees' | 'activites',
   price_text: event.price ? event.price.toString() : undefined,
   end_date: event.end_date,
   max_participants: event.max_participants,
   address: event.address,
   tags: event.tags,
-  external_url: event.external_url
+  external_url: event.external_url,
+  // Design système carte — unique/récurrent dérivés du compteur d'occurrences
+  // du titre (vue active_events), pas d'une colonne is_unique.
+  music_style: event.music_style ?? undefined,
+  edition_number: event.edition_number ?? undefined,
+  is_recurring: (event.title_occurrences ?? 1) > 1,
+  is_unique: (event.title_occurrences ?? 1) === 1,
 } as UnifiedEvent);
 
 export const fetchAllEventsPaginated = async (

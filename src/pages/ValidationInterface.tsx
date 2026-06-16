@@ -25,6 +25,8 @@ import { getEventStatus } from '@/utils/eventStatus';
 import { AdminEventPreview } from '@/components/admin/AdminEventPreview';
 import { AdminEventTableRow } from '@/components/admin/AdminEventTableRow';
 import { ValidationWorkload } from '@/components/admin/ValidationWorkload';
+import { DuplicatesPanel, DuplicatePair, DuplicateEvent } from '@/components/admin/DuplicatesPanel';
+import { VenuesPanel, UnknownVenue, VenueProfile } from '@/components/admin/VenuesPanel';
 import { useAdminStats } from '@/hooks/useAdminStats';
 
 interface PendingEvent {
@@ -46,7 +48,14 @@ interface PendingEvent {
   account_username?: string;
   event_type?: string;
   manual_review_reason?: string;
+  parsing_method?: string | null;
+  parsing_confidence?: number | null;
+  needs_manual_image?: boolean | null;
 }
+
+// Un event mérite un coup d'œil si l'IA a posé un drapeau ou n'a pas d'image exploitable.
+const hasReviewFlags = (e: PendingEvent) =>
+  !!e.manual_review_reason?.trim() || !!e.needs_manual_image;
 
 const ValidationInterface = () => {
   const [events, setEvents] = useState<PendingEvent[]>([]);
@@ -91,6 +100,57 @@ const ValidationInterface = () => {
   const [scraperErrors, setScraperErrors] = useState<any[]>([]);
   const [loadingErrors, setLoadingErrors] = useState(false);
   const [retryingError, setRetryingError] = useState<string | null>(null);
+
+  // State pour doublons potentiels
+  const [duplicatePairs, setDuplicatePairs] = useState<DuplicatePair[]>([]);
+  const [loadingDuplicates, setLoadingDuplicates] = useState(false);
+
+  const loadDuplicates = async () => {
+    setLoadingDuplicates(true);
+    try {
+      const { data, error } = await supabase.rpc('find_duplicate_pairs', { p_days: 400 });
+      if (error) throw error;
+      setDuplicatePairs((data as DuplicatePair[]) || []);
+    } catch (error) {
+      console.error('Erreur détection doublons:', error);
+    } finally {
+      setLoadingDuplicates(false);
+    }
+  };
+
+  // State pour lieux hors registre
+  const [unknownVenues, setUnknownVenues] = useState<UnknownVenue[]>([]);
+  const [loadingVenues, setLoadingVenues] = useState(false);
+  const [classifyingVenue, setClassifyingVenue] = useState<string | null>(null);
+
+  const loadUnknownVenues = async () => {
+    setLoadingVenues(true);
+    try {
+      const { data, error } = await supabase.rpc('unknown_venues', { p_days: 400 });
+      if (error) throw error;
+      setUnknownVenues((data as UnknownVenue[]) || []);
+    } catch (error) {
+      console.error('Erreur chargement lieux:', error);
+    } finally {
+      setLoadingVenues(false);
+    }
+  };
+
+  const handleClassifyVenue = async (location: string, profile: VenueProfile) => {
+    setClassifyingVenue(location);
+    try {
+      const { error } = await supabase.rpc('classify_venue', { p_name: location, p_profile: profile });
+      if (error) throw error;
+      // Le lieu sort de la liste des inconnus.
+      setUnknownVenues((prev) => prev.filter((v) => v.location !== location));
+      toast({ title: 'Lieu classé', description: `"${location}" → ${profile}` });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Classement impossible';
+      toast({ title: 'Erreur', description: message, variant: 'destructive' });
+    } finally {
+      setClassifyingVenue(null);
+    }
+  };
 
   // Initialiser les formulaires quand la modale s'ouvre
   useEffect(() => {
@@ -168,7 +228,9 @@ const ValidationInterface = () => {
   useEffect(() => {
     fetchEvents();
     loadScraperErrors();
-    
+    loadDuplicates();
+    loadUnknownVenues();
+
     // Realtime subscription sur la table events
     const eventsChannel = supabase
       .channel('events_changes')
@@ -321,7 +383,24 @@ const ValidationInterface = () => {
 
   const onStatusChangeSuccess = async () => {
     await fetchEvents(0, false);
+    loadDuplicates();
     setSelectedIds(new Set());
+  };
+
+  // Archiver un doublon (réversible, via le même flux que les autres changements de statut).
+  const handleArchiveDuplicate = (event: DuplicateEvent) => {
+    handleStatusChange([event.id], event.status, 'archived');
+  };
+
+  // Ouvrir l'aperçu d'un event par son id (les doublons ne sont pas forcément dans la liste chargée).
+  const openPreviewById = async (eventId: string) => {
+    const inList = events.find(e => e.id === eventId);
+    if (inList) {
+      setShowDetails(inList);
+      return;
+    }
+    const { data } = await supabase.from('events').select('*').eq('id', eventId).single();
+    if (data) setShowDetails(data as PendingEvent);
   };
 
   const calculateScore = (event: PendingEvent) => {
@@ -419,6 +498,11 @@ const ValidationInterface = () => {
         case 'date': return new Date(a.date).getTime() - new Date(b.date).getTime();
         case 'score': return calculateScore(b) - calculateScore(a);
         case 'created': return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'review': {
+          // Events flaggés par l'IA en premier, puis par date d'événement.
+          const diff = (hasReviewFlags(b) ? 1 : 0) - (hasReviewFlags(a) ? 1 : 0);
+          return diff !== 0 ? diff : new Date(a.date).getTime() - new Date(b.date).getTime();
+        }
         default: return 0;
       }
     });
@@ -591,6 +675,8 @@ const ValidationInterface = () => {
             isLoading={statsLoading}
             activeTab={activeTab}
             onTabChange={setActiveTab}
+            duplicatesCount={duplicatePairs.length}
+            venuesCount={unknownVenues.length}
           />
 
           {/* Alerte urgente */}
@@ -767,6 +853,26 @@ const ValidationInterface = () => {
               </div>
             )}
           </div>
+        )}
+
+        {/* DOUBLONS - Paires potentielles */}
+        {activeTab === 'doublons' && (
+          <DuplicatesPanel
+            pairs={duplicatePairs}
+            loading={loadingDuplicates}
+            onArchive={handleArchiveDuplicate}
+            onPreview={openPreviewById}
+          />
+        )}
+
+        {/* LIEUX - Registre des lieux */}
+        {activeTab === 'lieux' && (
+          <VenuesPanel
+            venues={unknownVenues}
+            loading={loadingVenues}
+            pendingLocation={classifyingVenue}
+            onClassify={handleClassifyVenue}
+          />
         )}
 
         {/* PENDING - À valider */}
@@ -1166,6 +1272,7 @@ const ValidationInterface = () => {
                   <SelectItem value="date">Date événement</SelectItem>
                   <SelectItem value="created">Date création</SelectItem>
                   <SelectItem value="score">Score qualité</SelectItem>
+                  <SelectItem value="review">À réviser en priorité</SelectItem>
                 </SelectContent>
               </Select>
             </div>
