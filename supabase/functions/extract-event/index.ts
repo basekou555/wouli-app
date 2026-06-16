@@ -25,6 +25,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-extract-secret",
 };
 
+// Petite pause utilitaire (espacement anti rate-limit + backoff).
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
 const PROVIDER = (Deno.env.get("EXTRACT_PROVIDER") ?? "gemini").toLowerCase();
 const MODEL = Deno.env.get("EXTRACT_MODEL") ??
   (PROVIDER === "anthropic" ? "claude-opus-4-8" : "gemini-2.5-flash");
@@ -195,15 +198,27 @@ serve(async (req) => {
       ids = [body.eventId];
     } else {
       const limit = Math.min(Number(body.limit) || 10, 50);
+      // Cible : events pas encore enrichis par l'IA = color_card OU energy manquant.
+      // (energy est toujours écrit lors de l'enrichissement ; color_card peut rester
+      // null si l'image est inaccessible, on le retente donc tant qu'il manque.)
       let q = supabase
         .from("events")
         .select("id")
-        .or("parsing_method.is.null,parsing_method.neq.claude-vision-v1");
-      if (body.all !== true) {
+        .or("color_card.is.null,energy.is.null");
+      if (body.pending === true) {
+        // File d'attente du cron : events fraîchement scrapés (status "pending").
+        // Pas de filtre sur la date (la date brute du scraper est peu fiable, c'est
+        // justement extract-event qui la corrige).
+        q = q.eq("status", "pending").is("archived_at", null);
+      } else if (body.all !== true) {
+        // Défaut : tout ce qui peut s'afficher côté user (pending inclus), à venir
+        // (depuis le début de journée pour ne pas rater les events du jour), non archivé.
+        const startOfToday = new Date();
+        startOfToday.setUTCHours(0, 0, 0, 0);
         q = q
-          .in("status", ["active", "validated"])
+          .in("status", ["active", "validated", "pending"])
           .is("archived_at", null)
-          .gte("date", new Date().toISOString());
+          .gte("date", startOfToday.toISOString());
       }
       const { data, error } = await q.order("created_at", { ascending: false }).limit(limit);
       if (error) throw error;
@@ -211,11 +226,13 @@ serve(async (req) => {
     }
 
     const results = [];
-    for (const id of ids) {
+    for (let i = 0; i < ids.length; i++) {
+      // Espacement anti rate-limit : on lisse les appels modèle (free tier Gemini).
+      if (i > 0) await sleep(4000);
       try {
-        results.push(await extractOne(supabase, id, dryRun));
+        results.push(await extractOne(supabase, ids[i], dryRun));
       } catch (e) {
-        results.push({ id, ok: false, error: String(e?.message ?? e) });
+        results.push({ id: ids[i], ok: false, error: String(e?.message ?? e) });
       }
     }
 
@@ -319,6 +336,27 @@ async function computeColorCard(imageUrl: string | null | undefined): Promise<st
   }
 }
 
+// Persiste un flyer distant (URL Instagram, qui expire) dans le Storage Supabase.
+// Rend l'URL stable -> l'IA peut lire le flyer, color_card fiable, image app pérenne.
+// Retourne l'URL Storage publique, ou null si l'image est inaccessible (URL déjà expirée).
+async function persistFlyer(supabase: any, id: string, srcUrl: string): Promise<string | null> {
+  try {
+    const res = await fetch(srcUrl);
+    if (!res.ok) return null;
+    const contentType = res.headers.get("content-type")?.split(";")[0] || "image/jpeg";
+    const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    const path = `events/event-${id}-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage
+      .from("events-images")
+      .upload(path, bytes, { contentType, upsert: true });
+    if (error) return null;
+    return `${STORAGE_PUBLIC_PREFIX}events-images/${path}`;
+  } catch {
+    return null;
+  }
+}
+
 async function extractOne(supabase: any, id: string, dryRun = false) {
   const { data: ev, error } = await supabase
     .from("events")
@@ -326,6 +364,14 @@ async function extractOne(supabase: any, id: string, dryRun = false) {
     .eq("id", id)
     .single();
   if (error || !ev) throw new Error(`event ${id} introuvable`);
+
+  // Protège la donnée image : si le flyer n'est pas déjà dans notre Storage (URL
+  // Instagram brute qui expire), on le télécharge et on l'y dépose. Tout le reste
+  // (lecture IA du flyer, color_card, affichage app) utilise alors une URL stable.
+  if (!dryRun && typeof ev.image_url === "string" && !ev.image_url.startsWith(STORAGE_PUBLIC_PREFIX)) {
+    const stored = await persistFlyer(supabase, id, ev.image_url);
+    if (stored) ev.image_url = stored;
+  }
 
   const { data: profileRow } = await supabase.rpc("venue_profile", { loc: ev.location ?? "" });
   const profile: string | null = profileRow ?? null;
@@ -417,6 +463,10 @@ async function extractOne(supabase: any, id: string, dryRun = false) {
   };
   if (price !== null) update.price = price;
   if (colorCard) update.color_card = colorCard;
+  // Pointe l'event sur l'URL Storage stable si le flyer vient d'être persisté.
+  if (typeof ev.image_url === "string" && ev.image_url.startsWith(STORAGE_PUBLIC_PREFIX)) {
+    update.image_url = ev.image_url;
+  }
 
   // Backup capture-once du brut scrapé (avant toute écriture IA).
   if (!ev.extraction_backup) {
@@ -480,7 +530,9 @@ async function callGemini(userText: string, imageUrl: string | null): Promise<an
     },
   });
 
-  // Retry avec backoff sur les surcharges du free tier (503/429/500).
+  // Retry sur les surcharges/limites du free tier (503/429/500). On respecte le
+  // retryDelay renvoyé par l'API (RetryInfo), borné à 15s pour ne pas dépasser le
+  // timeout de la fonction ; un event qui échoue sera repris au prochain cron.
   let resp: Response, data: any;
   for (let attempt = 0; ; attempt++) {
     resp = await fetch(url, {
@@ -494,7 +546,17 @@ async function callGemini(userText: string, imageUrl: string | null): Promise<an
     if (!retryable || attempt >= 3) {
       throw new Error(`${resp.status} ${JSON.stringify(data?.error ?? data)}`);
     }
-    await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt))); // 1s, 2s, 4s
+    // Lit le "retryDelay" (ex: "35s") de error.details (RetryInfo) si présent.
+    const details = data?.error?.details;
+    let suggested: number | null = null;
+    if (Array.isArray(details)) {
+      for (const dd of details) {
+        const mm = typeof dd?.retryDelay === "string" ? dd.retryDelay.match(/([0-9.]+)s/) : null;
+        if (mm) { suggested = Math.ceil(parseFloat(mm[1])); break; }
+      }
+    }
+    const backoff = Math.min(suggested ?? Math.pow(2, attempt), 15); // borne 15s
+    await sleep(backoff * 1000);
   }
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) {
@@ -533,6 +595,6 @@ async function callAnthropic(userText: string, imageUrl: string | null): Promise
 function json(payload: unknown, status: number) {
   return new Response(JSON.stringify(payload), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders, "Content-Type": "application/json; charset=utf-8" },
   });
 }
