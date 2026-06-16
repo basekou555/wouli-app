@@ -529,7 +529,7 @@ const EventCard: React.FC<EventCardProps> = ({
   };
 
   return (
-    <div className="w-full h-full bg-background flex flex-col" style={wrapperStyle}>
+    <div className="w-full h-full bg-black flex flex-col" style={wrapperStyle}>
 
       {/* ════════════ ZONE PHOTO ════════════ */}
       {/* flex-1 : reprend tout l'espace restant (proportions d'origine) */}
@@ -566,7 +566,7 @@ const EventCard: React.FC<EventCardProps> = ({
         )}
 
         {/* Détails + badge UNIQUE (haut gauche) */}
-        <div className="absolute top-3 left-3 z-10 flex items-center gap-2">
+        <div className="absolute left-3 z-10 flex items-center gap-2" style={{ top: 'calc(var(--app-header-h, 0px) + 12px)' }}>
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -587,7 +587,7 @@ const EventCard: React.FC<EventCardProps> = ({
         </div>
 
         {/* Partager + Passer (haut droite) */}
-        <div className="absolute top-3 right-3 z-10 flex gap-2">
+        <div className="absolute right-3 z-10 flex gap-2" style={{ top: 'calc(var(--app-header-h, 0px) + 12px)' }}>
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -644,7 +644,7 @@ const EventCard: React.FC<EventCardProps> = ({
       <div
         ref={containerRef}
         className="flex-shrink-0 flex flex-col overflow-hidden"
-        style={{ minHeight: '30%', fontFamily: POPPINS, ...zoneStyle }}
+        style={{ minHeight: '30%', fontFamily: POPPINS, ...zoneStyle, paddingBottom: 'var(--app-nav-h, 0px)' }}
       >
         {/* ---------- CLUB : deux colonnes ---------- */}
         {energy === 'CLUB' && (
