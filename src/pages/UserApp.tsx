@@ -278,7 +278,7 @@ const UserApp = () => {
     >
       {/* Header flottant — transparent, par-dessus le feed plein écran */}
       <header
-        className="absolute top-0 inset-x-0 z-40 h-14 px-4 flex items-center justify-between"
+        className="absolute top-0 inset-x-0 z-40 h-14 px-4 flex items-center justify-between pointer-events-none"
         style={{ paddingTop: isPWA ? 'env(safe-area-inset-top)' : undefined }}
       >
         {/* Dégradé pour la lisibilité des contrôles */}
@@ -286,19 +286,19 @@ const UserApp = () => {
 
         <button
           onClick={() => setIsMenuOpen(true)}
-          className="relative w-10 h-10 flex items-center justify-center rounded-full bg-black/30 backdrop-blur-md border border-white/15 text-white active:bg-black/50 transition-colors"
+          className="relative w-10 h-10 flex items-center justify-center rounded-full bg-black/30 backdrop-blur-md border border-white/15 text-white active:bg-black/50 transition-colors pointer-events-auto"
           aria-label="Menu"
         >
           <Menu className="w-5 h-5" />
         </button>
 
-        <div className="relative">
+        <div className="relative pointer-events-auto">
           <FeedModeToggle mode={feedMode} onModeChange={setFeedMode} />
         </div>
 
         <button
           onClick={() => setIsFiltersOpen(true)}
-          className="relative px-3 py-2 rounded-full bg-black/30 backdrop-blur-md border border-white/15 text-white text-sm font-medium active:bg-black/50 transition-colors flex items-center gap-1"
+          className="relative px-3 py-2 rounded-full bg-black/30 backdrop-blur-md border border-white/15 text-white text-sm font-medium active:bg-black/50 transition-colors flex items-center gap-1 pointer-events-auto"
         >
           <SlidersHorizontal className="w-4 h-4" />
           Filtres
@@ -337,7 +337,7 @@ const UserApp = () => {
             {/* Indicateur de chargement */}
             {loadingMore && (
               <div
-                className="h-full flex items-center justify-center bg-background"
+                className="h-full flex items-center justify-center bg-black"
                 style={{ scrollSnapAlign: 'start' }}
               >
                 <div className="text-center space-y-4">
@@ -379,7 +379,7 @@ const UserApp = () => {
       </div>
 
       {/* Bottom nav flottante — transparente par-dessus le feed plein écran */}
-      <div className="absolute bottom-0 inset-x-0 z-40">
+      <div className="absolute bottom-0 inset-x-0 z-40 pointer-events-none">
         <BottomNavigation variant="floating" />
       </div>
 

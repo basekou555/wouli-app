@@ -7,7 +7,6 @@ import { getFocusClass } from '@/utils/imageHelpers';
 import { normalizeAmbiance } from '@/utils/ambiance';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { useIsPWA } from '@/hooks/useIsPWA';
 import { useSmartTracking, type InteractionAction } from '@/hooks/useSmartTracking';
 
 interface EventCardProps {
@@ -375,7 +374,6 @@ const EventCard: React.FC<EventCardProps> = ({
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const isPWA = useIsPWA();
 
   // --- Design système carte (Phase 1) ---
   const energy = deriveEnergy(event);
@@ -791,7 +789,6 @@ const EventCard: React.FC<EventCardProps> = ({
             flexShrink: 0,
             background: actionBarBg,
             padding: '0 14px',
-            paddingBottom: isPWA ? 'env(safe-area-inset-bottom)' : undefined,
           }}
         >
           <span style={{ fontSize: '16px', fontWeight: 800, color: priceColor }}>

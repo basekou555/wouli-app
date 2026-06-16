@@ -49,6 +49,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ variant = 'fixed' }
               className={cn(
                 'flex flex-col items-center justify-center gap-0.5 flex-1 h-full rounded-lg transition-colors',
                 isActive ? activeColor : inactiveColor,
+                floating && 'pointer-events-auto',
               )}
               style={floating ? { textShadow: '0 1px 6px rgba(0,0,0,0.6)' } : undefined}
             >
