@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { UnifiedEvent } from '@/types/unified';
 import { X, Share2, Check, Bookmark, Info } from 'lucide-react';
 import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
-import { getSocialProofText, getPriceInfo } from '@/utils/eventCardHelpers';
+import { getSocialProofText, getPriceInfo, getUrgencyBadge } from '@/utils/eventCardHelpers';
 import { getFocusClass } from '@/utils/imageHelpers';
 import { normalizeAmbiance } from '@/utils/ambiance';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -266,6 +266,21 @@ function formatDateShort(date: string): string {
     .replace(/\./g, '');
 }
 
+// Date "chaleureuse" : "Ce soir" / "Aujourd'hui" / "Demain", sinon "sam 17".
+function formatDateWarm(date: string, time?: string): string {
+  const dt = new Date(date);
+  if (Number.isNaN(dt.getTime())) return '';
+  const now = new Date();
+  const isToday = dt.toDateString() === now.toDateString();
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const isTomorrow = dt.toDateString() === tomorrow.toDateString();
+  const hour = time ? parseInt(time.split(':')[0], 10) : dt.getHours();
+  if (isToday) return (!Number.isNaN(hour) && hour >= 18) ? 'Ce soir' : "Aujourd'hui";
+  if (isTomorrow) return 'Demain';
+  return formatDateShort(date);
+}
+
 // Taille de titre (px) selon énergie, longueur, et récurrence (une taille en dessous)
 function titleFontSize(
   energy: 'SCENE' | 'CLUB' | 'JOURNEE',
@@ -398,7 +413,8 @@ const EventCard: React.FC<EventCardProps> = ({
   const recurring = !!event.is_recurring;
   const price = getPriceInfo(event.price_text);
   const heure = formatHeure(event.time);
-  const dateShort = formatDateShort(event.date);
+  const dateShort = formatDateWarm(event.date, event.time);
+  const urgency = getUrgencyBadge(event.date);
   const titleSize = titleFontSize(energy, title, recurring);
   const ambiance = normalizeAmbiance(event.music_style, event.tags, categoryLabel(event));
 
@@ -570,11 +586,19 @@ const EventCard: React.FC<EventCardProps> = ({
               e.stopPropagation();
               setIsDetailsOpen(true);
             }}
-            className="w-8 h-8 rounded-full bg-black/35 backdrop-blur flex items-center justify-center"
+            className="h-8 px-2.5 rounded-full bg-black/40 backdrop-blur flex items-center gap-1 text-white"
             aria-label="Voir les détails"
           >
-            <Info className="w-4 h-4 text-white" />
+            <Info className="w-4 h-4" />
+            <span className="text-xs font-semibold">Détails</span>
           </button>
+          {urgency && (
+            <span
+              style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', borderRadius: '999px', padding: '3px 9px', color: '#fff', background: 'rgba(239,68,68,0.92)', backdropFilter: 'blur(4px)' }}
+            >
+              {urgency}
+            </span>
+          )}
           {isUnique && (
             <span
               style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', borderRadius: '4px', padding: '3px 7px', fontFamily: POPPINS, ...uniqueBadgeStyle }}
@@ -751,33 +775,42 @@ const EventCard: React.FC<EventCardProps> = ({
           </div>
         )}
 
-        {/* ---------- Couche sociale ---------- */}
-        {(event.friendsParticipating && event.friendsParticipating.length > 0) && (
+        {/* ---------- Couche sociale (amis OU participants) ---------- */}
+        {((event.friendsParticipating?.length ?? 0) > 0 ||
+          (event.totalParticipants ?? event.participants ?? 0) > 0) && (
           <div className="flex items-center gap-2 px-4 pb-1" style={{ flexShrink: 0 }}>
-            <div className="flex -space-x-1">
-              {event.friendsParticipating.slice(0, 3).map((friend) => (
-                friend.avatar ? (
-                  <img
-                    key={friend.id}
-                    src={friend.avatar}
-                    alt={friend.name}
-                    className="w-4 h-4 rounded-full object-cover"
-                    style={{ border: `1px solid ${isJournee ? journeeBg : adaptiveBg}` }}
-                  />
-                ) : (
-                  <div
-                    key={friend.id}
-                    className="w-4 h-4 rounded-full flex items-center justify-center"
-                    style={{ fontSize: '7px', fontWeight: 600, color: ink, background: hexToRgba(isJournee ? '#1A1208' : '#FFFFFF', 0.18), border: `1px solid ${isJournee ? journeeBg : adaptiveBg}` }}
-                  >
-                    {friend.name.charAt(0).toUpperCase()}
-                  </div>
-                )
-              ))}
-            </div>
-            <span style={{ fontSize: '11px', fontWeight: 500, color: inkMuted }} className="truncate">
-              {getSocialProofText(event.friendsParticipating, event.totalParticipants || 0)}
-            </span>
+            {(event.friendsParticipating?.length ?? 0) > 0 ? (
+              <>
+                <div className="flex -space-x-1">
+                  {event.friendsParticipating!.slice(0, 3).map((friend) => (
+                    friend.avatar ? (
+                      <img
+                        key={friend.id}
+                        src={friend.avatar}
+                        alt={friend.name}
+                        className="w-4 h-4 rounded-full object-cover"
+                        style={{ border: `1px solid ${isJournee ? journeeBg : adaptiveBg}` }}
+                      />
+                    ) : (
+                      <div
+                        key={friend.id}
+                        className="w-4 h-4 rounded-full flex items-center justify-center"
+                        style={{ fontSize: '7px', fontWeight: 600, color: ink, background: hexToRgba(isJournee ? '#1A1208' : '#FFFFFF', 0.18), border: `1px solid ${isJournee ? journeeBg : adaptiveBg}` }}
+                      >
+                        {friend.name.charAt(0).toUpperCase()}
+                      </div>
+                    )
+                  ))}
+                </div>
+                <span style={{ fontSize: '11px', fontWeight: 500, color: inkMuted }} className="truncate">
+                  {getSocialProofText(event.friendsParticipating, event.totalParticipants || 0)}
+                </span>
+              </>
+            ) : (
+              <span style={{ fontSize: '11px', fontWeight: 600, color: inkMuted }} className="truncate">
+                👥 {event.totalParticipants ?? event.participants ?? 0} intéressé{(event.totalParticipants ?? event.participants ?? 0) > 1 ? 's' : ''}
+              </span>
+            )}
           </div>
         )}
 
