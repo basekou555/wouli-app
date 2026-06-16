@@ -269,37 +269,46 @@ const UserApp = () => {
 
   return (
     <div
-      className="bg-background overflow-hidden flex flex-col"
-      style={{ height: '100dvh' }}
+      className="relative bg-black overflow-hidden"
+      style={{
+        height: '100dvh',
+        ['--app-header-h' as any]: 'calc(56px + env(safe-area-inset-top))',
+        ['--app-nav-h' as any]: 'calc(60px + env(safe-area-inset-bottom))',
+      }}
     >
-      {/* Fixed header */}
+      {/* Header flottant — transparent, par-dessus le feed plein écran */}
       <header
-        className="flex-shrink-0 h-14 px-4 flex items-center justify-between bg-card border-b border-border z-50"
+        className="absolute top-0 inset-x-0 z-40 h-14 px-4 flex items-center justify-between"
         style={{ paddingTop: isPWA ? 'env(safe-area-inset-top)' : undefined }}
       >
+        {/* Dégradé pour la lisibilité des contrôles */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/55 to-transparent" />
+
         <button
           onClick={() => setIsMenuOpen(true)}
-          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-accent transition-colors"
+          className="relative w-10 h-10 flex items-center justify-center rounded-full bg-black/30 backdrop-blur-md border border-white/15 text-white active:bg-black/50 transition-colors"
           aria-label="Menu"
         >
           <Menu className="w-5 h-5" />
         </button>
 
-        <FeedModeToggle mode={feedMode} onModeChange={setFeedMode} />
+        <div className="relative">
+          <FeedModeToggle mode={feedMode} onModeChange={setFeedMode} />
+        </div>
 
         <button
           onClick={() => setIsFiltersOpen(true)}
-          className="px-3 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors flex items-center gap-1"
+          className="relative px-3 py-2 rounded-full bg-black/30 backdrop-blur-md border border-white/15 text-white text-sm font-medium active:bg-black/50 transition-colors flex items-center gap-1"
         >
           <SlidersHorizontal className="w-4 h-4" />
           Filtres
         </button>
       </header>
 
-      {/* Feed vertical — scroll snap TikTok-style (une carte par écran) */}
+      {/* Feed vertical — scroll snap TikTok-style (une carte par écran), plein écran */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-y-scroll scroll-smooth scrollbar-hide"
+        className="absolute inset-0 overflow-y-scroll scroll-smooth scrollbar-hide"
         style={{ scrollSnapType: 'y mandatory' }}
       >
         {filteredEvents.length > 0 ? (
@@ -369,7 +378,10 @@ const UserApp = () => {
         )}
       </div>
 
-      <BottomNavigation variant="inline" />
+      {/* Bottom nav flottante — transparente par-dessus le feed plein écran */}
+      <div className="absolute bottom-0 inset-x-0 z-40">
+        <BottomNavigation variant="floating" />
+      </div>
 
       <InstallPrompt pageId="swipe" delay={1000} />
 
