@@ -30,6 +30,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminValidationPage from "./pages/AdminValidationPage";
 import ScraperControl from "./pages/ScraperControl";
 import Onboarding from "./pages/Onboarding";
+import DesignLab from "./pages/DesignLab";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AuthRedirect from "./components/AuthRedirect";
 import { AdminRoute } from "./components/AdminRoute";
@@ -52,6 +53,7 @@ function AppContent() {
       <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Home />} />
+                <Route path="/design" element={<DesignLab />} />
                 <Route path="/e/:id" element={<EventLanding />} />
                 <Route path="/auth" element={
                   <AuthRedirect>

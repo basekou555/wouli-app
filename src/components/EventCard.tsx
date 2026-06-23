@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { UnifiedEvent } from '@/types/unified';
-import { X, Share2, Check, Bookmark, Info } from 'lucide-react';
+import { X, Share2, Check, Bookmark } from 'lucide-react';
 import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
-import { getSocialProofText, getPriceInfo } from '@/utils/eventCardHelpers';
+import { getSocialProofText, getPriceInfo, getUrgencyBadge } from '@/utils/eventCardHelpers';
 import { getFocusClass } from '@/utils/imageHelpers';
 import { normalizeAmbiance } from '@/utils/ambiance';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -372,7 +372,6 @@ const EventCard: React.FC<EventCardProps> = ({
 }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [showImageModal, setShowImageModal] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // --- Design système carte (Phase 1) ---
@@ -399,6 +398,7 @@ const EventCard: React.FC<EventCardProps> = ({
   const price = getPriceInfo(event.price_text);
   const heure = formatHeure(event.time);
   const dateShort = formatDateShort(event.date);
+  const urgency = getUrgencyBadge(event.date, event.time);
   const titleSize = titleFontSize(energy, title, recurring);
   const ambiance = normalizeAmbiance(event.music_style, event.tags, categoryLabel(event));
 
@@ -533,7 +533,7 @@ const EventCard: React.FC<EventCardProps> = ({
       {/* flex-1 : reprend tout l'espace restant (proportions d'origine) */}
       <div
         className="relative flex-1 min-h-0 overflow-hidden cursor-pointer"
-        onClick={() => setShowImageModal(true)}
+        onClick={() => setIsDetailsOpen(true)}
       >
         {!imageLoaded && (
           <div className="absolute inset-0 bg-muted animate-pulse" />
@@ -563,26 +563,25 @@ const EventCard: React.FC<EventCardProps> = ({
           />
         )}
 
-        {/* Détails + badge UNIQUE (haut gauche) */}
-        <div className="absolute left-3 z-10 flex items-center gap-2" style={{ top: 'calc(var(--app-header-h, 0px) + 12px)' }}>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsDetailsOpen(true);
-            }}
-            className="w-8 h-8 rounded-full bg-black/35 backdrop-blur flex items-center justify-center"
-            aria-label="Voir les détails"
-          >
-            <Info className="w-4 h-4 text-white" />
-          </button>
-          {isUnique && (
-            <span
-              style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', borderRadius: '4px', padding: '3px 7px', fontFamily: POPPINS, ...uniqueBadgeStyle }}
-            >
-              Unique
-            </span>
-          )}
-        </div>
+        {/* Badges : urgence + unicité (haut gauche) */}
+        {(urgency || isUnique) && (
+          <div className="absolute left-3 z-10 flex items-center gap-2" style={{ top: 'calc(var(--app-header-h, 0px) + 12px)' }}>
+            {urgency && (
+              <span
+                style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', borderRadius: '999px', padding: '3px 9px', color: '#fff', background: 'rgba(239,68,68,0.92)', backdropFilter: 'blur(4px)' }}
+              >
+                {urgency}
+              </span>
+            )}
+            {isUnique && (
+              <span
+                style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', borderRadius: '4px', padding: '3px 7px', fontFamily: POPPINS, ...uniqueBadgeStyle }}
+              >
+                Unique
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Partager + Passer (haut droite) */}
         <div className="absolute right-3 z-10 flex gap-2" style={{ top: 'calc(var(--app-header-h, 0px) + 12px)' }}>
@@ -939,33 +938,6 @@ const EventCard: React.FC<EventCardProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Modal Fullscreen Image */}
-      <AnimatePresence>
-        {showImageModal && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowImageModal(false)}
-              className="fixed inset-0 bg-black z-50 flex items-center justify-center"
-            >
-              <img
-                src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/400/600?random=event"}
-                alt={event.title}
-                className="max-w-full max-h-full object-contain"
-                onError={handleImageError}
-              />
-              <button
-                onClick={() => setShowImageModal(false)}
-                className="absolute top-4 right-4 p-3 bg-white/20 hover:bg-white/30 backdrop-blur rounded-full transition-colors"
-              >
-                <X className="w-6 h-6 text-white" />
-              </button>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
     </div>
   );
 };
