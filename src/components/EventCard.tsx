@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { UnifiedEvent } from '@/types/unified';
 import { X, Share2, Check, Bookmark } from 'lucide-react';
-import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
+import { getProxiedImageUrl, getColorProbeUrl, handleImageError } from '@/utils/corsProxyHelpers';
 import { getSocialProofText, getPriceInfo, getUrgencyBadge } from '@/utils/eventCardHelpers';
 import { getFocusClass } from '@/utils/imageHelpers';
 import { normalizeAmbiance } from '@/utils/ambiance';
@@ -411,7 +411,9 @@ const EventCard: React.FC<EventCardProps> = ({
       setAdaptiveBg(event.color_card);
       return;
     }
-    const url = getProxiedImageUrl(event.image_url);
+    // Image-sonde routée via proxy CORS → canvas lisible quel que soit l'hôte
+    // (larayonne, cloudinary... ne renvoient pas d'en-têtes CORS en direct).
+    const url = getColorProbeUrl(event.image_url);
     if (!url) return;
     let cancelled = false;
     const probe = new Image();
