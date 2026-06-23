@@ -30,6 +30,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminValidationPage from "./pages/AdminValidationPage";
 import ScraperControl from "./pages/ScraperControl";
 import Onboarding from "./pages/Onboarding";
+import DesignLab from "./pages/DesignLab";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AuthRedirect from "./components/AuthRedirect";
 import { AdminRoute } from "./components/AdminRoute";
@@ -53,6 +54,8 @@ function AppContent() {
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/e/:id" element={<EventLanding />} />
+                {/* Design Lab — page d'itération visuelle de la carte (preview only) */}
+                <Route path="/design" element={<DesignLab />} />
                 <Route path="/auth" element={
                   <AuthRedirect>
                     <Auth />
