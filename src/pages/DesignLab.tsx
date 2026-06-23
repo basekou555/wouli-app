@@ -16,19 +16,31 @@ const DesignLab: React.FC = () => {
 
   useEffect(() => {
     async function fetchEvents() {
+      // Fetch a wider pool then shuffle + deduplicate by image_url client-side
+      // so the lab always shows diverse cards (no duplicate stock photos)
       const { data, error: err } = await supabase
         .from('events')
         .select('*')
         .in('status', ['validated', 'active'])
         .not('image_url', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(9);
+        .limit(60);
 
       if (err) {
         setError(err.message);
       } else if (data) {
-        // Map DB rows → UnifiedEvent (DB columns are snake_case and mostly compatible)
-        const mapped: UnifiedEvent[] = data.map((row: Record<string, unknown>) => ({
+        // Shuffle for variety on each reload
+        const shuffled = [...data].sort(() => Math.random() - 0.5);
+
+        // Deduplicate by image_url to avoid identical-looking cards
+        const seenImages = new Set<string>();
+        const unique = shuffled.filter((row) => {
+          const url = row.image_url as string;
+          if (seenImages.has(url)) return false;
+          seenImages.add(url);
+          return true;
+        }).slice(0, 9);
+
+        const mapped: UnifiedEvent[] = unique.map((row: Record<string, unknown>) => ({
           ...row,
           source: 'business' as const,
           organizer: (row.venue as string) || (row.location as string) || '',
@@ -66,15 +78,17 @@ const DesignLab: React.FC = () => {
       <div className="flex flex-wrap gap-x-6 gap-y-8">
         {events.map((event) => (
           <div key={event.id} className="space-y-2">
-            <div className="text-[11px] uppercase tracking-wide text-white/55 font-semibold flex gap-2 max-w-[300px]">
-              <span className="text-purple-400">{event.energy ?? '–'}</span>
-              <span className="truncate">{event.title?.slice(0, 35)}</span>
-              {event.color_card && (
+            <div className="text-[11px] uppercase tracking-wide text-white/55 font-semibold flex gap-2 max-w-[300px] items-center">
+              <span className="text-purple-400 flex-shrink-0">{event.energy ?? 'AUTO'}</span>
+              <span className="truncate">{event.title?.slice(0, 28)}</span>
+              {event.color_card ? (
                 <span
-                  className="w-3 h-3 rounded-full flex-shrink-0 self-center"
-                  style={{ background: event.color_card }}
-                  title={event.color_card}
+                  className="w-3 h-3 rounded-full flex-shrink-0"
+                  style={{ background: event.color_card, boxShadow: `0 0 4px ${event.color_card}` }}
+                  title={`color_card: ${event.color_card}`}
                 />
+              ) : (
+                <span className="text-white/25 flex-shrink-0 text-[9px]">no color</span>
               )}
             </div>
             <div className="w-[300px] h-[620px] rounded-[28px] overflow-hidden ring-1 ring-white/10 shadow-2xl bg-black">
