@@ -151,41 +151,58 @@ function adjustColor(hex: string, lightnessOffset: number, saturationOffset: num
 }
 
 /**
- * Extrait une couleur dominante depuis une image via canvas 10x10 (moyenne des pixels),
- * puis l'assombrit pour servir de fond de zone. Retourne null si CORS bloque getImageData.
+ * Couleur dominante VIVE depuis un buffer RGBA (port partagé avec le serveur).
+ * Au lieu d'une moyenne plate (qui vire au gris/noir boueux sur une affiche
+ * chargée), on pondère chaque pixel par sa saturation² : les pixels vifs (la
+ * couleur accent de l'affiche) dominent. Si l'image est quasi-monochrome
+ * (poids cumulé trop faible), on retombe sur la moyenne simple.
+ * Retourne un hex BRUT (sans assombrissement) ou null.
+ */
+function dominantVividColor(data: Uint8ClampedArray | number[]): string | null {
+  let vr = 0, vg = 0, vb = 0, wsum = 0; // accumulateurs pondérés (vifs)
+  let ar = 0, ag = 0, ab = 0, count = 0; // moyenne simple (fallback)
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i], g = data[i + 1], b = data[i + 2];
+    ar += r; ag += g; ab += b; count++;
+    const mx = Math.max(r, g, b) / 255;
+    const mn = Math.min(r, g, b) / 255;
+    const l = (mx + mn) / 2;
+    if (l > 0.95 || l < 0.05) continue; // blanc/noir pur : pas "la couleur"
+    const s = mx === mn ? 0 : (l > 0.5 ? (mx - mn) / (2 - mx - mn) : (mx - mn) / (mx + mn));
+    const w = s * s; // favorise fortement les pixels saturés
+    vr += r * w; vg += g * w; vb += b * w; wsum += w;
+  }
+  if (count === 0) return null;
+  const toHex = (x: number) => Math.max(0, Math.min(255, Math.round(x))).toString(16).padStart(2, '0');
+  if (wsum < 0.5) {
+    // Image quasi-monochrome → moyenne simple
+    return `#${toHex(ar / count)}${toHex(ag / count)}${toHex(ab / count)}`;
+  }
+  return `#${toHex(vr / wsum)}${toHex(vg / wsum)}${toHex(vb / wsum)}`;
+}
+
+/**
+ * Extrait une couleur dominante depuis une image via canvas 24x24, en favorisant
+ * les pixels vifs, puis l'assombrit légèrement pour servir de fond de zone.
+ * Retourne null si CORS bloque getImageData.
  */
 function extractCardColor(imgEl: HTMLImageElement): string | null {
   try {
     const canvas = document.createElement('canvas');
-    canvas.width = 10;
-    canvas.height = 10;
+    canvas.width = 24;
+    canvas.height = 24;
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
 
-    ctx.drawImage(imgEl, 0, 0, 10, 10);
-    const { data } = ctx.getImageData(0, 0, 10, 10);
+    ctx.drawImage(imgEl, 0, 0, 24, 24);
+    const { data } = ctx.getImageData(0, 0, 24, 24);
 
-    let r = 0;
-    let g = 0;
-    let b = 0;
-    let count = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      r += data[i];
-      g += data[i + 1];
-      b += data[i + 2];
-      count++;
-    }
-    if (count === 0) return null;
+    const vivid = dominantVividColor(data);
+    if (!vivid) return null;
 
-    r = Math.round(r / count);
-    g = Math.round(g / count);
-    b = Math.round(b / count);
-
-    const toHex = (x: number) => x.toString(16).padStart(2, '0');
-    const avgHex = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-
-    // Assombrissement + désaturation pour servir de fond de zone adaptative
-    return adjustColor(avgHex, -25, -20);
+    // Assombrissement modéré + léger boost de saturation : la couleur reste
+    // visible (≠ quasi-noir) tout en gardant du texte blanc lisible dessus.
+    return adjustColor(vivid, -15, 5);
   } catch {
     // CORS (images Instagram) → canvas tainted → échec attendu
     return null;
@@ -381,13 +398,34 @@ const EventCard: React.FC<EventCardProps> = ({
   // Priorité absolue au champ serveur color_card s'il est fourni.
   const [adaptiveBg, setAdaptiveBg] = useState<string>(event.color_card || defaultBg);
 
-  // Extraction couleur depuis l'image chargée (fallback gracieux si CORS bloque).
-  const handleImageLoaded = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    setImageLoaded(true);
-    if (event.color_card) return; // le serveur prime, pas d'extraction
-    const extracted = extractCardColor(e.currentTarget);
-    if (extracted) setAdaptiveBg(extracted);
-  };
+  // L'image VISIBLE n'a pas de crossOrigin → elle s'affiche toujours (même
+  // depuis un hôte sans en-têtes CORS). L'extraction couleur se fait à part,
+  // sur une image hors-DOM avec crossOrigin (best-effort), pour ne JAMAIS
+  // casser l'affichage de la vraie affiche.
+  const handleImageLoaded = () => setImageLoaded(true);
+
+  // Extraction couleur côté client — uniquement si le serveur n'a pas fourni
+  // color_card. Échec silencieux (CORS / image morte) : on garde le défaut.
+  useEffect(() => {
+    if (event.color_card) {
+      setAdaptiveBg(event.color_card);
+      return;
+    }
+    const url = getProxiedImageUrl(event.image_url);
+    if (!url) return;
+    let cancelled = false;
+    const probe = new Image();
+    probe.crossOrigin = 'anonymous';
+    probe.onload = () => {
+      if (cancelled) return;
+      const extracted = extractCardColor(probe);
+      if (extracted) setAdaptiveBg(extracted);
+    };
+    probe.src = url;
+    return () => {
+      cancelled = true;
+    };
+  }, [event.image_url, event.color_card]);
 
   // --- Design système carte (Phase 2 : 3 énergies) ---
   const POPPINS = "'Poppins', sans-serif";
@@ -541,7 +579,6 @@ const EventCard: React.FC<EventCardProps> = ({
         <img
           src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/400/600?random=event"}
           alt={event.title}
-          crossOrigin="anonymous"
           className={cn(
             "w-full h-full object-cover transition-opacity duration-300",
             getFocusClass(event.image_focus_position),
