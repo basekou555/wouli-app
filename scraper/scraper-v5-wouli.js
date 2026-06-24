@@ -745,6 +745,57 @@ class WouliScraperV5 {
     return event;
   }
 
+  // ============================================
+  // PERSISTANCE IMAGE -> STORAGE (FIX v5.3)
+  // ============================================
+  // Les URLs Instagram (scontent.cdninstagram.com) sont signées et EXPIRENT en
+  // quelques jours : passé ce délai elles renvoient 403, l'image meurt et la carte
+  // retombe sur un visuel générique. On télécharge donc le flyer DÈS le scrape
+  // (URL encore fraîche) et on le dépose sur notre Storage Supabase, qui ne périme
+  // jamais. Retourne l'URL Storage publique stable, ou null si échec (best-effort :
+  // on retombe alors sur l'URL d'origine, sans bloquer le scrape).
+  async persistImageToStorage(imageUrl, eventId) {
+    try {
+      if (!imageUrl || !eventId) return null;
+
+      let bytes;
+      let contentType;
+      if (imageUrl.startsWith('data:')) {
+        // Image déjà en base64 dans la page : décodage direct, aucun réseau.
+        const m = imageUrl.match(/^data:([^;]+);base64,(.*)$/);
+        if (!m) return null;
+        contentType = (m[1] || 'image/jpeg').split(';')[0];
+        bytes = Buffer.from(m[2], 'base64');
+      } else {
+        const res = await fetch(imageUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+            'Referer': 'https://www.instagram.com/'
+          }
+        });
+        if (!res.ok) return null;
+        contentType = (res.headers.get('content-type') || 'image/jpeg').split(';')[0];
+        bytes = Buffer.from(await res.arrayBuffer());
+      }
+
+      const ext = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg';
+      const filePath = `events/event-${eventId}-${Date.now()}.${ext}`;
+      const { error } = await this.supabase.storage
+        .from('events-images')
+        .upload(filePath, bytes, { contentType, upsert: true });
+      if (error) {
+        console.warn('      Upload Storage échoué:', error.message);
+        return null;
+      }
+      const { data } = this.supabase.storage.from('events-images').getPublicUrl(filePath);
+      return data?.publicUrl || null;
+    } catch (e) {
+      console.warn('      Persistance image échouée:', e.message);
+      return null;
+    }
+  }
+
   async createEvent(title, description, dateISO, account, imageUrl, sourceUrl, originalText) {
     const timeHHMM = this.extractTime(originalText || '');
     const eventDate = new Date(dateISO);
@@ -792,8 +843,20 @@ class WouliScraperV5 {
     }
 
     const nowIso = new Date().toISOString();
+    const eventId = crypto.randomUUID ? crypto.randomUUID() : undefined;
+
+    // FIX v5.3 : persistance pérenne du flyer dès le scrape (URL Instagram fraîche).
+    // Avant : on stockait l'URL CDN brute (qui expire) et les base64 étaient jetés.
+    // Maintenant : on dépose le flyer sur notre Storage et on pointe dessus. Échec
+    // -> on retombe sur l'URL d'origine (best-effort, ne casse jamais le scrape).
+    let finalImageUrl = imageUrl && !imageUrl.startsWith('data:') ? imageUrl : null;
+    if (eventId && imageUrl) {
+      const stored = await this.persistImageToStorage(imageUrl, eventId);
+      if (stored) finalImageUrl = stored;
+    }
+
     return {
-      id: crypto.randomUUID ? crypto.randomUUID() : undefined,
+      id: eventId,
       title: finalTitle,
       description: finalDesc,
       date: eventDate.toISOString(),
@@ -802,8 +865,8 @@ class WouliScraperV5 {
       address: this.cleanUnicode(account.address || `${account.venue_name}, Lyon`),
       category: this.sanitizeCategory(account.category || this.config.default_category || 'activites'),
       tags: ['instagram', account.username],
-      // FIX v5.2 : ne jamais stocker du base64 dans image_url (trop lourd pour Supabase)
-      image_url: imageUrl && !imageUrl.startsWith('data:') ? imageUrl : null,
+      // FIX v5.3 : URL Storage pérenne si la persistance a réussi, sinon URL d'origine.
+      image_url: finalImageUrl,
       external_url: sourceUrl,
       price: priceNumeric,
       max_participants: null,
