@@ -4,10 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Check, X, Edit, Eye, History, RotateCcw, FileEdit,
-  Calendar, MapPin, Euro, ExternalLink, Instagram, Sparkles, Music, Mic2
+  Calendar, MapPin, Euro, ExternalLink, Instagram, Sparkles, Music, Mic2, Zap, Tags
 } from 'lucide-react';
-import { PendingEvent, ENERGY_META, isAIEnriched, aiConfidencePct } from '@/hooks/utils/adminEventMappers';
-import { getCategoryById } from '@/data/wouliCategories';
+import { PendingEvent, ENERGY_META, isAIEnriched, aiConfidencePct, nextEnergy } from '@/hooks/utils/adminEventMappers';
+import { getCategoryById, getNextCategoryId } from '@/data/wouliCategories';
 
 // Libellés lisibles des drapeaux de revue posés par l'extraction IA (extract-event).
 const REVIEW_FLAG_LABELS: Record<string, { label: string; cls: string }> = {
@@ -45,6 +45,8 @@ interface AdminEventTableRowProps {
   onHistory: (eventId: string, eventTitle: string) => void;
   onStatusChange: (eventIds: string[], currentStatus: string, targetStatus: string) => void;
   onQuickApprove?: (eventId: string) => void;
+  onQuickSetEnergy?: (eventId: string, energy: string) => void;
+  onQuickSetCategory?: (eventId: string, category: string) => void;
   isProcessing?: boolean;
   calculateScore: (event: PendingEvent) => number;
   getScoreColor: (score: number) => string;
@@ -61,11 +63,14 @@ export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
   onHistory,
   onStatusChange,
   onQuickApprove,
+  onQuickSetEnergy,
+  onQuickSetCategory,
   isProcessing = false,
   calculateScore,
   getScoreColor
 }) => {
   const category = getCategoryById(event.category);
+  const energyMeta = event.energy ? ENERGY_META[event.energy] : null;
   const score = calculateScore(event);
   const confidence = aiConfidencePct(event);
 
@@ -283,7 +288,7 @@ export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
               variant="ghost"
               onClick={() => onEdit(event)}
               className="h-7 px-2 text-xs hover:bg-muted"
-              title="Modifier l'événement"
+              title="Modifier l'événement (raccourci : M)"
             >
               <Edit className="w-3.5 h-3.5 sm:mr-1" />
               <span className="hidden sm:inline">Modifier</span>
@@ -299,7 +304,41 @@ export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
               <span className="hidden sm:inline">Historique</span>
             </Button>
           </div>
-          
+
+          {/* Édition rapide : énergie + catégorie en un clic (cycle), sans ouvrir la modale */}
+          {(onQuickSetEnergy || onQuickSetCategory) && (
+            <div className="flex items-center gap-1">
+              {onQuickSetEnergy && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onQuickSetEnergy(event.id, nextEnergy(event.energy))}
+                  className={`h-7 px-2 text-xs ${energyMeta ? energyMeta.cls : 'text-muted-foreground'}`}
+                  title="Changer l'énergie : journée → club → scène (raccourci : E)"
+                >
+                  <Zap className="w-3.5 h-3.5 sm:mr-1" />
+                  <span className="hidden sm:inline">{energyMeta ? energyMeta.label : 'Énergie'}</span>
+                </Button>
+              )}
+              {onQuickSetCategory && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onQuickSetCategory(event.id, getNextCategoryId(event.category))}
+                  className="h-7 px-2 text-xs text-muted-foreground"
+                  title="Changer la catégorie (raccourci : C)"
+                >
+                  {category ? (
+                    <span className="sm:mr-1">{category.icon}</span>
+                  ) : (
+                    <Tags className="w-3.5 h-3.5 sm:mr-1" />
+                  )}
+                  <span className="hidden sm:inline">{category ? category.name : 'Catégorie'}</span>
+                </Button>
+              )}
+            </div>
+          )}
+
           {/* Ligne 2 : Actions contextuelles selon statut */}
           <div className="flex items-center gap-1">
             {event.status === 'pending' && (
@@ -319,7 +358,7 @@ export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
                   variant="ghost"
                   onClick={() => onStatusChange([event.id], 'pending', 'rejected')}
                   className="h-7 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-                  title="Rejeter l'événement"
+                  title="Rejeter l'événement (raccourci : R)"
                 >
                   <X className="w-3.5 h-3.5 sm:mr-1" />
                   <span className="hidden sm:inline">Refuser</span>

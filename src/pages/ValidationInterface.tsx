@@ -16,7 +16,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
-import { WOULI_CATEGORIES, getCategoryById } from '@/data/wouliCategories';
+import { WOULI_CATEGORIES, getCategoryById, getNextCategoryId } from '@/data/wouliCategories';
+import { nextEnergy } from '@/hooks/utils/adminEventMappers';
 import EventEditModal from '@/components/admin/EventEditModal';
 import EventModerationHistory from '@/components/admin/EventModerationHistory';
 import StatusChangeModal from '@/components/admin/StatusChangeModal';
@@ -495,10 +496,36 @@ const ValidationInterface = () => {
     }
   };
 
-  // Archiver un doublon (réversible, via le même flux que les autres changements de statut).
-  const handleArchiveDuplicate = (event: DuplicateEvent) => {
-    handleStatusChange([event.id], event.status, 'archived');
+  // Doublons : valider celui qu'on garde (publication immédiate, réversible)…
+  const handleValidateDuplicate = async (event: DuplicateEvent) => {
+    await quickApprove(event.id);
+    loadDuplicates();
   };
+
+  // …et rejeter le doublon à jeter (via le flux de changement de statut, réversible).
+  const handleRejectDuplicate = (event: DuplicateEvent) => {
+    handleStatusChange([event.id], event.status, 'rejected');
+  };
+
+  // Édition rapide d'un champ depuis la ligne du tableau (énergie / catégorie), sans ouvrir la modale.
+  // Optimiste : on met à jour l'état local immédiatement puis on persiste ; on resynchronise en cas d'échec.
+  const quickUpdateField = async (eventId: string, patch: Partial<PendingEvent>) => {
+    isMutatingRef.current = true;
+    setEvents((prev) => prev.map((e) => (e.id === eventId ? { ...e, ...patch } : e)));
+    try {
+      const { error } = await supabase.from('events').update(patch as never).eq('id', eventId);
+      if (error) throw error;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Mise à jour impossible';
+      toast({ title: 'Erreur', description: message, variant: 'destructive' });
+      await fetchEvents(0, false);
+    } finally {
+      isMutatingRef.current = false;
+    }
+  };
+
+  const quickSetEnergy = (eventId: string, energy: string) => quickUpdateField(eventId, { energy });
+  const quickSetCategory = (eventId: string, category: string) => quickUpdateField(eventId, { category });
 
   // Ouvrir l'aperçu d'un event par son id (les doublons ne sont pas forcément dans la liste chargée).
   const openPreviewById = async (eventId: string) => {
@@ -583,8 +610,8 @@ const ValidationInterface = () => {
   const focusedIndexRef = useRef(-1);
   focusedIndexRef.current = focusedIndex;
   // activeTabRef est déjà déclaré plus haut (utilisé par fetchEvents et le realtime).
-  const keyActionsRef = useRef({ quickApprove, handleReject, setShowDetails });
-  keyActionsRef.current = { quickApprove, handleReject, setShowDetails };
+  const keyActionsRef = useRef({ quickApprove, handleReject, setShowDetails, setEditingEvent, quickSetEnergy, quickSetCategory });
+  keyActionsRef.current = { quickApprove, handleReject, setShowDetails, setEditingEvent, quickSetEnergy, quickSetCategory };
 
   // Garde l'index focalisé dans les bornes quand la liste filtrée change.
   useEffect(() => {
@@ -632,6 +659,15 @@ const ValidationInterface = () => {
         } else if (e.key === 'Enter') {
           e.preventDefault();
           keyActionsRef.current.setShowDetails(ev);
+        } else if (e.key === 'm' || e.key === 'M') {
+          e.preventDefault();
+          keyActionsRef.current.setEditingEvent(ev);
+        } else if (e.key === 'e' || e.key === 'E') {
+          e.preventDefault();
+          keyActionsRef.current.quickSetEnergy(ev.id, nextEnergy(ev.energy));
+        } else if (e.key === 'c' || e.key === 'C') {
+          e.preventDefault();
+          keyActionsRef.current.quickSetCategory(ev.id, getNextCategoryId(ev.category));
         }
       }
     };
@@ -990,7 +1026,8 @@ const ValidationInterface = () => {
           <DuplicatesPanel
             pairs={duplicatePairs}
             loading={loadingDuplicates}
-            onArchive={handleArchiveDuplicate}
+            onValidate={handleValidateDuplicate}
+            onReject={handleRejectDuplicate}
             onPreview={openPreviewById}
           />
         )}
@@ -1564,6 +1601,12 @@ const ValidationInterface = () => {
                 valider ·
                 <kbd className="px-1.5 py-0.5 rounded border bg-muted">R</kbd>
                 rejeter ·
+                <kbd className="px-1.5 py-0.5 rounded border bg-muted">M</kbd>
+                modifier ·
+                <kbd className="px-1.5 py-0.5 rounded border bg-muted">E</kbd>
+                énergie ·
+                <kbd className="px-1.5 py-0.5 rounded border bg-muted">C</kbd>
+                catégorie ·
                 <kbd className="px-1.5 py-0.5 rounded border bg-muted">↵</kbd>
                 aperçu
               </span>
@@ -1630,6 +1673,8 @@ const ValidationInterface = () => {
                       }}
                       onStatusChange={handleStatusChange}
                       onQuickApprove={quickApprove}
+                      onQuickSetEnergy={quickSetEnergy}
+                      onQuickSetCategory={quickSetCategory}
                       calculateScore={calculateScore}
                       getScoreColor={getScoreColor}
                     />

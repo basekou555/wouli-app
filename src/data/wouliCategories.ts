@@ -51,3 +51,10 @@ export const getCategoryIcon = (id: string): string => {
   const category = getCategoryById(id);
   return category ? category.icon : '🎯';
 };
+
+// Catégorie suivante pour le bouton d'action rapide « Catégorie » (raccourci C).
+// Cycle dans l'ordre de WOULI_CATEGORIES ; repart au début si l'id courant est inconnu.
+export const getNextCategoryId = (currentId?: string | null): string => {
+  const idx = WOULI_CATEGORIES.findIndex(cat => cat.id === currentId);
+  return WOULI_CATEGORIES[(idx + 1) % WOULI_CATEGORIES.length].id;
+};

@@ -39,6 +39,15 @@ export const ENERGY_META: Record<string, { label: string; cls: string }> = {
   JOURNEE: { label: '☀️ Journée', cls: 'border-amber-300 text-amber-700 bg-amber-50' },
 };
 
+// Ordre de cycle pour le bouton d'action rapide « Énergie » (raccourci E).
+export const ENERGY_ORDER = ['JOURNEE', 'CLUB', 'SCENE'] as const;
+
+// Valeur d'énergie suivante (cycle JOURNEE → CLUB → SCENE → JOURNEE). Si non définie, commence à JOURNEE.
+export const nextEnergy = (current?: string | null): string => {
+  const idx = current ? ENERGY_ORDER.indexOf(current as (typeof ENERGY_ORDER)[number]) : -1;
+  return ENERGY_ORDER[(idx + 1) % ENERGY_ORDER.length];
+};
+
 // Vrai si l'event a été enrichi par le pipeline IA de vision.
 export const isAIEnriched = (e: { parsing_method?: string | null }): boolean =>
   e.parsing_method === 'claude-vision-v1';
