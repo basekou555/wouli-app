@@ -55,10 +55,18 @@ function deriveEnergy(event: UnifiedEvent): 'SCENE' | 'CLUB' | 'JOURNEE' {
     // RÈGLE SCÈNE — salle de concert connue
     if (SCENE_VENUES.some((v) => venue.includes(v))) return 'SCENE';
 
-    // RÈGLE SOIRÉE — tardive (>= 22h) = CLUB, plus tôt = SCÈNE (concert/live en salle)
-    if (event.event_type === 'soirees' && !Number.isNaN(hour)) {
-      return hour >= 22 ? 'CLUB' : 'SCENE';
+    // RÈGLE HEURE — généralisée à TOUS les types : un événement qui commence le
+    // soir est une SORTIE (clubbing tardif / concert-soirée), pas une activité de
+    // jour. Évite que des soirées (ex: "Soirée Latina" 21h, NYE 19h30) tombent en
+    // JOURNÉE crème faute de signal explicite.
+    if (!Number.isNaN(hour)) {
+      if (hour >= 22 || (event.event_type === 'soirees' && hour >= 21)) return 'CLUB';
+      if (hour >= 18) return 'SCENE';
+      return 'JOURNEE'; // matin / après-midi = activité de jour
     }
+
+    // Pas d'heure connue : un mot « soirée / party / nuit » suffit à sortir de la JOURNÉE.
+    if (/soir[ée]e|\bparty\b|clubbing|\bnuit\b/.test(haystack)) return 'SCENE';
 
     // Défaut sûr
     return 'JOURNEE';
