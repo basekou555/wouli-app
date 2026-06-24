@@ -8,14 +8,14 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar, MapPin, Euro, Save, X, Sparkles, Loader2, Check, Zap, Image as ImageIcon, FileText, ListChecks } from 'lucide-react';
-import { WOULI_CATEGORIES, getCategoryById } from '@/data/wouliCategories';
+import { WOULI_CATEGORIES } from '@/data/wouliCategories';
 import { ENERGY_META } from '@/hooks/utils/adminEventMappers';
-import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
 import { supabase } from '@/integrations/supabase/client';
 import { enhanceEventContent } from '@/services/aiEnhancementService';
 import AdminInlineImageCropper from './AdminInlineImageCropper';
 import { updateEventImageUrl } from '@/services/imageUploadService';
-import { cn } from '@/lib/utils';
+import EventCard from '@/components/EventCard';
+import { UnifiedEvent } from '@/types/unified';
 import { toast } from 'sonner';
 
 interface PendingEvent {
@@ -100,62 +100,68 @@ const SectionHeader = ({ icon, children }: { icon: React.ReactNode; children: Re
   </div>
 );
 
-// Aperçu live : reflète le formulaire tel que l'utilisateur verra la carte (swipe).
+// Construit un UnifiedEvent à partir du formulaire pour alimenter la VRAIE carte de swipe.
+// On réutilise EventCard (source de vérité) pour que l'aperçu soit pixel-identique à
+// ce que verront les utilisateurs — énergie, zone infos, barre d'action comprises.
+const buildPreviewEvent = (form: FormData): UnifiedEvent => {
+  const p = parseFloat(form.price);
+  const hasPrice = !!form.price && !Number.isNaN(p) && p > 0;
+  const eventType = (form.category || 'soirees') as UnifiedEvent['event_type'];
+  const date =
+    form.date && !Number.isNaN(new Date(`${form.date}T${form.time || '00:00'}`).getTime())
+      ? new Date(`${form.date}T${form.time || '00:00'}`).toISOString()
+      : new Date().toISOString();
+
+  return {
+    id: 'preview',
+    title: form.title || "Titre de l'événement",
+    description: form.description || '',
+    date,
+    location: form.location || 'Lieu',
+    category: (form.category || 'soirees') as UnifiedEvent['category'],
+    image_url: form.image_url || '',
+    views: 0,
+    likes: 0,
+    participants: 0,
+    source: 'business',
+    organizer: form.location || '',
+    organizer_type: 'business',
+    venue: form.location || '',
+    event_type: eventType,
+    time: form.time || '',
+    price_text: hasPrice ? `${p}€` : undefined,
+    address: form.address || '',
+    external_url: form.external_url || '',
+    tags: form.tags ? form.tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
+    energy:
+      form.energy && form.energy !== ENERGY_NONE
+        ? (form.energy as UnifiedEvent['energy'])
+        : undefined,
+  };
+};
+
+// Aperçu live : rend la vraie carte EventCard dans un cadre type téléphone.
+// `pointer-events-none` neutralise les clics (pas de tracking, pas de drawer) : c'est
+// un aperçu purement visuel. Les variables --app-* sont remises à 0 pour ne pas hériter
+// du chrome de l'app autour.
 const LivePreviewCard = ({ form }: { form: FormData }) => {
-  const category = getCategoryById(form.category);
-  const energy = form.energy && form.energy !== ENERGY_NONE ? ENERGY_META[form.energy] : null;
-
-  const priceDisplay = useMemo(() => {
-    const p = parseFloat(form.price);
-    return !form.price || p === 0 || Number.isNaN(p) ? null : `${p}€`;
-  }, [form.price]);
-
-  const dateDisplay = useMemo(() => {
-    if (!form.date) return '';
-    const d = new Date(`${form.date}T${form.time || '00:00'}`);
-    if (Number.isNaN(d.getTime())) return '';
-    return d.toLocaleDateString('fr-FR', {
-      weekday: 'short', day: 'numeric', month: 'short',
-      ...(form.time ? { hour: '2-digit', minute: '2-digit' } : {}),
-    });
-  }, [form.date, form.time]);
+  const previewEvent = useMemo(() => buildPreviewEvent(form), [form]);
 
   return (
-    <div className="rounded-2xl overflow-hidden border bg-card shadow-sm">
-      {/* Zone image 4:5 */}
-      <div className="relative w-full aspect-[4/5] bg-muted">
-        <img
-          src={getProxiedImageUrl(form.image_url) || 'https://picsum.photos/400/500?random=preview'}
-          alt={form.title || 'Aperçu'}
-          className="w-full h-full object-cover"
-          onError={handleImageError}
-        />
-        {category && (
-          <Badge className="absolute top-3 right-3 bg-purple-500/90 text-white border-none text-xs font-medium px-2 py-1 rounded-lg shadow-lg">
-            {category.icon} {category.name}
-          </Badge>
-        )}
-        {energy && (
-          <Badge variant="outline" className={cn('absolute top-3 left-3 text-[11px] bg-white/90 backdrop-blur', energy.cls)}>
-            {energy.label}
-          </Badge>
-        )}
-      </div>
-      {/* Infos */}
-      <div className="p-4 space-y-2">
-        <div className="flex justify-between items-start gap-2">
-          <h3 className="font-bold text-base text-foreground line-clamp-2 flex-1">
-            {form.title || 'Titre de l\'événement'}
-          </h3>
-          {priceDisplay && (
-            <div className="flex items-center gap-1 text-purple-500 font-semibold whitespace-nowrap text-sm">
-              <Euro className="w-4 h-4" />
-              <span>{priceDisplay}</span>
-            </div>
-          )}
-        </div>
-        <div className="text-sm text-muted-foreground">
-          {[dateDisplay, form.location].filter(Boolean).join(' • ') || 'Date • Lieu'}
+    <div className="mx-auto w-full max-w-[280px]">
+      <div
+        className="relative overflow-hidden rounded-[2rem] border-[6px] border-neutral-800 bg-black shadow-xl"
+        style={{ aspectRatio: '9 / 19', ['--app-header-h' as string]: '0px', ['--app-nav-h' as string]: '0px' } as React.CSSProperties}
+      >
+        <div className="absolute inset-0 pointer-events-none select-none">
+          <EventCard
+            event={previewEvent}
+            isFirstEvent
+            onBack={() => {}}
+            onDislike={() => {}}
+            onLike={() => {}}
+            onParticipate={() => {}}
+          />
         </div>
       </div>
     </div>

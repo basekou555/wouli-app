@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, MapPin, Instagram, Check, X, Eye, Sparkles, Copy, CheckCircle } from 'lucide-react';
+import { Calendar, MapPin, Instagram, Check, Eye, Sparkles, Copy, CheckCircle } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 // Event minimal renvoyé par la RPC find_duplicate_pairs.
@@ -26,8 +26,8 @@ export interface DuplicatePair {
 interface DuplicatesPanelProps {
   pairs: DuplicatePair[];
   loading: boolean;
-  onValidate: (event: DuplicateEvent) => void;
-  onReject: (event: DuplicateEvent) => void;
+  // Résout une paire en un geste : valide la carte choisie, rejette l'autre.
+  onResolve: (pair: DuplicatePair, keep: 'a' | 'b') => void;
   onPreview: (eventId: string) => void;
 }
 
@@ -42,14 +42,12 @@ const keepRecommendation = (pair: DuplicatePair): 'a' | 'b' => {
 const EventMiniCard = ({
   event,
   recommended,
-  onValidate,
-  onReject,
+  onKeep,
   onPreview,
 }: {
   event: DuplicateEvent;
   recommended: boolean;
-  onValidate: (event: DuplicateEvent) => void;
-  onReject: (event: DuplicateEvent) => void;
+  onKeep: () => void;
   onPreview: (eventId: string) => void;
 }) => (
   <div
@@ -93,28 +91,18 @@ const EventMiniCard = ({
         </div>
       </div>
     </div>
-    <div className="flex gap-2 mt-2">
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={() => onValidate(event)}
-        className="flex-1 h-7 text-xs text-green-600 hover:text-green-700 hover:border-green-300 hover:bg-green-50"
-      >
-        <Check className="w-3.5 h-3.5 mr-1" /> Valider
-      </Button>
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={() => onReject(event)}
-        className="flex-1 h-7 text-xs text-red-600 hover:text-red-700 hover:border-red-300 hover:bg-red-50"
-      >
-        <X className="w-3.5 h-3.5 mr-1" /> Rejeter
-      </Button>
-    </div>
+    {/* Un seul bouton : valider CELUI-CI publie cette carte et rejette automatiquement l'autre. */}
+    <Button
+      size="sm"
+      onClick={onKeep}
+      className="w-full h-8 mt-2 text-xs bg-green-600 hover:bg-green-700 text-white"
+    >
+      <Check className="w-3.5 h-3.5 mr-1" /> Garder celui-ci
+    </Button>
   </div>
 );
 
-export const DuplicatesPanel: React.FC<DuplicatesPanelProps> = ({ pairs, loading, onValidate, onReject, onPreview }) => {
+export const DuplicatesPanel: React.FC<DuplicatesPanelProps> = ({ pairs, loading, onResolve, onPreview }) => {
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -143,7 +131,8 @@ export const DuplicatesPanel: React.FC<DuplicatesPanelProps> = ({ pairs, loading
             {pairs.length} doublon{pairs.length > 1 ? 's' : ''} potentiel{pairs.length > 1 ? 's' : ''}
           </p>
           <p className="text-sm text-blue-700">
-            Même date et même lieu, titres similaires. Valide celui à garder, rejette le doublon (réversible).
+            Même date et même lieu, titres similaires. Clique « Garder celui-ci » sur la bonne carte :
+            elle part dans « À valider », l'autre est rejetée automatiquement (réversible).
           </p>
         </div>
       </div>
@@ -164,9 +153,9 @@ export const DuplicatesPanel: React.FC<DuplicatesPanelProps> = ({ pairs, loading
               </Badge>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 items-stretch">
-              <EventMiniCard event={pair.a} recommended={keep === 'a'} onValidate={onValidate} onReject={onReject} onPreview={onPreview} />
+              <EventMiniCard event={pair.a} recommended={keep === 'a'} onKeep={() => onResolve(pair, 'a')} onPreview={onPreview} />
               <div className="hidden sm:flex items-center text-muted-foreground font-bold text-xs">VS</div>
-              <EventMiniCard event={pair.b} recommended={keep === 'b'} onValidate={onValidate} onReject={onReject} onPreview={onPreview} />
+              <EventMiniCard event={pair.b} recommended={keep === 'b'} onKeep={() => onResolve(pair, 'b')} onPreview={onPreview} />
             </div>
           </div>
         );

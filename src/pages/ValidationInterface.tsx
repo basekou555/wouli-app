@@ -26,7 +26,7 @@ import { getEventStatus } from '@/utils/eventStatus';
 import { AdminEventPreview } from '@/components/admin/AdminEventPreview';
 import { AdminEventTableRow } from '@/components/admin/AdminEventTableRow';
 import { ValidationWorkload } from '@/components/admin/ValidationWorkload';
-import { DuplicatesPanel, DuplicatePair, DuplicateEvent } from '@/components/admin/DuplicatesPanel';
+import { DuplicatesPanel, DuplicatePair } from '@/components/admin/DuplicatesPanel';
 import { VenuesPanel, UnknownVenue, VenueProfile } from '@/components/admin/VenuesPanel';
 import { useAdminStats } from '@/hooks/useAdminStats';
 
@@ -496,15 +496,31 @@ const ValidationInterface = () => {
     }
   };
 
-  // Doublons : valider celui qu'on garde (publication immédiate, réversible)…
-  const handleValidateDuplicate = async (event: DuplicateEvent) => {
-    await quickApprove(event.id);
-    loadDuplicates();
-  };
+  // Doublons : un seul geste. On valide la carte gardée et on rejette l'autre directement
+  // (sans fenêtre de confirmation). La paire disparaît tout de suite de la liste — l'admin
+  // voit le tableau diminuer à chaque résolution. Tout reste réversible côté onglets.
+  const handleResolveDuplicate = async (pair: DuplicatePair, keep: 'a' | 'b') => {
+    const kept = keep === 'a' ? pair.a : pair.b;
+    const rejected = keep === 'a' ? pair.b : pair.a;
 
-  // …et rejeter le doublon à jeter (via le flux de changement de statut, réversible).
-  const handleRejectDuplicate = (event: DuplicateEvent) => {
-    handleStatusChange([event.id], event.status, 'rejected');
+    // Retrait optimiste de la paire traitée.
+    setDuplicatePairs((prev) => prev.filter((p) => !(p.a.id === pair.a.id && p.b.id === pair.b.id)));
+    isMutatingRef.current = true;
+    try {
+      const [approveRes, rejectRes] = await Promise.all([
+        supabase.rpc('approve_pending_event', { p_event_id: kept.id }),
+        supabase.rpc('reject_pending_event', { p_event_id: rejected.id }),
+      ]);
+      if (approveRes.error) throw approveRes.error;
+      if (rejectRes.error) throw rejectRes.error;
+      toast({ title: '✅ Doublon résolu', description: `« ${kept.title} » gardé, l'autre rejeté` });
+      await fetchEvents(0, false);
+    } catch (error: any) {
+      toast({ title: 'Erreur', description: error.message || 'Résolution impossible', variant: 'destructive' });
+      loadDuplicates(); // resync si l'opération a échoué
+    } finally {
+      isMutatingRef.current = false;
+    }
   };
 
   // Édition rapide d'un champ depuis la ligne du tableau (énergie / catégorie), sans ouvrir la modale.
@@ -1026,8 +1042,7 @@ const ValidationInterface = () => {
           <DuplicatesPanel
             pairs={duplicatePairs}
             loading={loadingDuplicates}
-            onValidate={handleValidateDuplicate}
-            onReject={handleRejectDuplicate}
+            onResolve={handleResolveDuplicate}
             onPreview={openPreviewById}
           />
         )}
