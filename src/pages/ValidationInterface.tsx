@@ -1330,13 +1330,30 @@ const ValidationInterface = () => {
     return (
       <>
         {/* Section Filtres */}
-        <div className="bg-card rounded-lg border p-4 space-y-4 mb-6">
-          <div className="flex items-center gap-2 mb-2">
-            <Search className="w-5 h-5 text-muted-foreground" />
-            <h3 className="font-semibold">Recherche & Filtres</h3>
-            {hasActiveFilters && (
-              <Badge variant="secondary" className="ml-2">Filtres actifs</Badge>
-            )}
+        <div className="bg-card rounded-lg border p-4 space-y-3 mb-6">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Search className="w-5 h-5 text-muted-foreground" />
+              <h3 className="font-semibold">Recherche & Filtres</h3>
+              {hasActiveFilters && (
+                <Badge variant="secondary">Filtres actifs</Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="h-8 px-3">
+                {filteredEvents.length} résultat{filteredEvents.length > 1 ? 's' : ''}
+              </Badge>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={resetFilters}
+                className="h-8"
+                disabled={!hasActiveFilters}
+              >
+                <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+                Réinitialiser
+              </Button>
+            </div>
           </div>
 
           <div className="relative">
@@ -1359,8 +1376,8 @@ const ValidationInterface = () => {
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="space-y-1.5">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="space-y-1">
               <label className="text-xs font-medium text-muted-foreground">Source Instagram</label>
               <Select value={accountFilter} onValueChange={setAccountFilter}>
                 <SelectTrigger className="h-9">
@@ -1377,7 +1394,7 @@ const ValidationInterface = () => {
               </Select>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <label className="text-xs font-medium text-muted-foreground">Enrichissement IA</label>
               <Select value={enrichmentFilter} onValueChange={(v: 'all' | 'enriched' | 'raw' | 'low') => setEnrichmentFilter(v)}>
                 <SelectTrigger className="h-9">
@@ -1392,7 +1409,7 @@ const ValidationInterface = () => {
               </Select>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <label className="text-xs font-medium text-muted-foreground">Date événement</label>
               <Select value={dateFilter} onValueChange={(v: 'all' | 'today' | 'week' | 'month') => setDateFilter(v)}>
                 <SelectTrigger className="h-9">
@@ -1407,7 +1424,7 @@ const ValidationInterface = () => {
               </Select>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <label className="text-xs font-medium text-muted-foreground">Tri</label>
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="h-9">
@@ -1422,23 +1439,6 @@ const ValidationInterface = () => {
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          <div className="flex items-center justify-between pt-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={resetFilters}
-              className="h-8"
-              disabled={!hasActiveFilters}
-            >
-              <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
-              Réinitialiser
-            </Button>
-            
-            <Badge variant="secondary" className="h-8 px-3">
-              {filteredEvents.length} résultat{filteredEvents.length > 1 ? 's' : ''}
-            </Badge>
           </div>
         </div>
 
@@ -1488,14 +1488,24 @@ const ValidationInterface = () => {
           </div>
         )}
 
-        {/* Actions groupées */}
-        {selectedIds.size > 0 && (
-          <div className="bg-card rounded-lg border p-4 mb-4">
-            <div className="flex items-center justify-between">
-              <span className="font-medium">
-                {selectedIds.size} événement(s) sélectionné(s)
+        {/* Toolbar unique (sticky) : sélection globale + actions groupées + raccourcis */}
+        {filteredEvents.length > 0 && (
+          <div className="sticky top-2 z-10 bg-card/95 backdrop-blur rounded-lg border shadow-sm p-3 mb-4 flex items-center justify-between gap-3">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedIds.size === filteredEvents.length}
+                onChange={handleSelectAll}
+                className="w-5 h-5 text-purple-600 rounded"
+              />
+              <span className="font-medium text-sm">
+                {selectedIds.size > 0
+                  ? `${selectedIds.size} sélectionné${selectedIds.size > 1 ? 's' : ''}`
+                  : `Tout sélectionner (${filteredEvents.length})`}
               </span>
-              
+            </label>
+
+            {selectedIds.size > 0 ? (
               <div className="flex gap-2">
                 {(activeTab === 'pending' || activeTab === 'urgent') && (
                   <>
@@ -1522,7 +1532,7 @@ const ValidationInterface = () => {
                     </Button>
                   </>
                 )}
-                
+
                 {activeTab === 'active' && (
                   <Button
                     onClick={() => handleStatusChange(Array.from(selectedIds), 'active', 'pending')}
@@ -1533,7 +1543,7 @@ const ValidationInterface = () => {
                     Remettre en attente
                   </Button>
                 )}
-                
+
                 {activeTab === 'rejected' && (
                   <Button
                     onClick={() => handleStatusChange(Array.from(selectedIds), 'rejected', 'pending')}
@@ -1545,33 +1555,19 @@ const ValidationInterface = () => {
                   </Button>
                 )}
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Sélection globale */}
-        {filteredEvents.length > 0 && (
-          <div className="bg-card rounded-lg border p-4 mb-4 flex items-center justify-between gap-3">
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={selectedIds.size === filteredEvents.length}
-                onChange={handleSelectAll}
-                className="w-5 h-5 text-purple-600 rounded"
-              />
-              <span className="font-medium">Tout sélectionner ({filteredEvents.length})</span>
-            </label>
-            <span className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground">
-              <kbd className="px-1.5 py-0.5 rounded border bg-muted">↑</kbd>
-              <kbd className="px-1.5 py-0.5 rounded border bg-muted">↓</kbd>
-              naviguer ·
-              <kbd className="px-1.5 py-0.5 rounded border bg-muted">A</kbd>
-              valider ·
-              <kbd className="px-1.5 py-0.5 rounded border bg-muted">R</kbd>
-              rejeter ·
-              <kbd className="px-1.5 py-0.5 rounded border bg-muted">↵</kbd>
-              aperçu
-            </span>
+            ) : (
+              <span className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground">
+                <kbd className="px-1.5 py-0.5 rounded border bg-muted">↑</kbd>
+                <kbd className="px-1.5 py-0.5 rounded border bg-muted">↓</kbd>
+                naviguer ·
+                <kbd className="px-1.5 py-0.5 rounded border bg-muted">A</kbd>
+                valider ·
+                <kbd className="px-1.5 py-0.5 rounded border bg-muted">R</kbd>
+                rejeter ·
+                <kbd className="px-1.5 py-0.5 rounded border bg-muted">↵</kbd>
+                aperçu
+              </span>
+            )}
           </div>
         )}
 
