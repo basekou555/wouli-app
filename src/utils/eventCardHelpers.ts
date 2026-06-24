@@ -19,17 +19,64 @@ export const getUrgencyBadge = (date: string, time?: string): string | null => {
   return null;
 };
 
-export const getSocialProofText = (friends: any[] = [], totalParticipants: number = 0): string => {
+export const getSocialProofText = (
+  friends: { name: string }[] = [],
+  totalParticipants: number = 0,
+): string => {
   if (friends.length > 0) {
     if (friends.length === 1) {
       return `${friends[0].name} + ${totalParticipants - 1} autres`;
     }
     return `${friends.length} amis + ${totalParticipants - friends.length} autres`;
   } else if (totalParticipants > 0) {
-    return `${totalParticipants} personnes intéressées`;
+    // §7.2 — preuve sociale forte sur la face avant ("47 personnes y vont").
+    return totalParticipants === 1
+      ? '1 personne y va'
+      : `${totalParticipants} personnes y vont`;
   } else {
-    return "Sois le premier";
+    return 'Sois le premier';
   }
+};
+
+/**
+ * Date chaude (§7.1 du design système carte). Transforme une date froide
+ * ("sam 17") en temporalité chaleureuse — cœur de la promesse
+ * "qu'est-ce qu'on fait ce soir ?". Retourne le label relatif SANS l'heure
+ * (l'heure est affichée séparément dans chaque énergie → on évite le doublon).
+ *
+ *  - Aujourd'hui (soir ≥18h)  → "Ce soir"
+ *  - Aujourd'hui (journée)    → "Aujourd'hui"
+ *  - Demain                   → "Demain"
+ *  - Cette semaine (J+2..J+6) → "Vendredi"
+ *  - Plus loin                → "Sam 17"
+ */
+export const formatHotDate = (date: string, time?: string): string => {
+  const dt = new Date(date);
+  if (Number.isNaN(dt.getTime())) return '';
+
+  const startOfDay = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const dayDiff = Math.round(
+    (startOfDay(dt).getTime() - startOfDay(new Date()).getTime()) / 86_400_000,
+  );
+
+  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  if (dayDiff === 0) {
+    const hh = time ? parseInt(time.split(':')[0], 10) : NaN;
+    const isEvening = Number.isNaN(hh) || hh >= 18;
+    return isEvening ? 'Ce soir' : "Aujourd'hui";
+  }
+  if (dayDiff === 1) return 'Demain';
+  if (dayDiff >= 2 && dayDiff <= 6) {
+    return capitalize(dt.toLocaleDateString('fr-FR', { weekday: 'long' }));
+  }
+  // Plus loin (ou passé) → "Sam 17"
+  return capitalize(
+    dt
+      .toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' })
+      .replace(/\./g, ''),
+  );
 };
 
 export const formatEventDateTime = (date: string, time?: string): string => {
