@@ -26,7 +26,7 @@ import { getEventStatus } from '@/utils/eventStatus';
 import { AdminEventPreview } from '@/components/admin/AdminEventPreview';
 import { AdminEventTableRow } from '@/components/admin/AdminEventTableRow';
 import { ValidationWorkload } from '@/components/admin/ValidationWorkload';
-import { DuplicatesPanel, DuplicatePair } from '@/components/admin/DuplicatesPanel';
+import { DuplicatesPanel, DuplicatePair, DuplicateEvent } from '@/components/admin/DuplicatesPanel';
 import { VenuesPanel, UnknownVenue, VenueProfile } from '@/components/admin/VenuesPanel';
 import { useAdminStats } from '@/hooks/useAdminStats';
 
@@ -497,6 +497,27 @@ const ValidationInterface = () => {
     }
   };
 
+  // Garde un event : s'il est encore en attente on le publie ; s'il est déjà actif/validé
+  // (cas fréquent des doublons anciens), il n'y a rien à faire.
+  const keepDuplicateEvent = (event: DuplicateEvent) => {
+    if (event.status === 'pending') {
+      return supabase.rpc('approve_pending_event', { p_event_id: event.id });
+    }
+    return Promise.resolve({ error: null });
+  };
+
+  // Rejette un event quel que soit son statut : la RPC ne traite que les "pending",
+  // donc pour un event déjà actif/validé on bascule directement le statut (RLS admin).
+  const rejectDuplicateEvent = (event: DuplicateEvent, reason: string) => {
+    if (event.status === 'pending') {
+      return supabase.rpc('reject_pending_event', { p_event_id: event.id, p_reason: reason });
+    }
+    return supabase
+      .from('events')
+      .update({ status: 'rejected', rejection_reason: reason, validated_at: new Date().toISOString() } as never)
+      .eq('id', event.id);
+  };
+
   // Doublons : un seul geste. On valide la carte gardée et on rejette l'autre directement
   // (sans fenêtre de confirmation). La paire disparaît tout de suite de la liste — l'admin
   // voit le tableau diminuer à chaque résolution. Tout reste réversible côté onglets.
@@ -508,11 +529,11 @@ const ValidationInterface = () => {
     setDuplicatePairs((prev) => prev.filter((p) => !(p.a.id === pair.a.id && p.b.id === pair.b.id)));
     isMutatingRef.current = true;
     try {
-      const [approveRes, rejectRes] = await Promise.all([
-        supabase.rpc('approve_pending_event', { p_event_id: kept.id }),
-        supabase.rpc('reject_pending_event', { p_event_id: rejected.id, p_reason: 'Doublon' }),
+      const [keepRes, rejectRes] = await Promise.all([
+        keepDuplicateEvent(kept),
+        rejectDuplicateEvent(rejected, 'Doublon'),
       ]);
-      if (approveRes.error) throw approveRes.error;
+      if (keepRes.error) throw keepRes.error;
       if (rejectRes.error) throw rejectRes.error;
       toast({ title: '✅ Doublon résolu', description: `« ${kept.title} » gardé, l'autre rejeté` });
       await fetchEvents(0, false);
@@ -530,8 +551,8 @@ const ValidationInterface = () => {
     isMutatingRef.current = true;
     try {
       const results = await Promise.all([
-        supabase.rpc('reject_pending_event', { p_event_id: pair.a.id, p_reason: 'Doublon' }),
-        supabase.rpc('reject_pending_event', { p_event_id: pair.b.id, p_reason: 'Doublon' }),
+        rejectDuplicateEvent(pair.a, 'Doublon'),
+        rejectDuplicateEvent(pair.b, 'Doublon'),
       ]);
       const firstError = results.find((r) => r.error)?.error;
       if (firstError) throw firstError;
