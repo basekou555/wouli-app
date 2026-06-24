@@ -352,7 +352,16 @@ async function computeColorCard(imageUrl: string | null | undefined): Promise<st
 // Retourne l'URL Storage publique, ou null si l'image est inaccessible (URL déjà expirée).
 async function persistFlyer(supabase: any, id: string, srcUrl: string): Promise<string | null> {
   try {
-    const res = await fetch(srcUrl);
+    // En-têtes navigateur + Referer Instagram : le CDN Instagram (scontent.cdninstagram.com)
+    // refuse (403) un fetch nu sans User-Agent crédible, même quand l'URL est ENCORE
+    // valide. Sans ça, ce filet de secours (cron) échouait aussi sur les URLs fraîches.
+    const res = await fetch(srcUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+        "Referer": "https://www.instagram.com/",
+      },
+    });
     if (!res.ok) return null;
     const contentType = res.headers.get("content-type")?.split(";")[0] || "image/jpeg";
     const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
