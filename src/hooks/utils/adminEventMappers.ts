@@ -16,6 +16,7 @@ export interface PendingEvent {
   created_at: string;
   validated_at?: string;
   image_url: string | null;
+  rejection_reason?: string | null;
   // Champs issus de l'extraction IA (extract-event) — optionnels, présents via select('*').
   parsing_method?: string | null;
   parsing_confidence?: number | null;

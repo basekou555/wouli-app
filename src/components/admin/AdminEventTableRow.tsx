@@ -275,6 +275,11 @@ export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
             </div>
           )}
           {getStatusBadge(event.status)}
+          {event.status === 'rejected' && event.rejection_reason && (
+            <div className="text-[10px] text-red-600 leading-tight" title="Motif du rejet">
+              {event.rejection_reason}
+            </div>
+          )}
         </div>
       </TableCell>
 

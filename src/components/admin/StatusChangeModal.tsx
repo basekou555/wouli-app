@@ -60,7 +60,7 @@ const StatusChangeModal = ({ eventIds, currentStatus, targetStatus, onClose, onS
         if (targetStatus === 'active') {
           await supabase.rpc('approve_pending_event', { p_event_id: eventId });
         } else if (targetStatus === 'rejected') {
-          await supabase.rpc('reject_pending_event', { p_event_id: eventId });
+          await supabase.rpc('reject_pending_event', { p_event_id: eventId, p_reason: usedReason || null });
         } else {
           // Pour remettre en attente, mettre à jour directement le statut
           await supabase

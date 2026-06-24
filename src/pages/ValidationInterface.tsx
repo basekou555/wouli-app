@@ -46,6 +46,7 @@ interface PendingEvent {
   created_at: string;
   validated_at?: string;
   image_url: string | null;
+  rejection_reason?: string | null;
   account_username?: string;
   event_type?: string;
   manual_review_reason?: string;
@@ -509,7 +510,7 @@ const ValidationInterface = () => {
     try {
       const [approveRes, rejectRes] = await Promise.all([
         supabase.rpc('approve_pending_event', { p_event_id: kept.id }),
-        supabase.rpc('reject_pending_event', { p_event_id: rejected.id }),
+        supabase.rpc('reject_pending_event', { p_event_id: rejected.id, p_reason: 'Doublon' }),
       ]);
       if (approveRes.error) throw approveRes.error;
       if (rejectRes.error) throw rejectRes.error;
@@ -518,6 +519,27 @@ const ValidationInterface = () => {
     } catch (error: any) {
       toast({ title: 'Erreur', description: error.message || 'Résolution impossible', variant: 'destructive' });
       loadDuplicates(); // resync si l'opération a échoué
+    } finally {
+      isMutatingRef.current = false;
+    }
+  };
+
+  // Doublons : rejeter les DEUX cartes d'un coup (aucune ne vaut la peine d'être gardée).
+  const handleRejectBothDuplicates = async (pair: DuplicatePair) => {
+    setDuplicatePairs((prev) => prev.filter((p) => !(p.a.id === pair.a.id && p.b.id === pair.b.id)));
+    isMutatingRef.current = true;
+    try {
+      const results = await Promise.all([
+        supabase.rpc('reject_pending_event', { p_event_id: pair.a.id, p_reason: 'Doublon' }),
+        supabase.rpc('reject_pending_event', { p_event_id: pair.b.id, p_reason: 'Doublon' }),
+      ]);
+      const firstError = results.find((r) => r.error)?.error;
+      if (firstError) throw firstError;
+      toast({ title: '✅ Doublon rejeté', description: 'Les deux événements ont été rejetés' });
+      await fetchEvents(0, false);
+    } catch (error: any) {
+      toast({ title: 'Erreur', description: error.message || 'Rejet impossible', variant: 'destructive' });
+      loadDuplicates();
     } finally {
       isMutatingRef.current = false;
     }
@@ -1043,6 +1065,7 @@ const ValidationInterface = () => {
             pairs={duplicatePairs}
             loading={loadingDuplicates}
             onResolve={handleResolveDuplicate}
+            onRejectBoth={handleRejectBothDuplicates}
             onPreview={openPreviewById}
           />
         )}
