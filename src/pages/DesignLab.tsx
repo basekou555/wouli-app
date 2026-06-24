@@ -16,13 +16,17 @@ const DesignLab: React.FC = () => {
 
   useEffect(() => {
     async function fetchEvents() {
-      // Fetch a wider pool then shuffle + deduplicate by image_url client-side
-      // so the lab always shows diverse cards (no duplicate stock photos)
+      // Événements À VENIR uniquement : ce sont les seuls représentatifs (bien
+      // enrichis par le pipeline = énergie + couleur). Les anciens événements
+      // (souvent non enrichis) ne sont pas pertinents pour juger le design.
+      // On tire un pool, shuffle + déduplique par image pour de la variété.
       const { data, error: err } = await supabase
         .from('events')
         .select('*')
         .in('status', ['validated', 'active'])
         .not('image_url', 'is', null)
+        .gte('date', new Date().toISOString())
+        .order('date', { ascending: true })
         .limit(60);
 
       if (err) {
@@ -60,7 +64,7 @@ const DesignLab: React.FC = () => {
     <div className="min-h-screen bg-neutral-950 text-white p-6">
       <h1 className="text-2xl font-bold">Design Lab — Carte</h1>
       <p className="text-white/50 text-sm mt-1 mb-6">
-        Vrais événements (live) · Cliquer sur la photo pour voir les détails
+        Événements à venir (live) · Cliquer sur la photo pour voir les détails
       </p>
 
       {loading && (
