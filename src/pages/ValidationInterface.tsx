@@ -497,6 +497,34 @@ const ValidationInterface = () => {
     }
   };
 
+  // Rejet en lot avec motif (nettoyage des événements à date passée dans la file).
+  const bulkRejectWithReason = async (ids: string[], reason: string) => {
+    if (!ids.length) return;
+    setBulkApproving(true);
+    isMutatingRef.current = true;
+    try {
+      const results = await Promise.allSettled(
+        ids.map((id) => supabase.rpc('reject_pending_event', { p_event_id: id, p_reason: reason }))
+      );
+      const ok = results.filter(
+        (r) => r.status === 'fulfilled' && !((r.value as { error: unknown }).error)
+      ).length;
+      toast({
+        title: '🧹 Nettoyage',
+        description: `${ok}/${ids.length} événement(s) rejeté(s) — ${reason}`,
+        variant: ok === ids.length ? undefined : 'destructive',
+      });
+      setSelectedIds(new Set());
+      await fetchEvents(0, false);
+      loadDuplicates();
+    } catch (error: any) {
+      toast({ title: 'Erreur', description: error.message || 'Rejet en lot impossible', variant: 'destructive' });
+    } finally {
+      isMutatingRef.current = false;
+      setBulkApproving(false);
+    }
+  };
+
   // Garde un event : s'il est encore en attente on le publie ; s'il est déjà actif/validé
   // (cas fréquent des doublons anciens), il n'y a rien à faire.
   const keepDuplicateEvent = (event: DuplicateEvent) => {
@@ -1553,8 +1581,45 @@ const ValidationInterface = () => {
         )
       : [];
 
+    // Événements en attente dont la date est déjà passée : ils polluent la file et
+    // n'ont plus d'intérêt -> nettoyage en un clic (motif « Date passée »).
+    const now = Date.now();
+    const pastPending = (activeTab === 'pending' || activeTab === 'urgent')
+      ? filteredEvents.filter((e) => e.status === 'pending' && new Date(e.date).getTime() < now)
+      : [];
+
     return (
       <>
+        {/* Nettoyage des événements à date passée */}
+        {pastPending.length > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Clock className="w-5 h-5 text-amber-600 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-amber-900">
+                  {pastPending.length} événement{pastPending.length > 1 ? 's' : ''} à date passée dans la file
+                </p>
+                <p className="text-sm text-amber-700">
+                  Leur date est déjà passée : ils n'ont plus à être validés. Rejette-les d'un coup.
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={() => bulkRejectWithReason(pastPending.map((e) => e.id), 'Date passée')}
+              disabled={bulkApproving}
+              variant="outline"
+              className="flex-shrink-0 border-amber-300 text-amber-800 hover:bg-amber-100"
+            >
+              {bulkApproving ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <X className="w-4 h-4 mr-2" />
+              )}
+              Rejeter les {pastPending.length} (Date passée)
+            </Button>
+          </div>
+        )}
+
         {/* Validation en lot des events enrichis à haute confiance */}
         {highConfidencePending.length > 0 && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4 flex items-center justify-between gap-3">
