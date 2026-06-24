@@ -90,8 +90,11 @@ const ValidationInterface = () => {
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [bulkApproving, setBulkApproving] = useState(false);
+  const [bulkRejecting, setBulkRejecting] = useState(false);
+  // Total réel des événements en attente déjà passés (toute la base, pas la page chargée).
+  const [pastPendingCount, setPastPendingCount] = useState(0);
   const [focusedIndex, setFocusedIndex] = useState(-1);
-  const EVENTS_PER_PAGE = 10;
+  const EVENTS_PER_PAGE = 20;
   const { toast } = useToast();
 
   // Utiliser useAdminStats pour les compteurs
@@ -127,6 +130,21 @@ const ValidationInterface = () => {
       console.error('Erreur détection doublons:', error);
     } finally {
       setLoadingDuplicates(false);
+    }
+  };
+
+  // Compte (côté serveur) tous les événements pending à date passée, indépendamment de la pagination.
+  const loadPastPendingCount = async () => {
+    try {
+      const { count, error } = await supabase
+        .from('events')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending')
+        .lt('date', new Date().toISOString());
+      if (error) throw error;
+      setPastPendingCount(count ?? 0);
+    } catch (error) {
+      console.error('Erreur comptage événements passés:', error);
     }
   };
 
@@ -265,6 +283,7 @@ const ValidationInterface = () => {
     loadScraperErrors();
     loadDuplicates();
     loadUnknownVenues();
+    loadPastPendingCount();
 
     // Refetch realtime débouncé et suspendu pendant nos propres mutations.
     const scheduleEventsRefetch = () => {
@@ -442,6 +461,7 @@ const ValidationInterface = () => {
   const onStatusChangeSuccess = async () => {
     await fetchEvents(0, false);
     loadDuplicates();
+    loadPastPendingCount();
     setSelectedIds(new Set());
   };
 
@@ -497,31 +517,25 @@ const ValidationInterface = () => {
     }
   };
 
-  // Rejet en lot avec motif (nettoyage des événements à date passée dans la file).
-  const bulkRejectWithReason = async (ids: string[], reason: string) => {
-    if (!ids.length) return;
-    setBulkApproving(true);
+  // Nettoyage des événements à date passée : un seul appel serveur rejette TOUS les
+  // pending passés (pas seulement la page chargée), et renvoie le nombre traité.
+  const cleanPastPending = async () => {
+    setBulkRejecting(true);
     isMutatingRef.current = true;
     try {
-      const results = await Promise.allSettled(
-        ids.map((id) => supabase.rpc('reject_pending_event', { p_event_id: id, p_reason: reason }))
-      );
-      const ok = results.filter(
-        (r) => r.status === 'fulfilled' && !((r.value as { error: unknown }).error)
-      ).length;
-      toast({
-        title: '🧹 Nettoyage',
-        description: `${ok}/${ids.length} événement(s) rejeté(s) — ${reason}`,
-        variant: ok === ids.length ? undefined : 'destructive',
-      });
+      const { data, error } = await supabase.rpc('reject_past_pending_events', { p_reason: 'Date passée' });
+      if (error) throw error;
+      const n = typeof data === 'number' ? data : 0;
+      toast({ title: '🧹 Nettoyage', description: `${n} événement(s) à date passée rejeté(s)` });
       setSelectedIds(new Set());
       await fetchEvents(0, false);
+      await loadPastPendingCount();
       loadDuplicates();
     } catch (error: any) {
-      toast({ title: 'Erreur', description: error.message || 'Rejet en lot impossible', variant: 'destructive' });
+      toast({ title: 'Erreur', description: error.message || 'Nettoyage impossible', variant: 'destructive' });
     } finally {
       isMutatingRef.current = false;
-      setBulkApproving(false);
+      setBulkRejecting(false);
     }
   };
 
@@ -553,8 +567,11 @@ const ValidationInterface = () => {
     const kept = keep === 'a' ? pair.a : pair.b;
     const rejected = keep === 'a' ? pair.b : pair.a;
 
-    // Retrait optimiste de la paire traitée.
-    setDuplicatePairs((prev) => prev.filter((p) => !(p.a.id === pair.a.id && p.b.id === pair.b.id)));
+    // Retrait optimiste : on enlève toutes les paires qui référencent l'un des deux events
+    // (un même event peut apparaître dans plusieurs paires — éviter d'agir sur un statut périmé).
+    setDuplicatePairs((prev) =>
+      prev.filter((p) => ![p.a.id, p.b.id].some((id) => id === kept.id || id === rejected.id))
+    );
     isMutatingRef.current = true;
     try {
       const [keepRes, rejectRes] = await Promise.all([
@@ -575,7 +592,10 @@ const ValidationInterface = () => {
 
   // Doublons : rejeter les DEUX cartes d'un coup (aucune ne vaut la peine d'être gardée).
   const handleRejectBothDuplicates = async (pair: DuplicatePair) => {
-    setDuplicatePairs((prev) => prev.filter((p) => !(p.a.id === pair.a.id && p.b.id === pair.b.id)));
+    // Retire toutes les paires référençant l'un des deux events (cf. handleResolveDuplicate).
+    setDuplicatePairs((prev) =>
+      prev.filter((p) => ![p.a.id, p.b.id].some((id) => id === pair.a.id || id === pair.b.id))
+    );
     isMutatingRef.current = true;
     try {
       const results = await Promise.all([
@@ -1581,23 +1601,20 @@ const ValidationInterface = () => {
         )
       : [];
 
-    // Événements en attente dont la date est déjà passée : ils polluent la file et
-    // n'ont plus d'intérêt -> nettoyage en un clic (motif « Date passée »).
-    const now = Date.now();
-    const pastPending = (activeTab === 'pending' || activeTab === 'urgent')
-      ? filteredEvents.filter((e) => e.status === 'pending' && new Date(e.date).getTime() < now)
-      : [];
+    // Événements en attente déjà passés : le compte vient du serveur (toute la base),
+    // le nettoyage rejette tout en un appel — indépendant de la pagination.
+    const showPastBanner = activeTab === 'pending' && pastPendingCount > 0;
 
     return (
       <>
         {/* Nettoyage des événements à date passée */}
-        {pastPending.length > 0 && (
+        {showPastBanner && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <Clock className="w-5 h-5 text-amber-600 flex-shrink-0" />
               <div>
                 <p className="font-semibold text-amber-900">
-                  {pastPending.length} événement{pastPending.length > 1 ? 's' : ''} à date passée dans la file
+                  {pastPendingCount} événement{pastPendingCount > 1 ? 's' : ''} à date passée dans la file
                 </p>
                 <p className="text-sm text-amber-700">
                   Leur date est déjà passée : ils n'ont plus à être validés. Rejette-les d'un coup.
@@ -1605,17 +1622,17 @@ const ValidationInterface = () => {
               </div>
             </div>
             <Button
-              onClick={() => bulkRejectWithReason(pastPending.map((e) => e.id), 'Date passée')}
-              disabled={bulkApproving}
+              onClick={cleanPastPending}
+              disabled={bulkRejecting}
               variant="outline"
               className="flex-shrink-0 border-amber-300 text-amber-800 hover:bg-amber-100"
             >
-              {bulkApproving ? (
+              {bulkRejecting ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : (
                 <X className="w-4 h-4 mr-2" />
               )}
-              Rejeter les {pastPending.length} (Date passée)
+              Rejeter les {pastPendingCount} (Date passée)
             </Button>
           </div>
         )}

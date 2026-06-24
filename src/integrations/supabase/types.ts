@@ -1799,6 +1799,10 @@ export type Database = {
         }
         Returns: string
       }
+      reject_past_pending_events: {
+        Args: { p_reason?: string }
+        Returns: number
+      }
       reject_pending_event: {
         Args: { p_event_id: string; p_reason?: string }
         Returns: undefined
