@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -87,6 +87,8 @@ const ValidationInterface = () => {
   const [hasMore, setHasMore] = useState(true);
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [bulkApproving, setBulkApproving] = useState(false);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
   const EVENTS_PER_PAGE = 10;
   const { toast } = useToast();
 
@@ -183,6 +185,8 @@ const ValidationInterface = () => {
 
   // Seuil en dessous duquel un event enrichi mérite une vraie revue humaine.
   const LOW_CONFIDENCE_THRESHOLD = 0.65;
+  // Seuil au-dessus duquel un event enrichi est candidat à la validation en lot.
+  const HIGH_CONFIDENCE_THRESHOLD = 0.85;
 
   // Charger la liste des comptes Instagram uniques
   useEffect(() => {
@@ -371,15 +375,6 @@ const ValidationInterface = () => {
     setLoadingMore(false);
   };
 
-  const handleApprove = async (eventIds: string | string[]) => {
-    const ids = Array.isArray(eventIds) ? eventIds : [eventIds];
-    setStatusChange({
-      eventIds: ids,
-      currentStatus: 'pending',
-      targetStatus: 'active'
-    });
-  };
-
   const handleReject = async (eventIds: string | string[]) => {
     const ids = Array.isArray(eventIds) ? eventIds : [eventIds];
     setStatusChange({
@@ -397,6 +392,54 @@ const ValidationInterface = () => {
     await fetchEvents(0, false);
     loadDuplicates();
     setSelectedIds(new Set());
+  };
+
+  // Validation directe d'un event, sans passer par la modale de confirmation.
+  // La validation est non destructive et réversible (« Remettre en attente »).
+  const quickApprove = async (eventId: string) => {
+    setProcessingId(eventId);
+    try {
+      const { error } = await supabase.rpc('approve_pending_event', { p_event_id: eventId });
+      if (error) throw error;
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(eventId);
+        return next;
+      });
+      toast({ title: '✅ Validé', description: 'Événement publié' });
+      await fetchEvents(0, false, searchQuery);
+    } catch (error: any) {
+      toast({ title: 'Erreur', description: error.message || 'Validation impossible', variant: 'destructive' });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  // Validation en lot (un seul refresh au lieu d'un par event), pour le bouton « haute confiance »
+  // et la barre d'actions groupées.
+  const bulkApprove = async (ids: string[]) => {
+    if (!ids.length) return;
+    setBulkApproving(true);
+    try {
+      const results = await Promise.allSettled(
+        ids.map((id) => supabase.rpc('approve_pending_event', { p_event_id: id }))
+      );
+      const ok = results.filter(
+        (r) => r.status === 'fulfilled' && !((r.value as any)?.error)
+      ).length;
+      toast({
+        title: '✅ Validation en lot',
+        description: `${ok}/${ids.length} événement(s) publié(s)`,
+        variant: ok === ids.length ? undefined : 'destructive',
+      });
+      setSelectedIds(new Set());
+      await fetchEvents(0, false, searchQuery);
+      loadDuplicates();
+    } catch (error: any) {
+      toast({ title: 'Erreur', description: error.message || 'Validation en lot impossible', variant: 'destructive' });
+    } finally {
+      setBulkApproving(false);
+    }
   };
 
   // Archiver un doublon (réversible, via le même flux que les autres changements de statut).
@@ -540,6 +583,69 @@ const ValidationInterface = () => {
   };
 
   const filteredEvents = getFilteredEvents();
+
+  // Refs pour que le handler clavier (lié une seule fois) lise toujours l'état frais.
+  const filteredEventsRef = useRef<PendingEvent[]>([]);
+  filteredEventsRef.current = filteredEvents;
+  const focusedIndexRef = useRef(-1);
+  focusedIndexRef.current = focusedIndex;
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
+  const keyActionsRef = useRef({ quickApprove, handleReject, setShowDetails });
+  keyActionsRef.current = { quickApprove, handleReject, setShowDetails };
+
+  // Garde l'index focalisé dans les bornes quand la liste filtrée change.
+  useEffect(() => {
+    if (focusedIndex >= filteredEvents.length) {
+      setFocusedIndex(filteredEvents.length - 1);
+    }
+  }, [filteredEvents.length, focusedIndex]);
+
+  // Raccourcis clavier : ↑/↓ ou j/k pour naviguer, A valider, R rejeter, Entrée aperçu.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+      // Ne pas capturer quand une modale est ouverte.
+      if (document.querySelector('[role="dialog"]')) return;
+
+      const list = filteredEventsRef.current;
+      if (!list.length) return;
+      const idx = focusedIndexRef.current;
+      const tab = activeTabRef.current;
+
+      const moveTo = (next: number) => {
+        const clamped = Math.max(0, Math.min(list.length - 1, next));
+        setFocusedIndex(clamped);
+        const el = document.querySelector(`[data-event-id="${list[clamped].id}"]`);
+        el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      };
+
+      if (e.key === 'ArrowDown' || e.key === 'j') {
+        e.preventDefault();
+        moveTo(idx < 0 ? 0 : idx + 1);
+      } else if (e.key === 'ArrowUp' || e.key === 'k') {
+        e.preventDefault();
+        moveTo(idx < 0 ? 0 : idx - 1);
+      } else if (e.key === 'Escape') {
+        setFocusedIndex(-1);
+      } else if (idx >= 0 && idx < list.length) {
+        const ev = list[idx];
+        if ((e.key === 'a' || e.key === 'A') && ev.status === 'pending') {
+          e.preventDefault();
+          keyActionsRef.current.quickApprove(ev.id);
+        } else if ((e.key === 'r' || e.key === 'R') && ev.status === 'pending') {
+          e.preventDefault();
+          keyActionsRef.current.handleReject([ev.id]);
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          keyActionsRef.current.setShowDetails(ev);
+        }
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   const resetFilters = () => {
     setSearchQuery('');
@@ -1351,8 +1457,45 @@ const ValidationInterface = () => {
 
   // Fonction pour afficher le tableau d'événements
   function renderEventsTable() {
+    const highConfidencePending = activeTab === 'pending'
+      ? filteredEvents.filter(
+          (e) => e.status === 'pending'
+            && e.parsing_method === 'claude-vision-v1'
+            && (e.parsing_confidence ?? 0) >= HIGH_CONFIDENCE_THRESHOLD
+        )
+      : [];
+
     return (
       <>
+        {/* Validation en lot des events enrichis à haute confiance */}
+        {highConfidencePending.length > 0 && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Sparkles className="w-5 h-5 text-green-600 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-green-900">
+                  {highConfidencePending.length} événement{highConfidencePending.length > 1 ? 's' : ''} enrichi{highConfidencePending.length > 1 ? 's' : ''} à haute confiance (≥{Math.round(HIGH_CONFIDENCE_THRESHOLD * 100)}%)
+                </p>
+                <p className="text-sm text-green-700">
+                  Validables en un lot. Contrôlez par échantillon si besoin avant de tout publier.
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={() => bulkApprove(highConfidencePending.map((e) => e.id))}
+              disabled={bulkApproving}
+              className="bg-green-600 hover:bg-green-700 flex-shrink-0"
+            >
+              {bulkApproving ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <CheckCircle className="w-4 h-4 mr-2" />
+              )}
+              Valider les {highConfidencePending.length}
+            </Button>
+          </div>
+        )}
+
         {/* Actions groupées */}
         {selectedIds.size > 0 && (
           <div className="bg-card rounded-lg border p-4 mb-4">
@@ -1365,11 +1508,16 @@ const ValidationInterface = () => {
                 {(activeTab === 'pending' || activeTab === 'urgent') && (
                   <>
                     <Button
-                      onClick={() => handleApprove(Array.from(selectedIds))}
+                      onClick={() => bulkApprove(Array.from(selectedIds))}
+                      disabled={bulkApproving}
                       size="sm"
                       className="bg-green-600 hover:bg-green-700"
                     >
-                      <Check className="w-4 h-4 mr-1" />
+                      {bulkApproving ? (
+                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      ) : (
+                        <Check className="w-4 h-4 mr-1" />
+                      )}
                       Valider
                     </Button>
                     <Button
@@ -1411,7 +1559,7 @@ const ValidationInterface = () => {
 
         {/* Sélection globale */}
         {filteredEvents.length > 0 && (
-          <div className="bg-card rounded-lg border p-4 mb-4">
+          <div className="bg-card rounded-lg border p-4 mb-4 flex items-center justify-between gap-3">
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
@@ -1421,6 +1569,17 @@ const ValidationInterface = () => {
               />
               <span className="font-medium">Tout sélectionner ({filteredEvents.length})</span>
             </label>
+            <span className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground">
+              <kbd className="px-1.5 py-0.5 rounded border bg-muted">↑</kbd>
+              <kbd className="px-1.5 py-0.5 rounded border bg-muted">↓</kbd>
+              naviguer ·
+              <kbd className="px-1.5 py-0.5 rounded border bg-muted">A</kbd>
+              valider ·
+              <kbd className="px-1.5 py-0.5 rounded border bg-muted">R</kbd>
+              rejeter ·
+              <kbd className="px-1.5 py-0.5 rounded border bg-muted">↵</kbd>
+              aperçu
+            </span>
           </div>
         )}
 
@@ -1466,11 +1625,13 @@ const ValidationInterface = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredEvents.map((event) => (
+                  {filteredEvents.map((event, index) => (
                     <AdminEventTableRow
                       key={event.id}
                       event={event}
                       isSelected={selectedIds.has(event.id)}
+                      isFocused={index === focusedIndex}
+                      isProcessing={processingId === event.id}
                       onSelect={handleSelect}
                       onPreview={setShowDetails}
                       onEdit={setEditingEvent}
@@ -1480,6 +1641,7 @@ const ValidationInterface = () => {
                         setHistoryEventTitle(eventTitle);
                       }}
                       onStatusChange={handleStatusChange}
+                      onQuickApprove={quickApprove}
                       calculateScore={calculateScore}
                       getScoreColor={getScoreColor}
                     />

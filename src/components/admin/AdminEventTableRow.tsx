@@ -37,12 +37,15 @@ function getReviewFlags(event: PendingEvent): { code: string; label: string; cls
 interface AdminEventTableRowProps {
   event: PendingEvent;
   isSelected: boolean;
+  isFocused?: boolean;
   onSelect: (eventId: string) => void;
   onPreview: (event: PendingEvent) => void;
   onEdit: (event: PendingEvent) => void;
   onProcessManualReview?: (event: PendingEvent) => void;
   onHistory: (eventId: string, eventTitle: string) => void;
   onStatusChange: (eventIds: string[], currentStatus: string, targetStatus: string) => void;
+  onQuickApprove?: (eventId: string) => void;
+  isProcessing?: boolean;
   calculateScore: (event: PendingEvent) => number;
   getScoreColor: (score: number) => string;
 }
@@ -50,12 +53,15 @@ interface AdminEventTableRowProps {
 export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
   event,
   isSelected,
+  isFocused = false,
   onSelect,
   onPreview,
   onEdit,
   onProcessManualReview,
   onHistory,
   onStatusChange,
+  onQuickApprove,
+  isProcessing = false,
   calculateScore,
   getScoreColor
 }) => {
@@ -97,7 +103,10 @@ export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
   };
 
   return (
-    <TableRow className="group hover:bg-muted/50">
+    <TableRow
+      data-event-id={event.id}
+      className={`group hover:bg-muted/50 ${isFocused ? 'ring-2 ring-inset ring-purple-400 bg-purple-50/40' : ''} ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
+    >
       {/* Sélection */}
       <TableCell className="w-12">
         <input
@@ -266,7 +275,7 @@ export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
 
       {/* Actions rapides - Boutons sur 2 lignes */}
       <TableCell className="w-auto min-w-[200px]">
-        <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex flex-col gap-1">
           {/* Ligne 1 : Modifier + Historique */}
           <div className="flex items-center gap-1">
             <Button
@@ -298,9 +307,9 @@ export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => onStatusChange([event.id], 'pending', 'active')}
+                  onClick={() => (onQuickApprove ? onQuickApprove(event.id) : onStatusChange([event.id], 'pending', 'active'))}
                   className="h-7 px-2 text-xs text-green-600 hover:text-green-700 hover:bg-green-50"
-                  title="Valider l'événement"
+                  title="Valider l'événement (raccourci : A)"
                 >
                   <Check className="w-3.5 h-3.5 sm:mr-1" />
                   <span className="hidden sm:inline">Accepter</span>
