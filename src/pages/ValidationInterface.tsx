@@ -51,6 +51,14 @@ interface PendingEvent {
   parsing_method?: string | null;
   parsing_confidence?: number | null;
   needs_manual_image?: boolean | null;
+  // Contenu structuré IA (extract-event) — renvoyé par select('*'), absent des types générés.
+  energy?: string | null;
+  subtitle?: string | null;
+  music_style?: string | null;
+  tags?: string[] | null;
+  lineup?: string[] | null;
+  venue_category?: string | null;
+  color_card?: string | null;
 }
 
 // Un event mérite un coup d'œil si l'IA a posé un drapeau ou n'a pas d'image exploitable.
@@ -170,7 +178,11 @@ const ValidationInterface = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [accountFilter, setAccountFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
+  const [enrichmentFilter, setEnrichmentFilter] = useState<'all' | 'enriched' | 'raw' | 'low'>('all');
   const [accounts, setAccounts] = useState<string[]>([]);
+
+  // Seuil en dessous duquel un event enrichi mérite une vraie revue humaine.
+  const LOW_CONFIDENCE_THRESHOLD = 0.65;
 
   // Charger la liste des comptes Instagram uniques
   useEffect(() => {
@@ -439,6 +451,19 @@ const ValidationInterface = () => {
       filtered = filtered.filter(e => e.account_username === accountFilter);
     }
 
+    // Filtre enrichissement IA
+    if (enrichmentFilter !== 'all') {
+      filtered = filtered.filter(e => {
+        const enriched = e.parsing_method === 'claude-vision-v1';
+        if (enrichmentFilter === 'enriched') return enriched;
+        if (enrichmentFilter === 'raw') return !enriched;
+        if (enrichmentFilter === 'low') {
+          return enriched && (e.parsing_confidence ?? 0) < LOW_CONFIDENCE_THRESHOLD;
+        }
+        return true;
+      });
+    }
+
     // Filtre date événement
     if (dateFilter !== 'all') {
       const now = new Date();
@@ -498,6 +523,12 @@ const ValidationInterface = () => {
         case 'date': return new Date(a.date).getTime() - new Date(b.date).getTime();
         case 'score': return calculateScore(b) - calculateScore(a);
         case 'created': return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'confidence': {
+          // Enrichis d'abord, du plus confiant au moins confiant ; les bruts en fin.
+          const ca = a.parsing_method === 'claude-vision-v1' ? (a.parsing_confidence ?? 0) : -1;
+          const cb = b.parsing_method === 'claude-vision-v1' ? (b.parsing_confidence ?? 0) : -1;
+          return cb - ca;
+        }
         case 'review': {
           // Events flaggés par l'IA en premier, puis par date d'événement.
           const diff = (hasReviewFlags(b) ? 1 : 0) - (hasReviewFlags(a) ? 1 : 0);
@@ -514,9 +545,10 @@ const ValidationInterface = () => {
     setSearchQuery('');
     setAccountFilter('all');
     setDateFilter('all');
+    setEnrichmentFilter('all');
   };
 
-  const hasActiveFilters = searchQuery || accountFilter !== 'all' || dateFilter !== 'all';
+  const hasActiveFilters = searchQuery || accountFilter !== 'all' || dateFilter !== 'all' || enrichmentFilter !== 'all';
 
   // Compteur validés aujourd'hui
   const todayValidated = useMemo(() => {
@@ -1229,7 +1261,7 @@ const ValidationInterface = () => {
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">Source Instagram</label>
               <Select value={accountFilter} onValueChange={setAccountFilter}>
@@ -1243,6 +1275,21 @@ const ValidationInterface = () => {
                       @{account}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Enrichissement IA</label>
+              <Select value={enrichmentFilter} onValueChange={(v: 'all' | 'enriched' | 'raw' | 'low') => setEnrichmentFilter(v)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous</SelectItem>
+                  <SelectItem value="enriched">✨ Enrichis IA</SelectItem>
+                  <SelectItem value="raw">Bruts (non traités)</SelectItem>
+                  <SelectItem value="low">⚠️ Confiance basse</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1271,6 +1318,7 @@ const ValidationInterface = () => {
                 <SelectContent>
                   <SelectItem value="date">Date événement</SelectItem>
                   <SelectItem value="created">Date création</SelectItem>
+                  <SelectItem value="confidence">Confiance IA</SelectItem>
                   <SelectItem value="score">Score qualité</SelectItem>
                   <SelectItem value="review">À réviser en priorité</SelectItem>
                 </SelectContent>
@@ -1413,7 +1461,7 @@ const ValidationInterface = () => {
                     </TableHead>
                     <TableHead className="min-w-[300px]">Événement</TableHead>
                     <TableHead className="max-w-[200px]">Description</TableHead>
-                    <TableHead className="text-center w-24">Score</TableHead>
+                    <TableHead className="text-center w-24">Confiance</TableHead>
                     <TableHead className="min-w-[280px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>

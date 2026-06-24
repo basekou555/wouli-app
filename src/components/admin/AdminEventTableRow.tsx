@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Check, X, Edit, Eye, History, RotateCcw, FileEdit,
-  Calendar, MapPin, Euro, ExternalLink, Instagram, Sparkles
+  Calendar, MapPin, Euro, ExternalLink, Instagram, Sparkles, Music, Mic2
 } from 'lucide-react';
-import { PendingEvent } from '@/hooks/utils/adminEventMappers';
+import { PendingEvent, ENERGY_META, isAIEnriched, aiConfidencePct } from '@/hooks/utils/adminEventMappers';
 import { getCategoryById } from '@/data/wouliCategories';
 
 // Libellés lisibles des drapeaux de revue posés par l'extraction IA (extract-event).
@@ -61,7 +61,8 @@ export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
 }) => {
   const category = getCategoryById(event.category);
   const score = calculateScore(event);
-  
+  const confidence = aiConfidencePct(event);
+
   const formatEventDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('fr-FR');
@@ -165,27 +166,58 @@ export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
             {/* Drapeaux de revue IA + statut d'enrichissement */}
             {(() => {
               const flags = getReviewFlags(event);
-              if (!flags.length && event.parsing_method === undefined) return null;
+              const enriched = isAIEnriched(event);
+              const energy = event.energy ? ENERGY_META[event.energy] : null;
+              const lineup = (event.lineup ?? []).filter(Boolean);
+              const hasAIContent = enriched || energy || event.music_style || lineup.length;
+              if (!flags.length && event.parsing_method === undefined && !hasAIContent) return null;
               return (
-                <div className="flex flex-wrap items-center gap-1 mt-2">
-                  {event.parsing_method === 'claude-vision-v1' ? (
-                    <Badge variant="outline" className="text-[10px] border-green-300 text-green-700 bg-green-50">
-                      <Sparkles className="w-2.5 h-2.5 mr-0.5" />
-                      Enrichi IA
-                      {typeof event.parsing_confidence === 'number'
-                        ? ` ${Math.round(event.parsing_confidence * 100)}%`
-                        : ''}
-                    </Badge>
-                  ) : event.parsing_method === null ? (
-                    <Badge variant="outline" className="text-[10px] text-muted-foreground" title="Pas encore traité par l'extraction IA">
-                      Brut
-                    </Badge>
+                <div className="mt-2 space-y-1">
+                  {/* Ligne 1 : statut d'enrichissement + drapeaux de revue */}
+                  <div className="flex flex-wrap items-center gap-1">
+                    {enriched ? (
+                      <Badge variant="outline" className="text-[10px] border-green-300 text-green-700 bg-green-50">
+                        <Sparkles className="w-2.5 h-2.5 mr-0.5" />
+                        Enrichi IA{confidence !== null ? ` ${confidence}%` : ''}
+                      </Badge>
+                    ) : event.parsing_method === null ? (
+                      <Badge variant="outline" className="text-[10px] text-muted-foreground" title="Pas encore traité par l'extraction IA">
+                        Brut
+                      </Badge>
+                    ) : null}
+                    {flags.map((f) => (
+                      <Badge key={f.code} variant="outline" className={`text-[10px] ${f.cls}`}>
+                        {f.label}
+                      </Badge>
+                    ))}
+                  </div>
+                  {/* Ligne 2 : ce que l'IA a compris (évite d'ouvrir l'event pour décider) */}
+                  {hasAIContent ? (
+                    <div className="flex flex-wrap items-center gap-1">
+                      {energy && (
+                        <Badge variant="outline" className={`text-[10px] ${energy.cls}`}>
+                          {energy.label}
+                        </Badge>
+                      )}
+                      {event.music_style && (
+                        <Badge variant="outline" className="text-[10px] border-border text-muted-foreground">
+                          <Music className="w-2.5 h-2.5 mr-0.5" />
+                          {event.music_style}
+                        </Badge>
+                      )}
+                      {lineup.length > 0 && (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] border-border text-muted-foreground"
+                          title={lineup.join(', ')}
+                        >
+                          <Mic2 className="w-2.5 h-2.5 mr-0.5" />
+                          {lineup.slice(0, 2).join(', ')}
+                          {lineup.length > 2 ? ` +${lineup.length - 2}` : ''}
+                        </Badge>
+                      )}
+                    </div>
                   ) : null}
-                  {flags.map((f) => (
-                    <Badge key={f.code} variant="outline" className={`text-[10px] ${f.cls}`}>
-                      {f.label}
-                    </Badge>
-                  ))}
                 </div>
               );
             })()}
@@ -206,12 +238,28 @@ export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
         )}
       </TableCell>
 
-      {/* Score & Statut */}
+      {/* Confiance IA (primaire) + complétude (secondaire) + statut */}
       <TableCell className="text-center">
         <div className="space-y-2">
-          <div className={`text-lg font-bold ${getScoreColor(score)}`}>
-            {score}/10
-          </div>
+          {confidence !== null ? (
+            <div>
+              <div
+                className={`text-lg font-bold ${
+                  confidence >= 85 ? 'text-green-600' : confidence >= 65 ? 'text-yellow-600' : 'text-red-600'
+                }`}
+                title="Confiance de l'extraction IA"
+              >
+                {confidence}%
+              </div>
+              <div className="text-[10px] text-muted-foreground" title="Score de complétude des champs">
+                complétude {score}/10
+              </div>
+            </div>
+          ) : (
+            <div className={`text-lg font-bold ${getScoreColor(score)}`} title="Score de complétude (événement non enrichi par l'IA)">
+              {score}/10
+            </div>
+          )}
           {getStatusBadge(event.status)}
         </div>
       </TableCell>
