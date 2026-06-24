@@ -6,78 +6,25 @@ import { useEffect } from 'react';
 export const useAdminStats = () => {
   const queryClient = useQueryClient();
 
-  // Écouter les changements temps réel sur les tables
+  // Écouter les changements temps réel sur les tables.
+  // Un seul canal par montage (4 listeners), au lieu de 4 canaux : on divise par 4
+  // le nombre de souscriptions websocket. Le suffixe aléatoire évite les collisions
+  // de nom quand le hook est monté à plusieurs endroits simultanément.
   useEffect(() => {
-    const eventsChannel = supabase
-      .channel('admin_stats_events_' + Math.random())
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'events'
-        },
-        () => {
-          console.log('🔄 Admin stats: Événement détecté, actualisation...');
-          queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
-        }
-      )
-      .subscribe();
+    const invalidate = () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+    };
 
-    const profilesChannel = supabase
-      .channel('admin_stats_profiles_' + Math.random())
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'profiles'
-        },
-        () => {
-          console.log('🔄 Admin stats: Profil détecté, actualisation...');
-          queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
-        }
-      )
-      .subscribe();
-
-    const businessChannel = supabase
-      .channel('admin_stats_business_' + Math.random())
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'business_configs'
-        },
-        () => {
-          console.log('🔄 Admin stats: Business config détecté, actualisation...');
-          queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
-        }
-      )
-      .subscribe();
-
-    const errorsChannel = supabase
-      .channel('admin_stats_errors_' + Math.random())
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'scraper_errors'
-        },
-        () => {
-          console.log('🔄 Admin stats: Erreur scraper détectée, actualisation...');
-          queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
-        }
-      )
+    const channel = supabase
+      .channel('admin_stats_' + Math.random())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'business_configs' }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'scraper_errors' }, invalidate)
       .subscribe();
 
     return () => {
-      console.log('🧹 Admin stats: Nettoyage des canaux...');
-      supabase.removeChannel(eventsChannel);
-      supabase.removeChannel(profilesChannel);
-      supabase.removeChannel(businessChannel);
-      supabase.removeChannel(errorsChannel);
+      supabase.removeChannel(channel);
     };
   }, [queryClient]);
 
@@ -253,7 +200,9 @@ export const useAdminStats = () => {
         systemHealth: 99.9
       };
     },
-    refetchInterval: 60000,
+    // Le realtime ci-dessus est la source principale d'actualisation ; ce polling
+    // n'est plus qu'un filet de sécurité si le websocket tombe.
+    refetchInterval: 300000,
     staleTime: 10000,
   });
 };

@@ -241,85 +241,121 @@ const ValidationInterface = () => {
     }
   };
 
+  // Refs : le handler realtime est lié une seule fois ; sans refs sa closure figerait
+  // les filtres. fetchEvents lit donc toujours les valeurs courantes via ces refs.
+  const searchQueryRef = useRef(searchQuery);
+  searchQueryRef.current = searchQuery;
+  const accountFilterRef = useRef(accountFilter);
+  accountFilterRef.current = accountFilter;
+  const dateFilterRef = useRef(dateFilter);
+  dateFilterRef.current = dateFilter;
+  const enrichmentFilterRef = useRef(enrichmentFilter);
+  enrichmentFilterRef.current = enrichmentFilter;
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
+  // Vrai pendant une validation/rejet : on suspend les refetch realtime pour éviter
+  // la tempête de re-fetch (chaque mutation émet un évènement postgres_changes).
+  const isMutatingRef = useRef(false);
+  const realtimeDebounceRef = useRef<ReturnType<typeof setTimeout>>();
+
   useEffect(() => {
     fetchEvents();
     loadScraperErrors();
     loadDuplicates();
     loadUnknownVenues();
 
-    // Realtime subscription sur la table events
+    // Refetch realtime débouncé et suspendu pendant nos propres mutations.
+    const scheduleEventsRefetch = () => {
+      if (isMutatingRef.current) return;
+      clearTimeout(realtimeDebounceRef.current);
+      realtimeDebounceRef.current = setTimeout(() => fetchEvents(0, false), 400);
+    };
+
     const eventsChannel = supabase
       .channel('events_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'events'
-        },
-        () => {
-          fetchEvents();
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, scheduleEventsRefetch)
       .subscribe();
 
-    // Realtime subscription sur scraper_errors
     const errorsChannel = supabase
       .channel('scraper_errors_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'scraper_errors'
-        },
-        () => {
-          loadScraperErrors();
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'scraper_errors' }, () => loadScraperErrors())
       .subscribe();
 
     return () => {
+      clearTimeout(realtimeDebounceRef.current);
       supabase.removeChannel(eventsChannel);
       supabase.removeChannel(errorsChannel);
     };
   }, [activeTab]);
 
-  const fetchEvents = async (pageNum = 0, append = false, search = '') => {
+  const fetchEvents = async (pageNum = 0, append = false) => {
     try {
       const start = pageNum * EVENTS_PER_PAGE;
       const end = start + EVENTS_PER_PAGE - 1;
 
+      // Tous les filtres sont lus depuis les refs -> toute invocation (realtime inclus)
+      // utilise les valeurs courantes, et les filtres portent sur TOUT le jeu (pas la page).
+      const search = searchQueryRef.current;
+      const account = accountFilterRef.current;
+      const dateF = dateFilterRef.current;
+      const enrichment = enrichmentFilterRef.current;
+      const tab = activeTabRef.current;
+
+      // Le total ne change pas entre les pages d'un même filtre : on ne le demande
+      // qu'à la première page (économise une requête count par "charger plus").
+      const wantCount = !append;
       let query = supabase
         .from('events')
-        .select('*', { count: 'exact' });
+        .select('*', wantCount ? { count: 'exact' } : undefined);
 
-      // Si recherche active, chercher dans tous les événements (sauf archivés)
+      // Recherche plein texte : cherche dans tous les statuts (sauf archivés).
       if (search.trim()) {
         const searchTerm = `%${search.trim()}%`;
         query = query.or(`title.ilike.${searchTerm},description.ilike.${searchTerm},location.ilike.${searchTerm},account_username.ilike.${searchTerm}`);
         query = query.neq('status', 'archived');
       } else {
-        const statuses = getStatusForTab(activeTab);
+        const statuses = getStatusForTab(tab);
         if (statuses === null) {
-          // Tab "all" - récupérer tout sauf archivés
           query = query.neq('status', 'archived');
         } else if (Array.isArray(statuses)) {
           query = query.in('status', statuses);
         } else {
           query = query.eq('status', statuses);
         }
-        
-        // Pour les événements "active", ne montrer que les événements à venir
-        if (activeTab === 'active') {
-          const now = new Date().toISOString();
-          query = query.gte('date', now);
+        // Actifs / rejetés : ne montrer que les événements à venir.
+        if (tab === 'active' || tab === 'rejected') {
+          query = query.gte('date', new Date().toISOString());
         }
-        
-        // Pour les événements "rejected", ne montrer que les événements à venir
-        if (activeTab === 'rejected') {
-          const now = new Date().toISOString();
-          query = query.gte('date', now);
+      }
+
+      // ---- Filtres avancés, désormais côté serveur ----
+      if (account !== 'all') {
+        query = query.eq('account_username', account);
+      }
+      if (enrichment === 'enriched') {
+        query = query.eq('parsing_method', 'claude-vision-v1');
+      } else if (enrichment === 'raw') {
+        query = query.or('parsing_method.is.null,parsing_method.neq.claude-vision-v1');
+      } else if (enrichment === 'low') {
+        query = query
+          .eq('parsing_method', 'claude-vision-v1')
+          .or(`parsing_confidence.is.null,parsing_confidence.lt.${LOW_CONFIDENCE_THRESHOLD}`);
+      }
+      if (dateF !== 'all') {
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        if (dateF === 'today') {
+          const endOfToday = new Date(startOfToday);
+          endOfToday.setDate(endOfToday.getDate() + 1);
+          query = query.gte('date', startOfToday.toISOString()).lt('date', endOfToday.toISOString());
+        } else if (dateF === 'week') {
+          const weekLater = new Date(startOfToday);
+          weekLater.setDate(weekLater.getDate() + 7);
+          query = query.gte('date', startOfToday.toISOString()).lte('date', weekLater.toISOString());
+        } else if (dateF === 'month') {
+          const monthLater = new Date(startOfToday);
+          monthLater.setMonth(monthLater.getMonth() + 1);
+          query = query.gte('date', startOfToday.toISOString()).lte('date', monthLater.toISOString());
         }
       }
 
@@ -328,21 +364,20 @@ const ValidationInterface = () => {
         .range(start, end);
 
       if (error) throw error;
-      
-      const newEvents = data || [];
-      
+
+      const newEvents = (data || []) as PendingEvent[];
+
       if (append) {
-        const existingIds = new Set(events.map(e => e.id));
-        const uniqueNewEvents = newEvents.filter(e => !existingIds.has(e.id));
-        setEvents([...events, ...uniqueNewEvents]);
+        setEvents((prev) => {
+          const existingIds = new Set(prev.map((e) => e.id));
+          return [...prev, ...newEvents.filter((e) => !existingIds.has(e.id))];
+        });
       } else {
         setEvents(newEvents);
       }
-      
+
       setHasMore(newEvents.length === EVENTS_PER_PAGE);
-      
-      if (count !== null) setTotalCount(count);
-      
+      if (count !== null && count !== undefined) setTotalCount(count);
       if (!append) setPage(pageNum);
     } catch (error) {
       console.error('❌ Erreur fetch events:', error);
@@ -361,17 +396,31 @@ const ValidationInterface = () => {
     const timeoutId = setTimeout(() => {
       setPage(0);
       setLoading(true);
-      fetchEvents(0, false, searchQuery);
+      fetchEvents(0, false);
     }, 300);
-    
+
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
+
+  // Refetch serveur quand un filtre avancé change (la recherche a son propre debounce
+  // ci-dessus, le statut/onglet a le sien). On saute le premier rendu pour ne pas
+  // doubler le fetch initial déclenché par l'effet [activeTab].
+  const filtersMountedRef = useRef(false);
+  useEffect(() => {
+    if (!filtersMountedRef.current) {
+      filtersMountedRef.current = true;
+      return;
+    }
+    setPage(0);
+    setLoading(true);
+    fetchEvents(0, false);
+  }, [accountFilter, dateFilter, enrichmentFilter]);
 
   const loadMore = async () => {
     setLoadingMore(true);
     const nextPage = page + 1;
     setPage(nextPage);
-    await fetchEvents(nextPage, true, searchQuery);
+    await fetchEvents(nextPage, true);
     setLoadingMore(false);
   };
 
@@ -398,6 +447,7 @@ const ValidationInterface = () => {
   // La validation est non destructive et réversible (« Remettre en attente »).
   const quickApprove = async (eventId: string) => {
     setProcessingId(eventId);
+    isMutatingRef.current = true;
     try {
       const { error } = await supabase.rpc('approve_pending_event', { p_event_id: eventId });
       if (error) throw error;
@@ -407,10 +457,11 @@ const ValidationInterface = () => {
         return next;
       });
       toast({ title: '✅ Validé', description: 'Événement publié' });
-      await fetchEvents(0, false, searchQuery);
+      await fetchEvents(0, false);
     } catch (error: any) {
       toast({ title: 'Erreur', description: error.message || 'Validation impossible', variant: 'destructive' });
     } finally {
+      isMutatingRef.current = false;
       setProcessingId(null);
     }
   };
@@ -420,12 +471,13 @@ const ValidationInterface = () => {
   const bulkApprove = async (ids: string[]) => {
     if (!ids.length) return;
     setBulkApproving(true);
+    isMutatingRef.current = true;
     try {
       const results = await Promise.allSettled(
         ids.map((id) => supabase.rpc('approve_pending_event', { p_event_id: id }))
       );
       const ok = results.filter(
-        (r) => r.status === 'fulfilled' && !((r.value as any)?.error)
+        (r) => r.status === 'fulfilled' && !((r.value as { error: unknown }).error)
       ).length;
       toast({
         title: '✅ Validation en lot',
@@ -433,11 +485,12 @@ const ValidationInterface = () => {
         variant: ok === ids.length ? undefined : 'destructive',
       });
       setSelectedIds(new Set());
-      await fetchEvents(0, false, searchQuery);
+      await fetchEvents(0, false);
       loadDuplicates();
     } catch (error: any) {
       toast({ title: 'Erreur', description: error.message || 'Validation en lot impossible', variant: 'destructive' });
     } finally {
+      isMutatingRef.current = false;
       setBulkApproving(false);
     }
   };
@@ -474,64 +527,6 @@ const ValidationInterface = () => {
     return 'text-red-600';
   };
 
-  // Fonction de filtrage avancée
-  const applyAdvancedFilters = (events: PendingEvent[]) => {
-    let filtered = events;
-
-    // Recherche full-text (déjà géré côté serveur si searchQuery actif)
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(e => 
-        e.title.toLowerCase().includes(query) ||
-        e.description?.toLowerCase().includes(query) ||
-        e.account_username?.toLowerCase().includes(query) ||
-        e.location?.toLowerCase().includes(query)
-      );
-    }
-
-    // Filtre compte Instagram
-    if (accountFilter !== 'all') {
-      filtered = filtered.filter(e => e.account_username === accountFilter);
-    }
-
-    // Filtre enrichissement IA
-    if (enrichmentFilter !== 'all') {
-      filtered = filtered.filter(e => {
-        const enriched = e.parsing_method === 'claude-vision-v1';
-        if (enrichmentFilter === 'enriched') return enriched;
-        if (enrichmentFilter === 'raw') return !enriched;
-        if (enrichmentFilter === 'low') {
-          return enriched && (e.parsing_confidence ?? 0) < LOW_CONFIDENCE_THRESHOLD;
-        }
-        return true;
-      });
-    }
-
-    // Filtre date événement
-    if (dateFilter !== 'all') {
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      
-      filtered = filtered.filter(e => {
-        const eventDate = new Date(e.date);
-        if (dateFilter === 'today') return eventDate.toDateString() === today.toDateString();
-        if (dateFilter === 'week') {
-          const weekLater = new Date(today);
-          weekLater.setDate(today.getDate() + 7);
-          return eventDate >= today && eventDate <= weekLater;
-        }
-        if (dateFilter === 'month') {
-          const monthLater = new Date(today);
-          monthLater.setMonth(today.getMonth() + 1);
-          return eventDate >= today && eventDate <= monthLater;
-        }
-        return true;
-      });
-    }
-
-    return filtered;
-  };
-
   const handleSelectAll = () => {
     const filtered = getFilteredEvents();
     if (selectedIds.size === filtered.length) {
@@ -552,16 +547,14 @@ const ValidationInterface = () => {
   };
 
   const getFilteredEvents = () => {
-    let filtered = events
-      .filter(event => {
-        if (filter !== 'all' && event.category !== filter) return false;
-        return true;
-      });
+    // Recherche, compte, date et enrichissement sont filtrés côté serveur (fetchEvents).
+    // Ici on ne fait que le filtre de catégorie local et le tri d'affichage.
+    const filtered = events.filter(event => {
+      if (filter !== 'all' && event.category !== filter) return false;
+      return true;
+    });
 
-    // Appliquer les filtres avancés
-    filtered = applyAdvancedFilters(filtered);
-
-    return filtered.sort((a, b) => {
+    return [...filtered].sort((a, b) => {
       switch(sortBy) {
         case 'date': return new Date(a.date).getTime() - new Date(b.date).getTime();
         case 'score': return calculateScore(b) - calculateScore(a);
@@ -589,8 +582,7 @@ const ValidationInterface = () => {
   filteredEventsRef.current = filteredEvents;
   const focusedIndexRef = useRef(-1);
   focusedIndexRef.current = focusedIndex;
-  const activeTabRef = useRef(activeTab);
-  activeTabRef.current = activeTab;
+  // activeTabRef est déjà déclaré plus haut (utilisé par fetchEvents et le realtime).
   const keyActionsRef = useRef({ quickApprove, handleReject, setShowDetails });
   keyActionsRef.current = { quickApprove, handleReject, setShowDetails };
 
