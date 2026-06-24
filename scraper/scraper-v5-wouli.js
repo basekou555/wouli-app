@@ -1020,6 +1020,23 @@ class WouliScraperV5 {
       return;
     }
 
+    // v5.5 : ne pas insérer les événements déjà passés (date antérieure à aujourd'hui).
+    // Ils encombraient inutilement la file de validation. On conserve les événements
+    // du jour même (cœur de Wouli : « qu'est-ce qu'on fait ce soir ? »).
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const droppedPast = this.events.filter((e) => new Date(e.date).getTime() < startOfToday.getTime());
+    if (droppedPast.length) {
+      this.events = this.events.filter((e) => new Date(e.date).getTime() >= startOfToday.getTime());
+      console.log(`\n${droppedPast.length} événement(s) à date passée ignoré(s) (non insérés).`);
+    }
+
+    if (!this.events.length) {
+      console.log('\nAucun événement à venir à sauvegarder');
+      await this.reportLog('success', 'Aucun événement à venir (tous passés).');
+      return;
+    }
+
     console.log(`\nSauvegarde de ${this.events.length} événement(s)...`);
     const batchSize = 10;
     let saved = 0;
