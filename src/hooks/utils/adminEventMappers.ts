@@ -16,12 +16,46 @@ export interface PendingEvent {
   created_at: string;
   validated_at?: string;
   image_url: string | null;
+  rejection_reason?: string | null;
   // Champs issus de l'extraction IA (extract-event) — optionnels, présents via select('*').
   parsing_method?: string | null;
   parsing_confidence?: number | null;
   manual_review_reason?: string | null;
   needs_manual_image?: boolean | null;
+  // Contenu structuré produit par extract-event (claude-vision-v1) — voir extract-event/index.ts:436-466.
+  // Absents des types générés (types.ts stale) mais bien renvoyés par select('*').
+  energy?: string | null;          // 'SCENE' | 'CLUB' | 'JOURNEE'
+  subtitle?: string | null;
+  music_style?: string | null;
+  tags?: string[] | null;
+  lineup?: string[] | null;
+  venue_category?: string | null;
+  color_card?: string | null;
 }
+
+// Métadonnées d'affichage de l'énergie déduite par l'IA (3 ambiances, extract-event/index.ts:44).
+export const ENERGY_META: Record<string, { label: string; cls: string }> = {
+  SCENE: { label: '🎤 Scène', cls: 'border-purple-300 text-purple-700 bg-purple-50' },
+  CLUB: { label: '🔊 Club', cls: 'border-pink-300 text-pink-700 bg-pink-50' },
+  JOURNEE: { label: '☀️ Journée', cls: 'border-amber-300 text-amber-700 bg-amber-50' },
+};
+
+// Ordre de cycle pour le bouton d'action rapide « Énergie » (raccourci E).
+export const ENERGY_ORDER = ['JOURNEE', 'CLUB', 'SCENE'] as const;
+
+// Valeur d'énergie suivante (cycle JOURNEE → CLUB → SCENE → JOURNEE). Si non définie, commence à JOURNEE.
+export const nextEnergy = (current?: string | null): string => {
+  const idx = current ? ENERGY_ORDER.indexOf(current as (typeof ENERGY_ORDER)[number]) : -1;
+  return ENERGY_ORDER[(idx + 1) % ENERGY_ORDER.length];
+};
+
+// Vrai si l'event a été enrichi par le pipeline IA de vision.
+export const isAIEnriched = (e: { parsing_method?: string | null }): boolean =>
+  e.parsing_method === 'claude-vision-v1';
+
+// Confiance IA en 0..100 (null si non enrichi / inconnue).
+export const aiConfidencePct = (e: { parsing_confidence?: number | null }): number | null =>
+  typeof e.parsing_confidence === 'number' ? Math.round(e.parsing_confidence * 100) : null;
 
 export const mapPendingEventToUnified = (pendingEvent: PendingEvent): UnifiedEvent => {
   return {

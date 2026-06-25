@@ -462,6 +462,7 @@ export type Database = {
           archived_at: string | null
           category: Database["public"]["Enums"]["event_category"]
           claimed: boolean | null
+          color_card: string | null
           created_at: string | null
           created_by: string
           created_by_type: Database["public"]["Enums"]["event_creator_type"]
@@ -469,14 +470,19 @@ export type Database = {
           description: string | null
           end_date: string | null
           end_time: string | null
+          energy: string | null
           event_day: string | null
           event_format: string | null
           event_type: string | null
           external_url: string | null
+          extraction_backup: Json | null
           id: string
           image_focus_position: string | null
           image_url: string | null
+          is_recurring: boolean | null
+          is_unique: boolean | null
           likes: number | null
+          lineup: string[] | null
           location: string
           manual_review_reason: string | null
           max_participants: number | null
@@ -487,11 +493,13 @@ export type Database = {
           parsing_method: string | null
           participants: number | null
           price: number | null
+          rejection_reason: string | null
           scraped_at: string | null
           search_appearances: number | null
           social_intensity: string | null
           status: string | null
           submitter_email: string | null
+          subtitle: string | null
           tags: string[] | null
           target_audience: string[] | null
           time: string | null
@@ -513,6 +521,7 @@ export type Database = {
           archived_at?: string | null
           category: Database["public"]["Enums"]["event_category"]
           claimed?: boolean | null
+          color_card?: string | null
           created_at?: string | null
           created_by: string
           created_by_type?: Database["public"]["Enums"]["event_creator_type"]
@@ -520,14 +529,19 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           end_time?: string | null
+          energy?: string | null
           event_day?: string | null
           event_format?: string | null
           event_type?: string | null
           external_url?: string | null
+          extraction_backup?: Json | null
           id?: string
           image_focus_position?: string | null
           image_url?: string | null
+          is_recurring?: boolean | null
+          is_unique?: boolean | null
           likes?: number | null
+          lineup?: string[] | null
           location: string
           manual_review_reason?: string | null
           max_participants?: number | null
@@ -538,11 +552,13 @@ export type Database = {
           parsing_method?: string | null
           participants?: number | null
           price?: number | null
+          rejection_reason?: string | null
           scraped_at?: string | null
           search_appearances?: number | null
           social_intensity?: string | null
           status?: string | null
           submitter_email?: string | null
+          subtitle?: string | null
           tags?: string[] | null
           target_audience?: string[] | null
           time?: string | null
@@ -564,6 +580,7 @@ export type Database = {
           archived_at?: string | null
           category?: Database["public"]["Enums"]["event_category"]
           claimed?: boolean | null
+          color_card?: string | null
           created_at?: string | null
           created_by?: string
           created_by_type?: Database["public"]["Enums"]["event_creator_type"]
@@ -571,14 +588,19 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           end_time?: string | null
+          energy?: string | null
           event_day?: string | null
           event_format?: string | null
           event_type?: string | null
           external_url?: string | null
+          extraction_backup?: Json | null
           id?: string
           image_focus_position?: string | null
           image_url?: string | null
+          is_recurring?: boolean | null
+          is_unique?: boolean | null
           likes?: number | null
+          lineup?: string[] | null
           location?: string
           manual_review_reason?: string | null
           max_participants?: number | null
@@ -589,11 +611,13 @@ export type Database = {
           parsing_method?: string | null
           participants?: number | null
           price?: number | null
+          rejection_reason?: string | null
           scraped_at?: string | null
           search_appearances?: number | null
           social_intensity?: string | null
           status?: string | null
           submitter_email?: string | null
+          subtitle?: string | null
           tags?: string[] | null
           target_audience?: string[] | null
           time?: string | null
@@ -682,6 +706,7 @@ export type Database = {
           type: Database["public"]["Enums"]["user_type"]
           updated_at: string | null
           username: string
+          visibility: string
           website: string | null
         }
         Insert: {
@@ -695,6 +720,7 @@ export type Database = {
           type?: Database["public"]["Enums"]["user_type"]
           updated_at?: string | null
           username: string
+          visibility?: string
           website?: string | null
         }
         Update: {
@@ -708,6 +734,7 @@ export type Database = {
           type?: Database["public"]["Enums"]["user_type"]
           updated_at?: string | null
           username?: string
+          visibility?: string
           website?: string | null
         }
         Relationships: []
@@ -1147,14 +1174,54 @@ export type Database = {
           },
         ]
       }
+      venues: {
+        Row: {
+          address: string | null
+          aliases: string[]
+          confirmed: boolean
+          created_at: string
+          id: string
+          instagram: string | null
+          name: string
+          profile: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          aliases?: string[]
+          confirmed?: boolean
+          created_at?: string
+          id?: string
+          instagram?: string | null
+          name: string
+          profile: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          aliases?: string[]
+          confirmed?: boolean
+          created_at?: string
+          id?: string
+          instagram?: string | null
+          name?: string
+          profile?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       active_events: {
         Row: {
+          account_username: string | null
+          activity_type: string | null
           actual_participants: number | null
           address: string | null
+          ambiance: string | null
           archived_at: string | null
           category: Database["public"]["Enums"]["event_category"] | null
+          color_card: string | null
           created_at: string | null
           created_by: string | null
           created_by_type:
@@ -1162,30 +1229,51 @@ export type Database = {
             | null
           date: string | null
           description: string | null
+          edition_number: number | null
           end_date: string | null
           end_time: string | null
+          energy: string | null
+          event_format: string | null
+          event_type: string | null
           external_url: string | null
           id: string | null
+          image_focus_position: string | null
           image_url: string | null
+          is_recurring: boolean | null
+          is_unique: boolean | null
           likes: number | null
           location: string | null
           max_participants: number | null
+          music_style: string | null
           no_show_count: number | null
+          parsing_confidence: number | null
+          parsing_method: string | null
           participants: number | null
           price: number | null
           search_appearances: number | null
+          social_intensity: string | null
           status: string | null
+          subtitle: string | null
           tags: string[] | null
+          target_audience: string[] | null
           time: string | null
           title: string | null
+          title_occurrences: number | null
           updated_at: string | null
+          venue_category: string | null
+          venue_id: string | null
+          venue_profile: string | null
           views: number | null
         }
         Insert: {
+          account_username?: string | null
+          activity_type?: string | null
           actual_participants?: number | null
           address?: string | null
+          ambiance?: string | null
           archived_at?: string | null
           category?: Database["public"]["Enums"]["event_category"] | null
+          color_card?: string | null
           created_at?: string | null
           created_by?: string | null
           created_by_type?:
@@ -1193,30 +1281,51 @@ export type Database = {
             | null
           date?: string | null
           description?: string | null
+          edition_number?: never
           end_date?: string | null
           end_time?: string | null
+          energy?: string | null
+          event_format?: string | null
+          event_type?: string | null
           external_url?: string | null
           id?: string | null
+          image_focus_position?: string | null
           image_url?: string | null
+          is_recurring?: boolean | null
+          is_unique?: boolean | null
           likes?: number | null
           location?: string | null
           max_participants?: number | null
+          music_style?: string | null
           no_show_count?: number | null
+          parsing_confidence?: number | null
+          parsing_method?: string | null
           participants?: number | null
           price?: number | null
           search_appearances?: number | null
+          social_intensity?: string | null
           status?: string | null
+          subtitle?: string | null
           tags?: string[] | null
+          target_audience?: string[] | null
           time?: string | null
           title?: string | null
+          title_occurrences?: never
           updated_at?: string | null
+          venue_category?: string | null
+          venue_id?: string | null
+          venue_profile?: never
           views?: number | null
         }
         Update: {
+          account_username?: string | null
+          activity_type?: string | null
           actual_participants?: number | null
           address?: string | null
+          ambiance?: string | null
           archived_at?: string | null
           category?: Database["public"]["Enums"]["event_category"] | null
+          color_card?: string | null
           created_at?: string | null
           created_by?: string | null
           created_by_type?:
@@ -1224,23 +1333,40 @@ export type Database = {
             | null
           date?: string | null
           description?: string | null
+          edition_number?: never
           end_date?: string | null
           end_time?: string | null
+          energy?: string | null
+          event_format?: string | null
+          event_type?: string | null
           external_url?: string | null
           id?: string | null
+          image_focus_position?: string | null
           image_url?: string | null
+          is_recurring?: boolean | null
+          is_unique?: boolean | null
           likes?: number | null
           location?: string | null
           max_participants?: number | null
+          music_style?: string | null
           no_show_count?: number | null
+          parsing_confidence?: number | null
+          parsing_method?: string | null
           participants?: number | null
           price?: number | null
           search_appearances?: number | null
+          social_intensity?: string | null
           status?: string | null
+          subtitle?: string | null
           tags?: string[] | null
+          target_audience?: string[] | null
           time?: string | null
           title?: string | null
+          title_occurrences?: never
           updated_at?: string | null
+          venue_category?: string | null
+          venue_id?: string | null
+          venue_profile?: never
           views?: number | null
         }
         Relationships: [
@@ -1254,6 +1380,20 @@ export type Database = {
           {
             foreignKeyName: "events_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_venue_id_fkey"
+            columns: ["venue_id"]
             isOneToOne: false
             referencedRelation: "public_profiles"
             referencedColumns: ["id"]
@@ -1582,6 +1722,18 @@ export type Database = {
           event_ids: string[]
         }[]
       }
+      classify_venue: {
+        Args: { p_name: string; p_profile: string }
+        Returns: undefined
+      }
+      find_duplicate_pairs: {
+        Args: { p_days?: number }
+        Returns: {
+          a: Json
+          b: Json
+          sim: number
+        }[]
+      }
       get_public_business_info: {
         Args: never
         Returns: {
@@ -1647,7 +1799,25 @@ export type Database = {
         }
         Returns: string
       }
-      reject_pending_event: { Args: { p_event_id: string }; Returns: undefined }
+      reject_past_pending_events: {
+        Args: { p_reason?: string }
+        Returns: number
+      }
+      reject_pending_event: {
+        Args: { p_event_id: string; p_reason?: string }
+        Returns: undefined
+      }
+      run_extraction_batch: { Args: { p_limit?: number }; Returns: undefined }
+      to_paris_ts: { Args: { d: string; t: string }; Returns: string }
+      unknown_venues: {
+        Args: { p_days?: number }
+        Returns: {
+          location: string
+          n_events: number
+        }[]
+      }
+      venue_profile: { Args: { loc: string }; Returns: string }
+      wouli_norm_title: { Args: { t: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

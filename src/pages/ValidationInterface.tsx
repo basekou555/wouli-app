@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +16,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
-import { WOULI_CATEGORIES, getCategoryById } from '@/data/wouliCategories';
+import { WOULI_CATEGORIES, getCategoryById, getNextCategoryId } from '@/data/wouliCategories';
+import { nextEnergy } from '@/hooks/utils/adminEventMappers';
 import EventEditModal from '@/components/admin/EventEditModal';
 import EventModerationHistory from '@/components/admin/EventModerationHistory';
 import StatusChangeModal from '@/components/admin/StatusChangeModal';
@@ -45,12 +46,21 @@ interface PendingEvent {
   created_at: string;
   validated_at?: string;
   image_url: string | null;
+  rejection_reason?: string | null;
   account_username?: string;
   event_type?: string;
   manual_review_reason?: string;
   parsing_method?: string | null;
   parsing_confidence?: number | null;
   needs_manual_image?: boolean | null;
+  // Contenu structuré IA (extract-event) — renvoyé par select('*'), absent des types générés.
+  energy?: string | null;
+  subtitle?: string | null;
+  music_style?: string | null;
+  tags?: string[] | null;
+  lineup?: string[] | null;
+  venue_category?: string | null;
+  color_card?: string | null;
 }
 
 // Un event mérite un coup d'œil si l'IA a posé un drapeau ou n'a pas d'image exploitable.
@@ -79,7 +89,12 @@ const ValidationInterface = () => {
   const [hasMore, setHasMore] = useState(true);
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
-  const EVENTS_PER_PAGE = 10;
+  const [bulkApproving, setBulkApproving] = useState(false);
+  const [bulkRejecting, setBulkRejecting] = useState(false);
+  // Total réel des événements en attente déjà passés (toute la base, pas la page chargée).
+  const [pastPendingCount, setPastPendingCount] = useState(0);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+  const EVENTS_PER_PAGE = 20;
   const { toast } = useToast();
 
   // Utiliser useAdminStats pour les compteurs
@@ -115,6 +130,21 @@ const ValidationInterface = () => {
       console.error('Erreur détection doublons:', error);
     } finally {
       setLoadingDuplicates(false);
+    }
+  };
+
+  // Compte (côté serveur) tous les événements pending à date passée, indépendamment de la pagination.
+  const loadPastPendingCount = async () => {
+    try {
+      const { count, error } = await supabase
+        .from('events')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending')
+        .lt('date', new Date().toISOString());
+      if (error) throw error;
+      setPastPendingCount(count ?? 0);
+    } catch (error) {
+      console.error('Erreur comptage événements passés:', error);
     }
   };
 
@@ -170,7 +200,13 @@ const ValidationInterface = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [accountFilter, setAccountFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
+  const [enrichmentFilter, setEnrichmentFilter] = useState<'all' | 'enriched' | 'raw' | 'low'>('all');
   const [accounts, setAccounts] = useState<string[]>([]);
+
+  // Seuil en dessous duquel un event enrichi mérite une vraie revue humaine.
+  const LOW_CONFIDENCE_THRESHOLD = 0.65;
+  // Seuil au-dessus duquel un event enrichi est candidat à la validation en lot.
+  const HIGH_CONFIDENCE_THRESHOLD = 0.85;
 
   // Charger la liste des comptes Instagram uniques
   useEffect(() => {
@@ -225,85 +261,122 @@ const ValidationInterface = () => {
     }
   };
 
+  // Refs : le handler realtime est lié une seule fois ; sans refs sa closure figerait
+  // les filtres. fetchEvents lit donc toujours les valeurs courantes via ces refs.
+  const searchQueryRef = useRef(searchQuery);
+  searchQueryRef.current = searchQuery;
+  const accountFilterRef = useRef(accountFilter);
+  accountFilterRef.current = accountFilter;
+  const dateFilterRef = useRef(dateFilter);
+  dateFilterRef.current = dateFilter;
+  const enrichmentFilterRef = useRef(enrichmentFilter);
+  enrichmentFilterRef.current = enrichmentFilter;
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
+  // Vrai pendant une validation/rejet : on suspend les refetch realtime pour éviter
+  // la tempête de re-fetch (chaque mutation émet un évènement postgres_changes).
+  const isMutatingRef = useRef(false);
+  const realtimeDebounceRef = useRef<ReturnType<typeof setTimeout>>();
+
   useEffect(() => {
     fetchEvents();
     loadScraperErrors();
     loadDuplicates();
     loadUnknownVenues();
+    loadPastPendingCount();
 
-    // Realtime subscription sur la table events
+    // Refetch realtime débouncé et suspendu pendant nos propres mutations.
+    const scheduleEventsRefetch = () => {
+      if (isMutatingRef.current) return;
+      clearTimeout(realtimeDebounceRef.current);
+      realtimeDebounceRef.current = setTimeout(() => fetchEvents(0, false), 400);
+    };
+
     const eventsChannel = supabase
       .channel('events_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'events'
-        },
-        () => {
-          fetchEvents();
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, scheduleEventsRefetch)
       .subscribe();
 
-    // Realtime subscription sur scraper_errors
     const errorsChannel = supabase
       .channel('scraper_errors_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'scraper_errors'
-        },
-        () => {
-          loadScraperErrors();
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'scraper_errors' }, () => loadScraperErrors())
       .subscribe();
 
     return () => {
+      clearTimeout(realtimeDebounceRef.current);
       supabase.removeChannel(eventsChannel);
       supabase.removeChannel(errorsChannel);
     };
   }, [activeTab]);
 
-  const fetchEvents = async (pageNum = 0, append = false, search = '') => {
+  const fetchEvents = async (pageNum = 0, append = false) => {
     try {
       const start = pageNum * EVENTS_PER_PAGE;
       const end = start + EVENTS_PER_PAGE - 1;
 
+      // Tous les filtres sont lus depuis les refs -> toute invocation (realtime inclus)
+      // utilise les valeurs courantes, et les filtres portent sur TOUT le jeu (pas la page).
+      const search = searchQueryRef.current;
+      const account = accountFilterRef.current;
+      const dateF = dateFilterRef.current;
+      const enrichment = enrichmentFilterRef.current;
+      const tab = activeTabRef.current;
+
+      // Le total ne change pas entre les pages d'un même filtre : on ne le demande
+      // qu'à la première page (économise une requête count par "charger plus").
+      const wantCount = !append;
       let query = supabase
         .from('events')
-        .select('*', { count: 'exact' });
+        .select('*', wantCount ? { count: 'exact' } : undefined);
 
-      // Si recherche active, chercher dans tous les événements (sauf archivés)
+      // Recherche plein texte : cherche dans tous les statuts (sauf archivés).
       if (search.trim()) {
         const searchTerm = `%${search.trim()}%`;
         query = query.or(`title.ilike.${searchTerm},description.ilike.${searchTerm},location.ilike.${searchTerm},account_username.ilike.${searchTerm}`);
         query = query.neq('status', 'archived');
       } else {
-        const statuses = getStatusForTab(activeTab);
+        const statuses = getStatusForTab(tab);
         if (statuses === null) {
-          // Tab "all" - récupérer tout sauf archivés
           query = query.neq('status', 'archived');
         } else if (Array.isArray(statuses)) {
           query = query.in('status', statuses);
         } else {
           query = query.eq('status', statuses);
         }
-        
-        // Pour les événements "active", ne montrer que les événements à venir
-        if (activeTab === 'active') {
-          const now = new Date().toISOString();
-          query = query.gte('date', now);
+        // Actifs / rejetés : ne montrer que les événements à venir.
+        if (tab === 'active' || tab === 'rejected') {
+          query = query.gte('date', new Date().toISOString());
         }
-        
-        // Pour les événements "rejected", ne montrer que les événements à venir
-        if (activeTab === 'rejected') {
-          const now = new Date().toISOString();
-          query = query.gte('date', now);
+      }
+
+      // ---- Filtres avancés, désormais côté serveur ----
+      if (account !== 'all') {
+        query = query.eq('account_username', account);
+      }
+      if (enrichment === 'enriched') {
+        query = query.eq('parsing_method', 'claude-vision-v1');
+      } else if (enrichment === 'raw') {
+        query = query.or('parsing_method.is.null,parsing_method.neq.claude-vision-v1');
+      } else if (enrichment === 'low') {
+        query = query
+          .eq('parsing_method', 'claude-vision-v1')
+          .or(`parsing_confidence.is.null,parsing_confidence.lt.${LOW_CONFIDENCE_THRESHOLD}`);
+      }
+      if (dateF !== 'all') {
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        if (dateF === 'today') {
+          const endOfToday = new Date(startOfToday);
+          endOfToday.setDate(endOfToday.getDate() + 1);
+          query = query.gte('date', startOfToday.toISOString()).lt('date', endOfToday.toISOString());
+        } else if (dateF === 'week') {
+          const weekLater = new Date(startOfToday);
+          weekLater.setDate(weekLater.getDate() + 7);
+          query = query.gte('date', startOfToday.toISOString()).lte('date', weekLater.toISOString());
+        } else if (dateF === 'month') {
+          const monthLater = new Date(startOfToday);
+          monthLater.setMonth(monthLater.getMonth() + 1);
+          query = query.gte('date', startOfToday.toISOString()).lte('date', monthLater.toISOString());
         }
       }
 
@@ -312,21 +385,20 @@ const ValidationInterface = () => {
         .range(start, end);
 
       if (error) throw error;
-      
-      const newEvents = data || [];
-      
+
+      const newEvents = (data || []) as PendingEvent[];
+
       if (append) {
-        const existingIds = new Set(events.map(e => e.id));
-        const uniqueNewEvents = newEvents.filter(e => !existingIds.has(e.id));
-        setEvents([...events, ...uniqueNewEvents]);
+        setEvents((prev) => {
+          const existingIds = new Set(prev.map((e) => e.id));
+          return [...prev, ...newEvents.filter((e) => !existingIds.has(e.id))];
+        });
       } else {
         setEvents(newEvents);
       }
-      
+
       setHasMore(newEvents.length === EVENTS_PER_PAGE);
-      
-      if (count !== null) setTotalCount(count);
-      
+      if (count !== null && count !== undefined) setTotalCount(count);
       if (!append) setPage(pageNum);
     } catch (error) {
       console.error('❌ Erreur fetch events:', error);
@@ -345,27 +417,32 @@ const ValidationInterface = () => {
     const timeoutId = setTimeout(() => {
       setPage(0);
       setLoading(true);
-      fetchEvents(0, false, searchQuery);
+      fetchEvents(0, false);
     }, 300);
-    
+
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
+
+  // Refetch serveur quand un filtre avancé change (la recherche a son propre debounce
+  // ci-dessus, le statut/onglet a le sien). On saute le premier rendu pour ne pas
+  // doubler le fetch initial déclenché par l'effet [activeTab].
+  const filtersMountedRef = useRef(false);
+  useEffect(() => {
+    if (!filtersMountedRef.current) {
+      filtersMountedRef.current = true;
+      return;
+    }
+    setPage(0);
+    setLoading(true);
+    fetchEvents(0, false);
+  }, [accountFilter, dateFilter, enrichmentFilter]);
 
   const loadMore = async () => {
     setLoadingMore(true);
     const nextPage = page + 1;
     setPage(nextPage);
-    await fetchEvents(nextPage, true, searchQuery);
+    await fetchEvents(nextPage, true);
     setLoadingMore(false);
-  };
-
-  const handleApprove = async (eventIds: string | string[]) => {
-    const ids = Array.isArray(eventIds) ? eventIds : [eventIds];
-    setStatusChange({
-      eventIds: ids,
-      currentStatus: 'pending',
-      targetStatus: 'active'
-    });
   };
 
   const handleReject = async (eventIds: string | string[]) => {
@@ -384,13 +461,178 @@ const ValidationInterface = () => {
   const onStatusChangeSuccess = async () => {
     await fetchEvents(0, false);
     loadDuplicates();
+    loadPastPendingCount();
     setSelectedIds(new Set());
   };
 
-  // Archiver un doublon (réversible, via le même flux que les autres changements de statut).
-  const handleArchiveDuplicate = (event: DuplicateEvent) => {
-    handleStatusChange([event.id], event.status, 'archived');
+  // Validation directe d'un event, sans passer par la modale de confirmation.
+  // La validation est non destructive et réversible (« Remettre en attente »).
+  const quickApprove = async (eventId: string) => {
+    setProcessingId(eventId);
+    isMutatingRef.current = true;
+    try {
+      const { error } = await supabase.rpc('approve_pending_event', { p_event_id: eventId });
+      if (error) throw error;
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(eventId);
+        return next;
+      });
+      toast({ title: '✅ Validé', description: 'Événement publié' });
+      await fetchEvents(0, false);
+    } catch (error: any) {
+      toast({ title: 'Erreur', description: error.message || 'Validation impossible', variant: 'destructive' });
+    } finally {
+      isMutatingRef.current = false;
+      setProcessingId(null);
+    }
   };
+
+  // Validation en lot (un seul refresh au lieu d'un par event), pour le bouton « haute confiance »
+  // et la barre d'actions groupées.
+  const bulkApprove = async (ids: string[]) => {
+    if (!ids.length) return;
+    setBulkApproving(true);
+    isMutatingRef.current = true;
+    try {
+      const results = await Promise.allSettled(
+        ids.map((id) => supabase.rpc('approve_pending_event', { p_event_id: id }))
+      );
+      const ok = results.filter(
+        (r) => r.status === 'fulfilled' && !((r.value as { error: unknown }).error)
+      ).length;
+      toast({
+        title: '✅ Validation en lot',
+        description: `${ok}/${ids.length} événement(s) publié(s)`,
+        variant: ok === ids.length ? undefined : 'destructive',
+      });
+      setSelectedIds(new Set());
+      await fetchEvents(0, false);
+      loadDuplicates();
+    } catch (error: any) {
+      toast({ title: 'Erreur', description: error.message || 'Validation en lot impossible', variant: 'destructive' });
+    } finally {
+      isMutatingRef.current = false;
+      setBulkApproving(false);
+    }
+  };
+
+  // Nettoyage des événements à date passée : un seul appel serveur rejette TOUS les
+  // pending passés (pas seulement la page chargée), et renvoie le nombre traité.
+  const cleanPastPending = async () => {
+    setBulkRejecting(true);
+    isMutatingRef.current = true;
+    try {
+      const { data, error } = await supabase.rpc('reject_past_pending_events', { p_reason: 'Date passée' });
+      if (error) throw error;
+      const n = typeof data === 'number' ? data : 0;
+      toast({ title: '🧹 Nettoyage', description: `${n} événement(s) à date passée rejeté(s)` });
+      setSelectedIds(new Set());
+      await fetchEvents(0, false);
+      await loadPastPendingCount();
+      loadDuplicates();
+    } catch (error: any) {
+      toast({ title: 'Erreur', description: error.message || 'Nettoyage impossible', variant: 'destructive' });
+    } finally {
+      isMutatingRef.current = false;
+      setBulkRejecting(false);
+    }
+  };
+
+  // Garde un event : s'il est encore en attente on le publie ; s'il est déjà actif/validé
+  // (cas fréquent des doublons anciens), il n'y a rien à faire.
+  const keepDuplicateEvent = (event: DuplicateEvent) => {
+    if (event.status === 'pending') {
+      return supabase.rpc('approve_pending_event', { p_event_id: event.id });
+    }
+    return Promise.resolve({ error: null });
+  };
+
+  // Rejette un event quel que soit son statut : la RPC ne traite que les "pending",
+  // donc pour un event déjà actif/validé on bascule directement le statut (RLS admin).
+  const rejectDuplicateEvent = (event: DuplicateEvent, reason: string) => {
+    if (event.status === 'pending') {
+      return supabase.rpc('reject_pending_event', { p_event_id: event.id, p_reason: reason });
+    }
+    return supabase
+      .from('events')
+      .update({ status: 'rejected', rejection_reason: reason, validated_at: new Date().toISOString() } as never)
+      .eq('id', event.id);
+  };
+
+  // Doublons : un seul geste. On valide la carte gardée et on rejette l'autre directement
+  // (sans fenêtre de confirmation). La paire disparaît tout de suite de la liste — l'admin
+  // voit le tableau diminuer à chaque résolution. Tout reste réversible côté onglets.
+  const handleResolveDuplicate = async (pair: DuplicatePair, keep: 'a' | 'b') => {
+    const kept = keep === 'a' ? pair.a : pair.b;
+    const rejected = keep === 'a' ? pair.b : pair.a;
+
+    // Retrait optimiste : on enlève toutes les paires qui référencent l'un des deux events
+    // (un même event peut apparaître dans plusieurs paires — éviter d'agir sur un statut périmé).
+    setDuplicatePairs((prev) =>
+      prev.filter((p) => ![p.a.id, p.b.id].some((id) => id === kept.id || id === rejected.id))
+    );
+    isMutatingRef.current = true;
+    try {
+      const [keepRes, rejectRes] = await Promise.all([
+        keepDuplicateEvent(kept),
+        rejectDuplicateEvent(rejected, 'Doublon'),
+      ]);
+      if (keepRes.error) throw keepRes.error;
+      if (rejectRes.error) throw rejectRes.error;
+      toast({ title: '✅ Doublon résolu', description: `« ${kept.title} » gardé, l'autre rejeté` });
+      await fetchEvents(0, false);
+    } catch (error: any) {
+      toast({ title: 'Erreur', description: error.message || 'Résolution impossible', variant: 'destructive' });
+      loadDuplicates(); // resync si l'opération a échoué
+    } finally {
+      isMutatingRef.current = false;
+    }
+  };
+
+  // Doublons : rejeter les DEUX cartes d'un coup (aucune ne vaut la peine d'être gardée).
+  const handleRejectBothDuplicates = async (pair: DuplicatePair) => {
+    // Retire toutes les paires référençant l'un des deux events (cf. handleResolveDuplicate).
+    setDuplicatePairs((prev) =>
+      prev.filter((p) => ![p.a.id, p.b.id].some((id) => id === pair.a.id || id === pair.b.id))
+    );
+    isMutatingRef.current = true;
+    try {
+      const results = await Promise.all([
+        rejectDuplicateEvent(pair.a, 'Doublon'),
+        rejectDuplicateEvent(pair.b, 'Doublon'),
+      ]);
+      const firstError = results.find((r) => r.error)?.error;
+      if (firstError) throw firstError;
+      toast({ title: '✅ Doublon rejeté', description: 'Les deux événements ont été rejetés' });
+      await fetchEvents(0, false);
+    } catch (error: any) {
+      toast({ title: 'Erreur', description: error.message || 'Rejet impossible', variant: 'destructive' });
+      loadDuplicates();
+    } finally {
+      isMutatingRef.current = false;
+    }
+  };
+
+  // Édition rapide d'un champ depuis la ligne du tableau (énergie / catégorie), sans ouvrir la modale.
+  // Optimiste : on met à jour l'état local immédiatement puis on persiste ; on resynchronise en cas d'échec.
+  const quickUpdateField = async (eventId: string, patch: Partial<PendingEvent>) => {
+    isMutatingRef.current = true;
+    setEvents((prev) => prev.map((e) => (e.id === eventId ? { ...e, ...patch } : e)));
+    try {
+      const { error } = await supabase.from('events').update(patch as never).eq('id', eventId);
+      if (error) throw error;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Mise à jour impossible';
+      toast({ title: 'Erreur', description: message, variant: 'destructive' });
+      await fetchEvents(0, false);
+    } finally {
+      isMutatingRef.current = false;
+    }
+  };
+
+  const quickSetEnergy = (eventId: string, energy: string) => quickUpdateField(eventId, { energy });
+  const quickSetCategory = (eventId: string, category: string) => quickUpdateField(eventId, { category });
 
   // Ouvrir l'aperçu d'un event par son id (les doublons ne sont pas forcément dans la liste chargée).
   const openPreviewById = async (eventId: string) => {
@@ -419,51 +661,6 @@ const ValidationInterface = () => {
     return 'text-red-600';
   };
 
-  // Fonction de filtrage avancée
-  const applyAdvancedFilters = (events: PendingEvent[]) => {
-    let filtered = events;
-
-    // Recherche full-text (déjà géré côté serveur si searchQuery actif)
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(e => 
-        e.title.toLowerCase().includes(query) ||
-        e.description?.toLowerCase().includes(query) ||
-        e.account_username?.toLowerCase().includes(query) ||
-        e.location?.toLowerCase().includes(query)
-      );
-    }
-
-    // Filtre compte Instagram
-    if (accountFilter !== 'all') {
-      filtered = filtered.filter(e => e.account_username === accountFilter);
-    }
-
-    // Filtre date événement
-    if (dateFilter !== 'all') {
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      
-      filtered = filtered.filter(e => {
-        const eventDate = new Date(e.date);
-        if (dateFilter === 'today') return eventDate.toDateString() === today.toDateString();
-        if (dateFilter === 'week') {
-          const weekLater = new Date(today);
-          weekLater.setDate(today.getDate() + 7);
-          return eventDate >= today && eventDate <= weekLater;
-        }
-        if (dateFilter === 'month') {
-          const monthLater = new Date(today);
-          monthLater.setMonth(today.getMonth() + 1);
-          return eventDate >= today && eventDate <= monthLater;
-        }
-        return true;
-      });
-    }
-
-    return filtered;
-  };
-
   const handleSelectAll = () => {
     const filtered = getFilteredEvents();
     if (selectedIds.size === filtered.length) {
@@ -484,20 +681,24 @@ const ValidationInterface = () => {
   };
 
   const getFilteredEvents = () => {
-    let filtered = events
-      .filter(event => {
-        if (filter !== 'all' && event.category !== filter) return false;
-        return true;
-      });
+    // Recherche, compte, date et enrichissement sont filtrés côté serveur (fetchEvents).
+    // Ici on ne fait que le filtre de catégorie local et le tri d'affichage.
+    const filtered = events.filter(event => {
+      if (filter !== 'all' && event.category !== filter) return false;
+      return true;
+    });
 
-    // Appliquer les filtres avancés
-    filtered = applyAdvancedFilters(filtered);
-
-    return filtered.sort((a, b) => {
+    return [...filtered].sort((a, b) => {
       switch(sortBy) {
         case 'date': return new Date(a.date).getTime() - new Date(b.date).getTime();
         case 'score': return calculateScore(b) - calculateScore(a);
         case 'created': return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'confidence': {
+          // Enrichis d'abord, du plus confiant au moins confiant ; les bruts en fin.
+          const ca = a.parsing_method === 'claude-vision-v1' ? (a.parsing_confidence ?? 0) : -1;
+          const cb = b.parsing_method === 'claude-vision-v1' ? (b.parsing_confidence ?? 0) : -1;
+          return cb - ca;
+        }
         case 'review': {
           // Events flaggés par l'IA en premier, puis par date d'événement.
           const diff = (hasReviewFlags(b) ? 1 : 0) - (hasReviewFlags(a) ? 1 : 0);
@@ -510,13 +711,87 @@ const ValidationInterface = () => {
 
   const filteredEvents = getFilteredEvents();
 
+  // Refs pour que le handler clavier (lié une seule fois) lise toujours l'état frais.
+  const filteredEventsRef = useRef<PendingEvent[]>([]);
+  filteredEventsRef.current = filteredEvents;
+  const focusedIndexRef = useRef(-1);
+  focusedIndexRef.current = focusedIndex;
+  // activeTabRef est déjà déclaré plus haut (utilisé par fetchEvents et le realtime).
+  const keyActionsRef = useRef({ quickApprove, handleReject, setShowDetails, setEditingEvent, quickSetEnergy, quickSetCategory });
+  keyActionsRef.current = { quickApprove, handleReject, setShowDetails, setEditingEvent, quickSetEnergy, quickSetCategory };
+
+  // Garde l'index focalisé dans les bornes quand la liste filtrée change.
+  useEffect(() => {
+    if (focusedIndex >= filteredEvents.length) {
+      setFocusedIndex(filteredEvents.length - 1);
+    }
+  }, [filteredEvents.length, focusedIndex]);
+
+  // Raccourcis clavier : ↑/↓ ou j/k pour naviguer, A valider, R rejeter, Entrée aperçu.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+      // Ne pas capturer quand une modale est ouverte.
+      if (document.querySelector('[role="dialog"]')) return;
+
+      const list = filteredEventsRef.current;
+      if (!list.length) return;
+      const idx = focusedIndexRef.current;
+      const tab = activeTabRef.current;
+
+      const moveTo = (next: number) => {
+        const clamped = Math.max(0, Math.min(list.length - 1, next));
+        setFocusedIndex(clamped);
+        const el = document.querySelector(`[data-event-id="${list[clamped].id}"]`);
+        el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      };
+
+      if (e.key === 'ArrowDown' || e.key === 'j') {
+        e.preventDefault();
+        moveTo(idx < 0 ? 0 : idx + 1);
+      } else if (e.key === 'ArrowUp' || e.key === 'k') {
+        e.preventDefault();
+        moveTo(idx < 0 ? 0 : idx - 1);
+      } else if (e.key === 'Escape') {
+        setFocusedIndex(-1);
+      } else if (idx >= 0 && idx < list.length) {
+        const ev = list[idx];
+        if ((e.key === 'a' || e.key === 'A') && ev.status === 'pending') {
+          e.preventDefault();
+          keyActionsRef.current.quickApprove(ev.id);
+        } else if ((e.key === 'r' || e.key === 'R') && ev.status === 'pending') {
+          e.preventDefault();
+          keyActionsRef.current.handleReject([ev.id]);
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          // Entrée ouvre la modale d'édition (aperçu de la vraie carte + formulaire),
+          // pas l'ancien aperçu en lecture seule.
+          keyActionsRef.current.setEditingEvent(ev);
+        } else if (e.key === 'm' || e.key === 'M') {
+          e.preventDefault();
+          keyActionsRef.current.setEditingEvent(ev);
+        } else if (e.key === 'e' || e.key === 'E') {
+          e.preventDefault();
+          keyActionsRef.current.quickSetEnergy(ev.id, nextEnergy(ev.energy));
+        } else if (e.key === 'c' || e.key === 'C') {
+          e.preventDefault();
+          keyActionsRef.current.quickSetCategory(ev.id, getNextCategoryId(ev.category));
+        }
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
   const resetFilters = () => {
     setSearchQuery('');
     setAccountFilter('all');
     setDateFilter('all');
+    setEnrichmentFilter('all');
   };
 
-  const hasActiveFilters = searchQuery || accountFilter !== 'all' || dateFilter !== 'all';
+  const hasActiveFilters = searchQuery || accountFilter !== 'all' || dateFilter !== 'all' || enrichmentFilter !== 'all';
 
   // Compteur validés aujourd'hui
   const todayValidated = useMemo(() => {
@@ -860,7 +1135,8 @@ const ValidationInterface = () => {
           <DuplicatesPanel
             pairs={duplicatePairs}
             loading={loadingDuplicates}
-            onArchive={handleArchiveDuplicate}
+            onResolve={handleResolveDuplicate}
+            onRejectBoth={handleRejectBothDuplicates}
             onPreview={openPreviewById}
           />
         )}
@@ -1200,13 +1476,30 @@ const ValidationInterface = () => {
     return (
       <>
         {/* Section Filtres */}
-        <div className="bg-card rounded-lg border p-4 space-y-4 mb-6">
-          <div className="flex items-center gap-2 mb-2">
-            <Search className="w-5 h-5 text-muted-foreground" />
-            <h3 className="font-semibold">Recherche & Filtres</h3>
-            {hasActiveFilters && (
-              <Badge variant="secondary" className="ml-2">Filtres actifs</Badge>
-            )}
+        <div className="bg-card rounded-lg border p-4 space-y-3 mb-6">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Search className="w-5 h-5 text-muted-foreground" />
+              <h3 className="font-semibold">Recherche & Filtres</h3>
+              {hasActiveFilters && (
+                <Badge variant="secondary">Filtres actifs</Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="h-8 px-3">
+                {filteredEvents.length} résultat{filteredEvents.length > 1 ? 's' : ''}
+              </Badge>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={resetFilters}
+                className="h-8"
+                disabled={!hasActiveFilters}
+              >
+                <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+                Réinitialiser
+              </Button>
+            </div>
           </div>
 
           <div className="relative">
@@ -1229,8 +1522,8 @@ const ValidationInterface = () => {
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="space-y-1.5">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="space-y-1">
               <label className="text-xs font-medium text-muted-foreground">Source Instagram</label>
               <Select value={accountFilter} onValueChange={setAccountFilter}>
                 <SelectTrigger className="h-9">
@@ -1247,7 +1540,22 @@ const ValidationInterface = () => {
               </Select>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Enrichissement IA</label>
+              <Select value={enrichmentFilter} onValueChange={(v: 'all' | 'enriched' | 'raw' | 'low') => setEnrichmentFilter(v)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous</SelectItem>
+                  <SelectItem value="enriched">✨ Enrichis IA</SelectItem>
+                  <SelectItem value="raw">Bruts (non traités)</SelectItem>
+                  <SelectItem value="low">⚠️ Confiance basse</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
               <label className="text-xs font-medium text-muted-foreground">Date événement</label>
               <Select value={dateFilter} onValueChange={(v: 'all' | 'today' | 'week' | 'month') => setDateFilter(v)}>
                 <SelectTrigger className="h-9">
@@ -1262,7 +1570,7 @@ const ValidationInterface = () => {
               </Select>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <label className="text-xs font-medium text-muted-foreground">Tri</label>
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="h-9">
@@ -1271,28 +1579,12 @@ const ValidationInterface = () => {
                 <SelectContent>
                   <SelectItem value="date">Date événement</SelectItem>
                   <SelectItem value="created">Date création</SelectItem>
+                  <SelectItem value="confidence">Confiance IA</SelectItem>
                   <SelectItem value="score">Score qualité</SelectItem>
                   <SelectItem value="review">À réviser en priorité</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          <div className="flex items-center justify-between pt-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={resetFilters}
-              className="h-8"
-              disabled={!hasActiveFilters}
-            >
-              <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
-              Réinitialiser
-            </Button>
-            
-            <Badge variant="secondary" className="h-8 px-3">
-              {filteredEvents.length} résultat{filteredEvents.length > 1 ? 's' : ''}
-            </Badge>
           </div>
         </div>
 
@@ -1303,25 +1595,111 @@ const ValidationInterface = () => {
 
   // Fonction pour afficher le tableau d'événements
   function renderEventsTable() {
+    const highConfidencePending = activeTab === 'pending'
+      ? filteredEvents.filter(
+          (e) => e.status === 'pending'
+            && e.parsing_method === 'claude-vision-v1'
+            && (e.parsing_confidence ?? 0) >= HIGH_CONFIDENCE_THRESHOLD
+        )
+      : [];
+
+    // Événements en attente déjà passés : le compte vient du serveur (toute la base),
+    // le nettoyage rejette tout en un appel — indépendant de la pagination.
+    const showPastBanner = activeTab === 'pending' && pastPendingCount > 0;
+
     return (
       <>
-        {/* Actions groupées */}
-        {selectedIds.size > 0 && (
-          <div className="bg-card rounded-lg border p-4 mb-4">
-            <div className="flex items-center justify-between">
-              <span className="font-medium">
-                {selectedIds.size} événement(s) sélectionné(s)
+        {/* Nettoyage des événements à date passée */}
+        {showPastBanner && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Clock className="w-5 h-5 text-amber-600 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-amber-900">
+                  {pastPendingCount} événement{pastPendingCount > 1 ? 's' : ''} à date passée dans la file
+                </p>
+                <p className="text-sm text-amber-700">
+                  Leur date est déjà passée : ils n'ont plus à être validés. Rejette-les d'un coup.
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={cleanPastPending}
+              disabled={bulkRejecting}
+              variant="outline"
+              className="flex-shrink-0 border-amber-300 text-amber-800 hover:bg-amber-100"
+            >
+              {bulkRejecting ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <X className="w-4 h-4 mr-2" />
+              )}
+              Rejeter les {pastPendingCount} (Date passée)
+            </Button>
+          </div>
+        )}
+
+        {/* Validation en lot des events enrichis à haute confiance */}
+        {highConfidencePending.length > 0 && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Sparkles className="w-5 h-5 text-green-600 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-green-900">
+                  {highConfidencePending.length} événement{highConfidencePending.length > 1 ? 's' : ''} enrichi{highConfidencePending.length > 1 ? 's' : ''} à haute confiance (≥{Math.round(HIGH_CONFIDENCE_THRESHOLD * 100)}%)
+                </p>
+                <p className="text-sm text-green-700">
+                  Validables en un lot. Contrôlez par échantillon si besoin avant de tout publier.
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={() => bulkApprove(highConfidencePending.map((e) => e.id))}
+              disabled={bulkApproving}
+              className="bg-green-600 hover:bg-green-700 flex-shrink-0"
+            >
+              {bulkApproving ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <CheckCircle className="w-4 h-4 mr-2" />
+              )}
+              Valider les {highConfidencePending.length}
+            </Button>
+          </div>
+        )}
+
+        {/* Toolbar unique (sticky) : sélection globale + actions groupées + raccourcis */}
+        {filteredEvents.length > 0 && (
+          <div className="sticky top-2 z-10 bg-card/95 backdrop-blur rounded-lg border shadow-sm p-3 mb-4 flex items-center justify-between gap-3">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedIds.size === filteredEvents.length}
+                onChange={handleSelectAll}
+                className="w-5 h-5 text-purple-600 rounded"
+              />
+              <span className="font-medium text-sm">
+                {selectedIds.size > 0
+                  ? `${selectedIds.size} sélectionné${selectedIds.size > 1 ? 's' : ''}`
+                  : `Tout sélectionner (${filteredEvents.length})`}
               </span>
-              
+            </label>
+
+            {selectedIds.size > 0 ? (
               <div className="flex gap-2">
                 {(activeTab === 'pending' || activeTab === 'urgent') && (
                   <>
                     <Button
-                      onClick={() => handleApprove(Array.from(selectedIds))}
+                      onClick={() => bulkApprove(Array.from(selectedIds))}
+                      disabled={bulkApproving}
                       size="sm"
                       className="bg-green-600 hover:bg-green-700"
                     >
-                      <Check className="w-4 h-4 mr-1" />
+                      {bulkApproving ? (
+                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      ) : (
+                        <Check className="w-4 h-4 mr-1" />
+                      )}
                       Valider
                     </Button>
                     <Button
@@ -1334,7 +1712,7 @@ const ValidationInterface = () => {
                     </Button>
                   </>
                 )}
-                
+
                 {activeTab === 'active' && (
                   <Button
                     onClick={() => handleStatusChange(Array.from(selectedIds), 'active', 'pending')}
@@ -1345,7 +1723,7 @@ const ValidationInterface = () => {
                     Remettre en attente
                   </Button>
                 )}
-                
+
                 {activeTab === 'rejected' && (
                   <Button
                     onClick={() => handleStatusChange(Array.from(selectedIds), 'rejected', 'pending')}
@@ -1357,22 +1735,25 @@ const ValidationInterface = () => {
                   </Button>
                 )}
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Sélection globale */}
-        {filteredEvents.length > 0 && (
-          <div className="bg-card rounded-lg border p-4 mb-4">
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={selectedIds.size === filteredEvents.length}
-                onChange={handleSelectAll}
-                className="w-5 h-5 text-purple-600 rounded"
-              />
-              <span className="font-medium">Tout sélectionner ({filteredEvents.length})</span>
-            </label>
+            ) : (
+              <span className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground">
+                <kbd className="px-1.5 py-0.5 rounded border bg-muted">↑</kbd>
+                <kbd className="px-1.5 py-0.5 rounded border bg-muted">↓</kbd>
+                naviguer ·
+                <kbd className="px-1.5 py-0.5 rounded border bg-muted">A</kbd>
+                valider ·
+                <kbd className="px-1.5 py-0.5 rounded border bg-muted">R</kbd>
+                rejeter ·
+                <kbd className="px-1.5 py-0.5 rounded border bg-muted">M</kbd>
+                modifier ·
+                <kbd className="px-1.5 py-0.5 rounded border bg-muted">E</kbd>
+                énergie ·
+                <kbd className="px-1.5 py-0.5 rounded border bg-muted">C</kbd>
+                catégorie ·
+                <kbd className="px-1.5 py-0.5 rounded border bg-muted">↵</kbd>
+                ouvrir
+              </span>
+            )}
           </div>
         )}
 
@@ -1413,18 +1794,20 @@ const ValidationInterface = () => {
                     </TableHead>
                     <TableHead className="min-w-[300px]">Événement</TableHead>
                     <TableHead className="max-w-[200px]">Description</TableHead>
-                    <TableHead className="text-center w-24">Score</TableHead>
+                    <TableHead className="text-center w-24">Confiance</TableHead>
                     <TableHead className="min-w-[280px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredEvents.map((event) => (
+                  {filteredEvents.map((event, index) => (
                     <AdminEventTableRow
                       key={event.id}
                       event={event}
                       isSelected={selectedIds.has(event.id)}
+                      isFocused={index === focusedIndex}
+                      isProcessing={processingId === event.id}
                       onSelect={handleSelect}
-                      onPreview={setShowDetails}
+                      onPreview={setEditingEvent}
                       onEdit={setEditingEvent}
                       onProcessManualReview={setProcessManualReview}
                       onHistory={(eventId, eventTitle) => {
@@ -1432,6 +1815,9 @@ const ValidationInterface = () => {
                         setHistoryEventTitle(eventTitle);
                       }}
                       onStatusChange={handleStatusChange}
+                      onQuickApprove={quickApprove}
+                      onQuickSetEnergy={quickSetEnergy}
+                      onQuickSetCategory={quickSetCategory}
                       calculateScore={calculateScore}
                       getScoreColor={getScoreColor}
                     />

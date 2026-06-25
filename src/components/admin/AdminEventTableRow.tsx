@@ -4,10 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Check, X, Edit, Eye, History, RotateCcw, FileEdit,
-  Calendar, MapPin, Euro, ExternalLink, Instagram, Sparkles
+  Calendar, MapPin, Euro, ExternalLink, Instagram, Sparkles, Music, Mic2, Zap, Tags
 } from 'lucide-react';
-import { PendingEvent } from '@/hooks/utils/adminEventMappers';
-import { getCategoryById } from '@/data/wouliCategories';
+import { PendingEvent, ENERGY_META, isAIEnriched, aiConfidencePct, nextEnergy } from '@/hooks/utils/adminEventMappers';
+import { getCategoryById, getNextCategoryId } from '@/data/wouliCategories';
 
 // Libellés lisibles des drapeaux de revue posés par l'extraction IA (extract-event).
 const REVIEW_FLAG_LABELS: Record<string, { label: string; cls: string }> = {
@@ -37,12 +37,17 @@ function getReviewFlags(event: PendingEvent): { code: string; label: string; cls
 interface AdminEventTableRowProps {
   event: PendingEvent;
   isSelected: boolean;
+  isFocused?: boolean;
   onSelect: (eventId: string) => void;
   onPreview: (event: PendingEvent) => void;
   onEdit: (event: PendingEvent) => void;
   onProcessManualReview?: (event: PendingEvent) => void;
   onHistory: (eventId: string, eventTitle: string) => void;
   onStatusChange: (eventIds: string[], currentStatus: string, targetStatus: string) => void;
+  onQuickApprove?: (eventId: string) => void;
+  onQuickSetEnergy?: (eventId: string, energy: string) => void;
+  onQuickSetCategory?: (eventId: string, category: string) => void;
+  isProcessing?: boolean;
   calculateScore: (event: PendingEvent) => number;
   getScoreColor: (score: number) => string;
 }
@@ -50,18 +55,25 @@ interface AdminEventTableRowProps {
 export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
   event,
   isSelected,
+  isFocused = false,
   onSelect,
   onPreview,
   onEdit,
   onProcessManualReview,
   onHistory,
   onStatusChange,
+  onQuickApprove,
+  onQuickSetEnergy,
+  onQuickSetCategory,
+  isProcessing = false,
   calculateScore,
   getScoreColor
 }) => {
   const category = getCategoryById(event.category);
+  const energyMeta = event.energy ? ENERGY_META[event.energy] : null;
   const score = calculateScore(event);
-  
+  const confidence = aiConfidencePct(event);
+
   const formatEventDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('fr-FR');
@@ -96,7 +108,10 @@ export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
   };
 
   return (
-    <TableRow className="group hover:bg-muted/50">
+    <TableRow
+      data-event-id={event.id}
+      className={`group hover:bg-muted/50 ${isFocused ? 'ring-2 ring-inset ring-purple-400 bg-purple-50/40' : ''} ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
+    >
       {/* Sélection */}
       <TableCell className="w-12">
         <input
@@ -165,27 +180,58 @@ export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
             {/* Drapeaux de revue IA + statut d'enrichissement */}
             {(() => {
               const flags = getReviewFlags(event);
-              if (!flags.length && event.parsing_method === undefined) return null;
+              const enriched = isAIEnriched(event);
+              const energy = event.energy ? ENERGY_META[event.energy] : null;
+              const lineup = (event.lineup ?? []).filter(Boolean);
+              const hasAIContent = enriched || energy || event.music_style || lineup.length;
+              if (!flags.length && event.parsing_method === undefined && !hasAIContent) return null;
               return (
-                <div className="flex flex-wrap items-center gap-1 mt-2">
-                  {event.parsing_method === 'claude-vision-v1' ? (
-                    <Badge variant="outline" className="text-[10px] border-green-300 text-green-700 bg-green-50">
-                      <Sparkles className="w-2.5 h-2.5 mr-0.5" />
-                      Enrichi IA
-                      {typeof event.parsing_confidence === 'number'
-                        ? ` ${Math.round(event.parsing_confidence * 100)}%`
-                        : ''}
-                    </Badge>
-                  ) : event.parsing_method === null ? (
-                    <Badge variant="outline" className="text-[10px] text-muted-foreground" title="Pas encore traité par l'extraction IA">
-                      Brut
-                    </Badge>
+                <div className="mt-2 space-y-1">
+                  {/* Ligne 1 : statut d'enrichissement + drapeaux de revue */}
+                  <div className="flex flex-wrap items-center gap-1">
+                    {enriched ? (
+                      <Badge variant="outline" className="text-[10px] border-green-300 text-green-700 bg-green-50">
+                        <Sparkles className="w-2.5 h-2.5 mr-0.5" />
+                        Enrichi IA{confidence !== null ? ` ${confidence}%` : ''}
+                      </Badge>
+                    ) : event.parsing_method === null ? (
+                      <Badge variant="outline" className="text-[10px] text-muted-foreground" title="Pas encore traité par l'extraction IA">
+                        Brut
+                      </Badge>
+                    ) : null}
+                    {flags.map((f) => (
+                      <Badge key={f.code} variant="outline" className={`text-[10px] ${f.cls}`}>
+                        {f.label}
+                      </Badge>
+                    ))}
+                  </div>
+                  {/* Ligne 2 : ce que l'IA a compris (évite d'ouvrir l'event pour décider) */}
+                  {hasAIContent ? (
+                    <div className="flex flex-wrap items-center gap-1">
+                      {energy && (
+                        <Badge variant="outline" className={`text-[10px] ${energy.cls}`}>
+                          {energy.label}
+                        </Badge>
+                      )}
+                      {event.music_style && (
+                        <Badge variant="outline" className="text-[10px] border-border text-muted-foreground">
+                          <Music className="w-2.5 h-2.5 mr-0.5" />
+                          {event.music_style}
+                        </Badge>
+                      )}
+                      {lineup.length > 0 && (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] border-border text-muted-foreground"
+                          title={lineup.join(', ')}
+                        >
+                          <Mic2 className="w-2.5 h-2.5 mr-0.5" />
+                          {lineup.slice(0, 2).join(', ')}
+                          {lineup.length > 2 ? ` +${lineup.length - 2}` : ''}
+                        </Badge>
+                      )}
+                    </div>
                   ) : null}
-                  {flags.map((f) => (
-                    <Badge key={f.code} variant="outline" className={`text-[10px] ${f.cls}`}>
-                      {f.label}
-                    </Badge>
-                  ))}
                 </div>
               );
             })()}
@@ -206,19 +252,40 @@ export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
         )}
       </TableCell>
 
-      {/* Score & Statut */}
+      {/* Confiance IA (primaire) + complétude (secondaire) + statut */}
       <TableCell className="text-center">
         <div className="space-y-2">
-          <div className={`text-lg font-bold ${getScoreColor(score)}`}>
-            {score}/10
-          </div>
+          {confidence !== null ? (
+            <div>
+              <div
+                className={`text-lg font-bold ${
+                  confidence >= 85 ? 'text-green-600' : confidence >= 65 ? 'text-yellow-600' : 'text-red-600'
+                }`}
+                title="Confiance de l'extraction IA"
+              >
+                {confidence}%
+              </div>
+              <div className="text-[10px] text-muted-foreground" title="Score de complétude des champs">
+                complétude {score}/10
+              </div>
+            </div>
+          ) : (
+            <div className={`text-lg font-bold ${getScoreColor(score)}`} title="Score de complétude (événement non enrichi par l'IA)">
+              {score}/10
+            </div>
+          )}
           {getStatusBadge(event.status)}
+          {event.status === 'rejected' && event.rejection_reason && (
+            <div className="text-[10px] text-red-600 leading-tight" title="Motif du rejet">
+              {event.rejection_reason}
+            </div>
+          )}
         </div>
       </TableCell>
 
       {/* Actions rapides - Boutons sur 2 lignes */}
       <TableCell className="w-auto min-w-[200px]">
-        <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex flex-col gap-1">
           {/* Ligne 1 : Modifier + Historique */}
           <div className="flex items-center gap-1">
             <Button
@@ -226,7 +293,7 @@ export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
               variant="ghost"
               onClick={() => onEdit(event)}
               className="h-7 px-2 text-xs hover:bg-muted"
-              title="Modifier l'événement"
+              title="Modifier l'événement (raccourci : M)"
             >
               <Edit className="w-3.5 h-3.5 sm:mr-1" />
               <span className="hidden sm:inline">Modifier</span>
@@ -242,7 +309,41 @@ export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
               <span className="hidden sm:inline">Historique</span>
             </Button>
           </div>
-          
+
+          {/* Édition rapide : énergie + catégorie en un clic (cycle), sans ouvrir la modale */}
+          {(onQuickSetEnergy || onQuickSetCategory) && (
+            <div className="flex items-center gap-1">
+              {onQuickSetEnergy && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onQuickSetEnergy(event.id, nextEnergy(event.energy))}
+                  className={`h-7 px-2 text-xs ${energyMeta ? energyMeta.cls : 'text-muted-foreground'}`}
+                  title="Changer l'énergie : journée → club → scène (raccourci : E)"
+                >
+                  <Zap className="w-3.5 h-3.5 sm:mr-1" />
+                  <span className="hidden sm:inline">{energyMeta ? energyMeta.label : 'Énergie'}</span>
+                </Button>
+              )}
+              {onQuickSetCategory && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onQuickSetCategory(event.id, getNextCategoryId(event.category))}
+                  className="h-7 px-2 text-xs text-muted-foreground"
+                  title="Changer la catégorie (raccourci : C)"
+                >
+                  {category ? (
+                    <span className="sm:mr-1">{category.icon}</span>
+                  ) : (
+                    <Tags className="w-3.5 h-3.5 sm:mr-1" />
+                  )}
+                  <span className="hidden sm:inline">{category ? category.name : 'Catégorie'}</span>
+                </Button>
+              )}
+            </div>
+          )}
+
           {/* Ligne 2 : Actions contextuelles selon statut */}
           <div className="flex items-center gap-1">
             {event.status === 'pending' && (
@@ -250,9 +351,9 @@ export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => onStatusChange([event.id], 'pending', 'active')}
+                  onClick={() => (onQuickApprove ? onQuickApprove(event.id) : onStatusChange([event.id], 'pending', 'active'))}
                   className="h-7 px-2 text-xs text-green-600 hover:text-green-700 hover:bg-green-50"
-                  title="Valider l'événement"
+                  title="Valider l'événement (raccourci : A)"
                 >
                   <Check className="w-3.5 h-3.5 sm:mr-1" />
                   <span className="hidden sm:inline">Accepter</span>
@@ -262,7 +363,7 @@ export const AdminEventTableRow: React.FC<AdminEventTableRowProps> = ({
                   variant="ghost"
                   onClick={() => onStatusChange([event.id], 'pending', 'rejected')}
                   className="h-7 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-                  title="Rejeter l'événement"
+                  title="Rejeter l'événement (raccourci : R)"
                 >
                   <X className="w-3.5 h-3.5 sm:mr-1" />
                   <span className="hidden sm:inline">Refuser</span>

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { PendingEvent } from '@/hooks/utils/adminEventMappers';
+import { PendingEvent, ENERGY_META, isAIEnriched, aiConfidencePct } from '@/hooks/utils/adminEventMappers';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Edit, History, BarChart3, X, Calendar, MapPin, Euro, Heart, Share2, Users, ExternalLink, Check } from 'lucide-react';
+import { Edit, History, BarChart3, X, Calendar, MapPin, Euro, Heart, Share2, Users, ExternalLink, Check, Sparkles, Music, Mic2 } from 'lucide-react';
 import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
 import { getCategoryById } from '@/data/wouliCategories';
 import { getFocusClass, ImageFocusPosition, focusPositionLabels } from '@/utils/imageHelpers';
@@ -279,6 +279,63 @@ export const AdminEventPreview: React.FC<AdminEventPreviewProps> = ({
           </Button>
         )}
       </div>
+
+      {/* Analyse IA — ce que le pipeline extract-event a déduit */}
+      {(() => {
+        const enriched = isAIEnriched(event);
+        const energy = event.energy ? ENERGY_META[event.energy] : null;
+        const lineup = (event.lineup ?? []).filter(Boolean);
+        const confidence = aiConfidencePct(event);
+        if (!enriched && !energy && !event.music_style && !lineup.length && !event.subtitle) return null;
+        return (
+          <div className="bg-card border rounded-lg p-4 space-y-3 text-sm">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-green-600" />
+              <span className="font-semibold text-foreground">Analyse IA</span>
+              {confidence !== null && (
+                <Badge variant="outline" className="text-xs border-green-300 text-green-700 bg-green-50">
+                  Confiance {confidence}%
+                </Badge>
+              )}
+            </div>
+            {event.subtitle && (
+              <p className="text-sm text-muted-foreground italic">« {event.subtitle} »</p>
+            )}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {energy && (
+                <Badge variant="outline" className={`text-xs ${energy.cls}`}>{energy.label}</Badge>
+              )}
+              {event.music_style && (
+                <Badge variant="outline" className="text-xs border-border text-muted-foreground">
+                  <Music className="w-3 h-3 mr-1" />{event.music_style}
+                </Badge>
+              )}
+              {event.venue_category && (
+                <Badge variant="outline" className="text-xs border-border text-muted-foreground">
+                  <MapPin className="w-3 h-3 mr-1" />{event.venue_category}
+                </Badge>
+              )}
+            </div>
+            {lineup.length > 0 && (
+              <div className="flex items-start gap-2">
+                <Mic2 className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                <div className="flex flex-wrap gap-1">
+                  {lineup.map((artist) => (
+                    <Badge key={artist} variant="secondary" className="text-xs">{artist}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            {Array.isArray(event.tags) && event.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {event.tags.map((tag) => (
+                  <span key={tag} className="text-xs text-muted-foreground">#{tag}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Admin Info */}
       <div className="bg-card border rounded-lg p-4 space-y-2 text-sm">

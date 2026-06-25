@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, MapPin, Instagram, Archive, Eye, Sparkles, Copy, CheckCircle } from 'lucide-react';
+import { Calendar, MapPin, Instagram, Check, X, Eye, Sparkles, Copy, CheckCircle } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 // Event minimal renvoyé par la RPC find_duplicate_pairs.
@@ -26,7 +26,10 @@ export interface DuplicatePair {
 interface DuplicatesPanelProps {
   pairs: DuplicatePair[];
   loading: boolean;
-  onArchive: (event: DuplicateEvent) => void;
+  // Résout une paire en un geste : valide la carte choisie, rejette l'autre.
+  onResolve: (pair: DuplicatePair, keep: 'a' | 'b') => void;
+  // Rejette les deux cartes de la paire d'un coup.
+  onRejectBoth: (pair: DuplicatePair) => void;
   onPreview: (eventId: string) => void;
 }
 
@@ -41,12 +44,12 @@ const keepRecommendation = (pair: DuplicatePair): 'a' | 'b' => {
 const EventMiniCard = ({
   event,
   recommended,
-  onArchive,
+  onKeep,
   onPreview,
 }: {
   event: DuplicateEvent;
   recommended: boolean;
-  onArchive: (event: DuplicateEvent) => void;
+  onKeep: () => void;
   onPreview: (eventId: string) => void;
 }) => (
   <div
@@ -90,18 +93,18 @@ const EventMiniCard = ({
         </div>
       </div>
     </div>
+    {/* Un seul bouton : valider CELUI-CI publie cette carte et rejette automatiquement l'autre. */}
     <Button
       size="sm"
-      variant="outline"
-      onClick={() => onArchive(event)}
-      className="w-full mt-2 h-7 text-xs text-muted-foreground hover:text-red-600 hover:border-red-300"
+      onClick={onKeep}
+      className="w-full h-8 mt-2 text-xs bg-green-600 hover:bg-green-700 text-white"
     >
-      <Archive className="w-3.5 h-3.5 mr-1" /> Archiver ce doublon
+      <Check className="w-3.5 h-3.5 mr-1" /> Garder celui-ci
     </Button>
   </div>
 );
 
-export const DuplicatesPanel: React.FC<DuplicatesPanelProps> = ({ pairs, loading, onArchive, onPreview }) => {
+export const DuplicatesPanel: React.FC<DuplicatesPanelProps> = ({ pairs, loading, onResolve, onRejectBoth, onPreview }) => {
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -130,7 +133,8 @@ export const DuplicatesPanel: React.FC<DuplicatesPanelProps> = ({ pairs, loading
             {pairs.length} doublon{pairs.length > 1 ? 's' : ''} potentiel{pairs.length > 1 ? 's' : ''}
           </p>
           <p className="text-sm text-blue-700">
-            Même date et même lieu, titres similaires. Vérifie puis archive celui à jeter (réversible).
+            Même date et même lieu, titres similaires. Clique « Garder celui-ci » sur la bonne carte :
+            elle part dans « À valider », l'autre est rejetée automatiquement (réversible).
           </p>
         </div>
       </div>
@@ -151,9 +155,20 @@ export const DuplicatesPanel: React.FC<DuplicatesPanelProps> = ({ pairs, loading
               </Badge>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 items-stretch">
-              <EventMiniCard event={pair.a} recommended={keep === 'a'} onArchive={onArchive} onPreview={onPreview} />
+              <EventMiniCard event={pair.a} recommended={keep === 'a'} onKeep={() => onResolve(pair, 'a')} onPreview={onPreview} />
               <div className="hidden sm:flex items-center text-muted-foreground font-bold text-xs">VS</div>
-              <EventMiniCard event={pair.b} recommended={keep === 'b'} onArchive={onArchive} onPreview={onPreview} />
+              <EventMiniCard event={pair.b} recommended={keep === 'b'} onKeep={() => onResolve(pair, 'b')} onPreview={onPreview} />
+            </div>
+            {/* Aucune des deux ne vaut le coup : tout rejeter d'un clic. */}
+            <div className="flex justify-center mt-3">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => onRejectBoth(pair)}
+                className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                <X className="w-3.5 h-3.5 mr-1" /> Rejeter les deux
+              </Button>
             </div>
           </div>
         );
