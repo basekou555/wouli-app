@@ -318,10 +318,11 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
           </DialogTitle>
         </DialogHeader>
 
-        {/* Deux panneaux : formulaire (sections) à gauche, aperçu live à droite */}
+        {/* Deux panneaux : aperçu live + formulaire. Sur mobile l'aperçu passe en
+            premier (on voit la carte, puis on édite) ; sur desktop il reste à droite. */}
         <div className="grid lg:grid-cols-[1fr_300px] gap-6">
           {/* ---- Colonne formulaire ---- */}
-          <div className="grid grid-cols-2 gap-x-4 gap-y-4">
+          <div className="order-2 lg:order-1 grid grid-cols-2 gap-x-4 gap-y-4">
             {/* Section Essentiel */}
             <SectionHeader icon={<ListChecks className="w-4 h-4 text-purple-500" />}>Essentiel</SectionHeader>
 
@@ -516,7 +517,7 @@ const EventEditModal = ({ event, onClose, onSuccess }: EventEditModalProps) => {
           </div>
 
           {/* ---- Colonne aperçu live ---- */}
-          <div className="lg:sticky lg:top-0 self-start space-y-2">
+          <div className="order-1 lg:order-2 lg:sticky lg:top-0 self-start space-y-2">
             <p className="text-xs font-medium text-muted-foreground">Aperçu — tel que les utilisateurs le verront</p>
             <LivePreviewCard form={formData} />
           </div>

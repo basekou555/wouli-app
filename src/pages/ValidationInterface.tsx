@@ -765,7 +765,9 @@ const ValidationInterface = () => {
           keyActionsRef.current.handleReject([ev.id]);
         } else if (e.key === 'Enter') {
           e.preventDefault();
-          keyActionsRef.current.setShowDetails(ev);
+          // Entrée ouvre la modale d'édition (aperçu de la vraie carte + formulaire),
+          // pas l'ancien aperçu en lecture seule.
+          keyActionsRef.current.setEditingEvent(ev);
         } else if (e.key === 'm' || e.key === 'M') {
           e.preventDefault();
           keyActionsRef.current.setEditingEvent(ev);
@@ -1749,7 +1751,7 @@ const ValidationInterface = () => {
                 <kbd className="px-1.5 py-0.5 rounded border bg-muted">C</kbd>
                 catégorie ·
                 <kbd className="px-1.5 py-0.5 rounded border bg-muted">↵</kbd>
-                aperçu
+                ouvrir
               </span>
             )}
           </div>
@@ -1805,7 +1807,7 @@ const ValidationInterface = () => {
                       isFocused={index === focusedIndex}
                       isProcessing={processingId === event.id}
                       onSelect={handleSelect}
-                      onPreview={setShowDetails}
+                      onPreview={setEditingEvent}
                       onEdit={setEditingEvent}
                       onProcessManualReview={setProcessManualReview}
                       onHistory={(eventId, eventTitle) => {
