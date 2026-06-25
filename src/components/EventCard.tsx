@@ -8,6 +8,13 @@ import { normalizeAmbiance } from '@/utils/ambiance';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useSmartTracking, type InteractionAction } from '@/hooks/useSmartTracking';
+import {
+  card as cardTokens,
+  journeeAccentFor,
+  ink as inkAlpha,
+  white as whiteAlpha,
+  black as blackAlpha,
+} from '@/design/cardTokens';
 
 interface EventCardProps {
   event: UnifiedEvent;
@@ -309,8 +316,8 @@ const EventCard: React.FC<EventCardProps> = ({
 
   // --- Design système carte (Phase 1) ---
   const energy = deriveEnergy(event);
-  // Fond de la zone infos. Défaut #1C1A1A (CLUB/SCENE), crème pour JOURNEE.
-  const defaultBg = energy === 'JOURNEE' ? '#F4EDE0' : '#1C1A1A';
+  // Fond de la zone infos. Défaut sombre (CLUB/SCENE), crème pour JOURNEE.
+  const defaultBg = energy === 'JOURNEE' ? cardTokens.journee.bg : cardTokens.dark.fallback;
   // Priorité absolue au champ serveur color_card s'il est fourni.
   const [adaptiveBg, setAdaptiveBg] = useState<string>(event.color_card || defaultBg);
 
@@ -347,19 +354,14 @@ const EventCard: React.FC<EventCardProps> = ({
   const accentBright = adjustColor(adaptiveBg, 30, 0); // +30% lum (texte de tag)
 
   // JOURNÉE : identité de jour portée par le TYPE d'événement, pas par la photo.
-  // Fond papier crème fixe + accent sémantique selon le sous-type (≠ couleur dominante).
-  const JOURNEE_ACCENTS: Record<string, string> = {
-    'a-manger': '#C9683B', // terracotta
-    'a-boire': '#D99A2B',  // ambre
-    'activites': '#7E8C5A', // sauge
-  };
-  const journeeAccent = JOURNEE_ACCENTS[(event.event_type || event.category) as string] ?? '#B5853F';
+  // Fond papier crème fixe + accent sémantique selon le sous-type (§2, tokens).
+  const journeeAccent = journeeAccentFor(event.event_type || event.category);
   const journeeAccentInk = adjustColor(journeeAccent, -8, 0); // assombri pour texte lisible sur crème
-  const journeeBg = '#F4EDE0';
+  const journeeBg = cardTokens.journee.bg;
 
   // Encre selon énergie : blanc sur CLUB/SCENE, encre sombre sur JOURNEE
-  const ink = isJournee ? '#1A1208' : '#FFFFFF';
-  const inkMuted = isJournee ? 'rgba(26,18,8,0.55)' : 'rgba(255,255,255,0.62)';
+  const ink = isJournee ? cardTokens.journee.ink : cardTokens.dark.ink;
+  const inkMuted = isJournee ? inkAlpha(0.55) : whiteAlpha(0.62);
 
   // Fond SCENE : garanti assez sombre pour du texte blanc lisible, quelle que soit
   // la couleur extraite de l'image (sinon titre blanc sur fond clair = illisible).
@@ -403,11 +405,11 @@ const EventCard: React.FC<EventCardProps> = ({
 
   // Style du badge UNIQUE selon énergie
   const uniqueBadgeStyle: React.CSSProperties = isJournee
-    ? { color: '#1A1208', background: 'rgba(26,18,8,0.08)', border: '0.5px solid rgba(26,18,8,0.3)' }
+    ? { color: cardTokens.journee.ink, background: inkAlpha(0.08), border: `0.5px solid ${inkAlpha(0.3)}` }
     : { color: accentBright, background: hexToRgba(accentFull, 0.15), border: `1px solid ${hexToRgba(accentFull, 0.6)}` };
 
   // Barre d'action : fond + libellé CTA selon énergie/prix
-  const actionBarBg = isJournee ? 'rgba(26,18,8,0.06)' : 'rgba(0,0,0,0.20)';
+  const actionBarBg = isJournee ? inkAlpha(0.06) : blackAlpha(0.20);
   const priceColor = price.isFree
     ? isJournee
       ? journeeAccentInk
@@ -557,7 +559,7 @@ const EventCard: React.FC<EventCardProps> = ({
               bottom: '8px',
               left: '8px',
               zIndex: 5,
-              background: 'rgba(0,0,0,0.40)',
+              background: blackAlpha(0.40),
               backdropFilter: 'blur(4px)',
               borderRadius: '2px',
               padding: '3px 7px',
@@ -567,10 +569,10 @@ const EventCard: React.FC<EventCardProps> = ({
               fontFamily: POPPINS,
             }}
           >
-            <span style={{ fontSize: '13px', fontWeight: 800, color: 'rgba(255,255,255,0.85)', lineHeight: 1 }}>
+            <span style={{ fontSize: '13px', fontWeight: 800, color: whiteAlpha(0.85), lineHeight: 1 }}>
               #{editionNumber}
             </span>
-            <span style={{ fontSize: '8px', fontWeight: 500, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+            <span style={{ fontSize: '8px', fontWeight: 500, color: whiteAlpha(0.5), textTransform: 'uppercase', letterSpacing: '0.07em' }}>
               Éd.
             </span>
           </div>
@@ -605,7 +607,7 @@ const EventCard: React.FC<EventCardProps> = ({
                 <span style={{ fontSize: '12px', fontWeight: 600, color: inkMuted }}>{heure}</span>
               )}
             </div>
-            <div style={{ width: '1px', background: 'rgba(255,255,255,0.14)' }} />
+            <div style={{ width: '1px', background: whiteAlpha(0.14) }} />
             <div className="flex flex-col items-end justify-center gap-1.5" style={{ minWidth: '32%' }}>
               {hotDate && (
                 <span
@@ -641,12 +643,12 @@ const EventCard: React.FC<EventCardProps> = ({
                 { label: 'Heure', value: heure },
               ].filter((cell) => cell.value).map((cell, i) => (
                 <React.Fragment key={cell.label}>
-                  {i > 0 && <div style={{ width: '1px', background: 'rgba(255,255,255,0.16)', alignSelf: 'stretch' }} />}
+                  {i > 0 && <div style={{ width: '1px', background: whiteAlpha(0.16), alignSelf: 'stretch' }} />}
                   <div className="min-w-0">
-                    <div style={{ fontSize: '9px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'rgba(255,255,255,0.5)', marginBottom: '2px' }}>
+                    <div style={{ fontSize: '9px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color: whiteAlpha(0.5), marginBottom: '2px' }}>
                       {cell.label}
                     </div>
-                    <div className="truncate" style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.92)', textTransform: 'uppercase' }}>
+                    <div className="truncate" style={{ fontSize: '11px', fontWeight: 700, color: whiteAlpha(0.92), textTransform: 'uppercase' }}>
                       {cell.value}
                     </div>
                   </div>
@@ -672,7 +674,7 @@ const EventCard: React.FC<EventCardProps> = ({
                 {title}
               </h1>
             </div>
-            <div style={{ width: '1px', background: 'rgba(26,18,8,0.16)' }} />
+            <div style={{ width: '1px', background: inkAlpha(0.16) }} />
             <div className="flex flex-col justify-center gap-2" style={{ minWidth: '36%' }}>
               {[
                 { label: 'Jour', value: hotDate },
@@ -680,10 +682,10 @@ const EventCard: React.FC<EventCardProps> = ({
                 { label: 'Lieu', value: venue },
               ].filter((meta) => meta.value).map((meta) => (
                 <div key={meta.label} className="min-w-0">
-                  <div style={{ fontSize: '9px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(26,18,8,0.5)', marginBottom: '1px' }}>
+                  <div style={{ fontSize: '9px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: inkAlpha(0.5), marginBottom: '1px' }}>
                     {meta.label}
                   </div>
-                  <div className="truncate" style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(26,18,8,0.85)', textTransform: 'uppercase' }}>
+                  <div className="truncate" style={{ fontSize: '11px', fontWeight: 700, color: inkAlpha(0.85), textTransform: 'uppercase' }}>
                     {meta.value}
                   </div>
                 </div>
@@ -712,7 +714,7 @@ const EventCard: React.FC<EventCardProps> = ({
                     <div
                       key={friend.id}
                       className="w-4 h-4 rounded-full flex items-center justify-center"
-                      style={{ fontSize: '7px', fontWeight: 600, color: ink, background: hexToRgba(isJournee ? '#1A1208' : '#FFFFFF', 0.18), border: `1px solid ${isJournee ? journeeBg : adaptiveBg}` }}
+                      style={{ fontSize: '7px', fontWeight: 600, color: ink, background: isJournee ? inkAlpha(0.18) : whiteAlpha(0.18), border: `1px solid ${isJournee ? journeeBg : adaptiveBg}` }}
                     >
                       {friend.name.charAt(0).toUpperCase()}
                     </div>
@@ -751,7 +753,7 @@ const EventCard: React.FC<EventCardProps> = ({
               whileTap={{ scale: 0.9 }}
               onClick={handleLike}
               className="flex items-center justify-center rounded-full"
-              style={{ width: '34px', height: '34px', border: isJournee ? '1px solid rgba(26,18,8,0.22)' : '1px solid rgba(255,255,255,0.22)' }}
+              style={{ width: '34px', height: '34px', border: `1px solid ${isJournee ? inkAlpha(0.22) : whiteAlpha(0.22)}` }}
               aria-label="Enregistrer"
             >
               <Bookmark style={{ width: '15px', height: '15px', color: ink }} />
@@ -760,7 +762,7 @@ const EventCard: React.FC<EventCardProps> = ({
             <motion.button
               whileTap={{ scale: 0.96 }}
               onClick={handleParticipate}
-              style={{ background: isJournee ? '#1A1208' : '#FFFFFF', color: isJournee ? '#F5F0E8' : '#0A0A0A', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.03em', borderRadius: '6px', padding: '9px 16px' }}
+              style={{ background: isJournee ? cardTokens.journee.ink : cardTokens.dark.ink, color: isJournee ? cardTokens.journee.inkInverse : cardTokens.dark.ctaText, fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.03em', borderRadius: '6px', padding: '9px 16px' }}
               aria-label="Participer"
             >
               {ctaLabel}
