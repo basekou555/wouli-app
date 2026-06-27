@@ -5,6 +5,32 @@
 
 ---
 
+## 🔄 RECENTRAGE — Semaine du 23 juin 2026
+
+> ⚠️ **À lire en premier.** Cette entrée prime sur les sections « validé / ne pas régresser » ci-dessous. Plusieurs acquis de design sont désormais **sous revue**.
+
+### Décision stratégique
+- **Focus unique Wouli.** Agence mise de côté, cadre CDI abandonné.
+- **Retour au postulat de base :** la seule question qui compte → *« l'app permet-elle, en 5 min, de savoir où sortir ? »*. Le fond avant la forme.
+- **Growth :** partenariats visibilité avec établissements (gratuit-gratuit), à lancer avec Léa (stratégie de contenu, 1 format récurrent à tester).
+
+### Produit — état réel
+- **Scroll définitif** (plus de swipe vertical).
+- **Scraper :** nettement plus performant + IA d'enrichissement (`extract-event`).
+  - 🔴 **Goulot = validation :** ~5 events retraités toutes les 4-6h → diffusion trop lente, des events passent leur date. Backlog réel ~150 en attente. Cible : absorber ~150 events/semaine.
+  - 🔵 Idée : outil de découverte auto de nouveaux comptes Instagram à scraper.
+- **Déploiement :** 🔴 la dernière version ne sort pas sur le domaine cible (preview OK mais URL non présentable / domaine = ancienne version).
+
+### ⚠️ SOUS REVUE — ne plus traiter comme « figé »
+Le gros chantier design des dernières semaines est **remis en question** : il manque une **marque / un branding**, donc le design est « creux » (bons éléments isolés, mais ça ne résonne pas). Sont concernés :
+- le système d'**énergies** (CLUB / SCÈNE / JOURNÉE)
+- les **états de cartes** et la logique de **couleurs** (`color_card`)
+- le système de **tags**
+
+➡️ **Avant de re-corriger ou défendre ces éléments, vérifier qu'ils survivent au travail de branding à venir.** La vision produit et les fonctionnalités restent jugées bonnes ; c'est la couche identité/sens qui manque.
+
+---
+
 ## 🟢 État actuel (à jour : juin 2026)
 
 ### Pipeline d'extraction — la source de vérité, c'est l'IA
