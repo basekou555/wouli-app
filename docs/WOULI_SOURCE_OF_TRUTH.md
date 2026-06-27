@@ -58,12 +58,15 @@ Wouli aide les 18-28 ans à Lyon à répondre "qu'est-ce qu'on fait ce soir ?" v
 
 ---
 
-### Contexte CDI
+### Contexte CDI (historique — terminé)
 
-**Début CDI :** 22 juin 2025  
-**Impact :** 5-10h/semaine pour projets  
-**Motivation :** Apprendre vente B2B (transférable à Wouli + Agence)  
+> ⚠️ Plus d'actualité depuis le recentrage (25 juin 2026). Conservé pour mémoire — cf. **STRATÉGIE ACTIVE : FOCUS WOULI**.
+
+**Période CDI :** 22 juin 2025 → mi-2026 (terminé)
+**Impact (à l'époque) :** 5-10h/semaine disponibles pour les projets
+**Motivation :** Apprendre la vente B2B (compétence conservée pour Wouli)
 **Corrélation Git :** Pause février 2026 (0 commits) = réflexion décision
+**Suite :** Concentration plein temps sur l'entrepreneuriat (Wouli)
 
 ---
 
@@ -71,32 +74,27 @@ Wouli aide les 18-28 ans à Lyon à répondre "qu'est-ce qu'on fait ce soir ?" v
 
 ### Architecture Technique
 
-#### Système Swipe - Fragilité Connue
+#### Système Swipe (legacy `react-tinder-card`) — ⚠️ retiré du code
 
-**⚠️ CRITIQUE :** Le swipe repose sur une cascade de 5 niveaux de contraintes de hauteur. Modifier un maillon casse toute la chaîne.
+> **Obsolète depuis le passage au scroll.** La lib `react-tinder-card` et la cascade de hauteurs décrites ci-dessous **ne sont plus dans le code** (absente de `package.json`, zéro `TinderCard`). Le feed est en **scroll** ; la carte de découverte utilise désormais `framer-motion` (`src/components/user/swipe/SwipeCard.tsx`). Bloc conservé comme **référence historique** de debug layout (hauteur/overflow), pas comme état courant.
 
-**Chaîne de dépendances :**
+**Ancienne chaîne de dépendances (`react-tinder-card`) :**
 ```
 h-screen → flex-1 → max-h-full → absolute inset-0 → TinderCard
 ```
 
-**Règles strictes UserApp.tsx :**
-- Ligne 73 : `h-screen` (référence hauteur globale)
-- Ligne 97 : `flex-1` (container cartes)
-- Ligne 99 : `relative` + `max-h-full` (positionnement)
-- Ligne 102 : `absolute inset-0` (TinderCard)
+**Anciennes règles UserApp.tsx (caduques) :**
+- `h-screen` (référence hauteur globale)
+- `flex-1` (container cartes)
+- `relative` + `max-h-full` (positionnement)
+- `absolute inset-0` (TinderCard)
 
-**Piège BottomNavigation :**
+**Piège BottomNavigation (toujours pertinent en scroll) :**
 - `position: fixed` = hors flux document
 - Prend 60px EN PLUS du 100vh
 - Peut causer overlap sur mobile
 
-**⚠️ Avant toute modification layout :** Consulter `docs/archives/Architecture_Swipe.md` (checklist complète + guide debug)
-
-**Top 3 Symptômes Régression :**
-1. **Cartes invisibles** → Vérifier `relative` ligne 99
-2. **Swipe cassé** → Vérifier hauteur explicite container
-3. **Scroll horizontal** → Vérifier `overflow-hidden` lignes 73, 97
+**Réf. archivée :** `docs/archives/Architecture_Swipe.md` (checklist complète + guide debug)
 
 ---
 
@@ -105,7 +103,7 @@ h-screen → flex-1 → max-h-full → absolute inset-0 → TinderCard
 **Déployé :** Web app (Vercel)
 
 **Features Live :**
-- ✅ Discovery événements (swipe Tinder natif depuis 13 mai)
+- ✅ Discovery événements (feed scroll — positionnement définitif)
 - ✅ Filtres & recherche
 - ✅ Profil + système amis basique
 - ✅ Recommandations V2.0 (algo sophistiqué)
@@ -549,6 +547,7 @@ La dernière version ne se déploie pas sur le domaine cible.
 **🟢 RÉSOLU : Focus unique Wouli**
 - ✅ Recentrage acté (25 juin 2026) — fin du dual track et du cadrage CDI
 - ✅ Mission d'abord : "savoir où sortir en 5 min" avant design/growth
+- ✅ Automatisation Wouli prioritaire (scraper + validation)
 - ✅ Growth = partenariats visibilité (cf. section dédiée)
 
 ---
