@@ -1,13 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { UnifiedEvent } from '@/types/unified';
-import { X, Share2, Check, Bookmark, Info } from 'lucide-react';
+import { X, Share2, Bookmark, ChevronRight } from 'lucide-react';
 import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
-import { getSocialProofText, getPriceInfo } from '@/utils/eventCardHelpers';
+import { getSocialProofText, getPriceInfo, formatHotDate } from '@/utils/eventCardHelpers';
 import { getFocusClass } from '@/utils/imageHelpers';
 import { normalizeAmbiance } from '@/utils/ambiance';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useSmartTracking, type InteractionAction } from '@/hooks/useSmartTracking';
+import {
+  card as cardTokens,
+  journeeAccentFor,
+  ink as inkAlpha,
+  white as whiteAlpha,
+  black as blackAlpha,
+} from '@/design/cardTokens';
 
 interface EventCardProps {
   event: UnifiedEvent;
@@ -257,15 +264,6 @@ function formatHeure(time?: string): string {
   return m && m !== '00' ? `${hh}h${m}` : `${hh}h`;
 }
 
-// Date courte "sam 17"
-function formatDateShort(date: string): string {
-  const dt = new Date(date);
-  if (Number.isNaN(dt.getTime())) return '';
-  return dt
-    .toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' })
-    .replace(/\./g, '');
-}
-
 // Taille de titre (px) selon énergie, longueur, et récurrence (une taille en dessous)
 function titleFontSize(
   energy: 'SCENE' | 'CLUB' | 'JOURNEE',
@@ -302,65 +300,6 @@ const getStaticMapUrl = (lat: number, lon: number) => {
   return `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lon}&zoom=15&size=600x300&markers=${lat},${lon},red-pushpin`;
 };
 
-// Composant ParticipateButton avec animation spéciale
-const ParticipateButton: React.FC<{ onClick: () => void }> = ({ onClick }) => {
-  const [isAnimating, setIsAnimating] = useState(false);
-
-  const handleClick = () => {
-    setIsAnimating(true);
-    onClick();
-    
-    setTimeout(() => {
-      setIsAnimating(false);
-    }, 1000);
-  };
-
-  return (
-      <motion.button
-        whileTap={{ scale: 0.9 }}
-        onClick={handleClick}
-        className="flex-[2] h-11 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold transition-all shadow-lg flex items-center justify-center gap-2 relative overflow-hidden"
-        aria-label="Participer"
-      >
-      {/* Animation success */}
-      {isAnimating && (
-        <>
-          <motion.div
-            initial={{ scale: 0, opacity: 1 }}
-            animate={{ scale: 3, opacity: 0 }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
-            className="absolute inset-0 bg-white rounded-xl"
-          />
-          {[...Array(4)].map((_, i) => (
-            <motion.div
-              key={i}
-              initial={{ scale: 0, x: 0, y: 0, opacity: 1 }}
-              animate={{ 
-                scale: [0, 1, 0],
-                x: Math.cos(i * Math.PI / 2) * 40,
-                y: Math.sin(i * Math.PI / 2) * 40,
-                opacity: [1, 1, 0]
-              }}
-              transition={{ duration: 0.6, ease: 'easeOut' }}
-              className="absolute w-2 h-2 bg-yellow-400 rounded-full"
-              style={{ top: '50%', left: '50%' }}
-            />
-          ))}
-        </>
-      )}
-      
-      <motion.div
-        animate={isAnimating ? { scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] } : {}}
-        transition={{ duration: 0.4 }}
-        className="flex items-center gap-2"
-      >
-        <Check className="w-5 h-5" />
-        <span>Participer</span>
-      </motion.div>
-    </motion.button>
-  );
-};
-
 const EventCard: React.FC<EventCardProps> = ({
   event,
   onDislike,
@@ -377,8 +316,8 @@ const EventCard: React.FC<EventCardProps> = ({
 
   // --- Design système carte (Phase 1) ---
   const energy = deriveEnergy(event);
-  // Fond de la zone infos. Défaut #1C1A1A (CLUB/SCENE), crème pour JOURNEE.
-  const defaultBg = energy === 'JOURNEE' ? '#F4EDE0' : '#1C1A1A';
+  // Fond de la zone infos. Défaut sombre (CLUB/SCENE), crème pour JOURNEE.
+  const defaultBg = energy === 'JOURNEE' ? cardTokens.journee.bg : cardTokens.dark.fallback;
   // Priorité absolue au champ serveur color_card s'il est fourni.
   const [adaptiveBg, setAdaptiveBg] = useState<string>(event.color_card || defaultBg);
 
@@ -398,9 +337,13 @@ const EventCard: React.FC<EventCardProps> = ({
   const recurring = !!event.is_recurring;
   const price = getPriceInfo(event.price_text);
   const heure = formatHeure(event.time);
-  const dateShort = formatDateShort(event.date);
+  // §7.1 — date chaude ("Ce soir" / "Demain" / "Vendredi" / "Sam 17") au lieu
+  // d'une date froide. L'heure reste affichée séparément dans chaque énergie.
+  const hotDate = formatHotDate(event.date, event.time);
   const titleSize = titleFontSize(energy, title, recurring);
   const ambiance = normalizeAmbiance(event.music_style, event.tags, categoryLabel(event));
+
+  const hasFriends = !!event.friendsParticipating && event.friendsParticipating.length > 0;
 
   // États superposables
   const isUnique = !!event.is_unique;
@@ -411,19 +354,14 @@ const EventCard: React.FC<EventCardProps> = ({
   const accentBright = adjustColor(adaptiveBg, 30, 0); // +30% lum (texte de tag)
 
   // JOURNÉE : identité de jour portée par le TYPE d'événement, pas par la photo.
-  // Fond papier crème fixe + accent sémantique selon le sous-type (≠ couleur dominante).
-  const JOURNEE_ACCENTS: Record<string, string> = {
-    'a-manger': '#C9683B', // terracotta
-    'a-boire': '#D99A2B',  // ambre
-    'activites': '#7E8C5A', // sauge
-  };
-  const journeeAccent = JOURNEE_ACCENTS[(event.event_type || event.category) as string] ?? '#B5853F';
+  // Fond papier crème fixe + accent sémantique selon le sous-type (§2, tokens).
+  const journeeAccent = journeeAccentFor(event.event_type || event.category);
   const journeeAccentInk = adjustColor(journeeAccent, -8, 0); // assombri pour texte lisible sur crème
-  const journeeBg = '#F4EDE0';
+  const journeeBg = cardTokens.journee.bg;
 
   // Encre selon énergie : blanc sur CLUB/SCENE, encre sombre sur JOURNEE
-  const ink = isJournee ? '#1A1208' : '#FFFFFF';
-  const inkMuted = isJournee ? 'rgba(26,18,8,0.55)' : 'rgba(255,255,255,0.62)';
+  const ink = isJournee ? cardTokens.journee.ink : cardTokens.dark.ink;
+  const inkMuted = isJournee ? inkAlpha(0.55) : whiteAlpha(0.62);
 
   // Fond SCENE : garanti assez sombre pour du texte blanc lisible, quelle que soit
   // la couleur extraite de l'image (sinon titre blanc sur fond clair = illisible).
@@ -467,11 +405,11 @@ const EventCard: React.FC<EventCardProps> = ({
 
   // Style du badge UNIQUE selon énergie
   const uniqueBadgeStyle: React.CSSProperties = isJournee
-    ? { color: '#1A1208', background: 'rgba(26,18,8,0.08)', border: '0.5px solid rgba(26,18,8,0.3)' }
+    ? { color: cardTokens.journee.ink, background: inkAlpha(0.08), border: `0.5px solid ${inkAlpha(0.3)}` }
     : { color: accentBright, background: hexToRgba(accentFull, 0.15), border: `1px solid ${hexToRgba(accentFull, 0.6)}` };
 
   // Barre d'action : fond + libellé CTA selon énergie/prix
-  const actionBarBg = isJournee ? 'rgba(26,18,8,0.06)' : 'rgba(0,0,0,0.20)';
+  const actionBarBg = isJournee ? inkAlpha(0.06) : blackAlpha(0.20);
   const priceColor = price.isFree
     ? isJournee
       ? journeeAccentInk
@@ -565,15 +503,20 @@ const EventCard: React.FC<EventCardProps> = ({
 
         {/* Détails + badge UNIQUE (haut gauche) */}
         <div className="absolute left-3 z-10 flex items-center gap-2" style={{ top: 'calc(var(--app-header-h, 0px) + 12px)' }}>
+          {/* §7.4 — accès aux détails explicite (vrai bouton libellé, plus le (i) discret) */}
           <button
             onClick={(e) => {
               e.stopPropagation();
               setIsDetailsOpen(true);
             }}
-            className="w-8 h-8 rounded-full bg-black/35 backdrop-blur flex items-center justify-center"
-            aria-label="Voir les détails"
+            className="h-8 pl-3 pr-2 rounded-full bg-black/40 backdrop-blur flex items-center gap-0.5 active:scale-95 transition-transform"
+            style={{ fontFamily: POPPINS }}
+            aria-label="Voir les détails de l'événement"
           >
-            <Info className="w-4 h-4 text-white" />
+            <span style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.02em', color: '#FFFFFF' }}>
+              Détails
+            </span>
+            <ChevronRight className="w-4 h-4 text-white/80" />
           </button>
           {isUnique && (
             <span
@@ -616,7 +559,7 @@ const EventCard: React.FC<EventCardProps> = ({
               bottom: '8px',
               left: '8px',
               zIndex: 5,
-              background: 'rgba(0,0,0,0.40)',
+              background: blackAlpha(0.40),
               backdropFilter: 'blur(4px)',
               borderRadius: '2px',
               padding: '3px 7px',
@@ -626,10 +569,10 @@ const EventCard: React.FC<EventCardProps> = ({
               fontFamily: POPPINS,
             }}
           >
-            <span style={{ fontSize: '13px', fontWeight: 800, color: 'rgba(255,255,255,0.85)', lineHeight: 1 }}>
+            <span style={{ fontSize: '13px', fontWeight: 800, color: whiteAlpha(0.85), lineHeight: 1 }}>
               #{editionNumber}
             </span>
-            <span style={{ fontSize: '8px', fontWeight: 500, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+            <span style={{ fontSize: '8px', fontWeight: 500, color: whiteAlpha(0.5), textTransform: 'uppercase', letterSpacing: '0.07em' }}>
               Éd.
             </span>
           </div>
@@ -664,14 +607,14 @@ const EventCard: React.FC<EventCardProps> = ({
                 <span style={{ fontSize: '12px', fontWeight: 600, color: inkMuted }}>{heure}</span>
               )}
             </div>
-            <div style={{ width: '1px', background: 'rgba(255,255,255,0.14)' }} />
+            <div style={{ width: '1px', background: whiteAlpha(0.14) }} />
             <div className="flex flex-col items-end justify-center gap-1.5" style={{ minWidth: '32%' }}>
-              {dateShort && (
+              {hotDate && (
                 <span
                   style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: ink }}
                   className="truncate max-w-full"
                 >
-                  {dateShort}
+                  {hotDate}
                 </span>
               )}
               <span
@@ -695,17 +638,17 @@ const EventCard: React.FC<EventCardProps> = ({
             </h1>
             <div className="flex items-stretch gap-3">
               {[
-                { label: 'Date', value: dateShort },
+                { label: 'Date', value: hotDate },
                 { label: 'Lieu', value: venue },
                 { label: 'Heure', value: heure },
               ].filter((cell) => cell.value).map((cell, i) => (
                 <React.Fragment key={cell.label}>
-                  {i > 0 && <div style={{ width: '1px', background: 'rgba(255,255,255,0.16)', alignSelf: 'stretch' }} />}
+                  {i > 0 && <div style={{ width: '1px', background: whiteAlpha(0.16), alignSelf: 'stretch' }} />}
                   <div className="min-w-0">
-                    <div style={{ fontSize: '9px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'rgba(255,255,255,0.5)', marginBottom: '2px' }}>
+                    <div style={{ fontSize: '9px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color: whiteAlpha(0.5), marginBottom: '2px' }}>
                       {cell.label}
                     </div>
-                    <div className="truncate" style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.92)', textTransform: 'uppercase' }}>
+                    <div className="truncate" style={{ fontSize: '11px', fontWeight: 700, color: whiteAlpha(0.92), textTransform: 'uppercase' }}>
                       {cell.value}
                     </div>
                   </div>
@@ -731,18 +674,18 @@ const EventCard: React.FC<EventCardProps> = ({
                 {title}
               </h1>
             </div>
-            <div style={{ width: '1px', background: 'rgba(26,18,8,0.16)' }} />
+            <div style={{ width: '1px', background: inkAlpha(0.16) }} />
             <div className="flex flex-col justify-center gap-2" style={{ minWidth: '36%' }}>
               {[
-                { label: 'Jour', value: dateShort },
+                { label: 'Jour', value: hotDate },
                 { label: 'Heure', value: heure },
                 { label: 'Lieu', value: venue },
               ].filter((meta) => meta.value).map((meta) => (
                 <div key={meta.label} className="min-w-0">
-                  <div style={{ fontSize: '9px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'rgba(26,18,8,0.5)', marginBottom: '1px' }}>
+                  <div style={{ fontSize: '9px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: inkAlpha(0.5), marginBottom: '1px' }}>
                     {meta.label}
                   </div>
-                  <div className="truncate" style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(26,18,8,0.85)', textTransform: 'uppercase' }}>
+                  <div className="truncate" style={{ fontSize: '11px', fontWeight: 700, color: inkAlpha(0.85), textTransform: 'uppercase' }}>
                     {meta.value}
                   </div>
                 </div>
@@ -752,29 +695,39 @@ const EventCard: React.FC<EventCardProps> = ({
         )}
 
         {/* ---------- Couche sociale ---------- */}
-        {(event.friendsParticipating && event.friendsParticipating.length > 0) && (
+        {/* §7.2 — visible si amis OU participants : la preuve sociale ("47 */}
+        {/* personnes y vont") porte la conversion même sans réseau d'amis. */}
+        {(hasFriends || (event.totalParticipants ?? 0) > 0) && (
           <div className="flex items-center gap-2 px-4 pb-1" style={{ flexShrink: 0 }}>
-            <div className="flex -space-x-1">
-              {event.friendsParticipating.slice(0, 3).map((friend) => (
-                friend.avatar ? (
-                  <img
-                    key={friend.id}
-                    src={friend.avatar}
-                    alt={friend.name}
-                    className="w-4 h-4 rounded-full object-cover"
-                    style={{ border: `1px solid ${isJournee ? journeeBg : adaptiveBg}` }}
-                  />
-                ) : (
-                  <div
-                    key={friend.id}
-                    className="w-4 h-4 rounded-full flex items-center justify-center"
-                    style={{ fontSize: '7px', fontWeight: 600, color: ink, background: hexToRgba(isJournee ? '#1A1208' : '#FFFFFF', 0.18), border: `1px solid ${isJournee ? journeeBg : adaptiveBg}` }}
-                  >
-                    {friend.name.charAt(0).toUpperCase()}
-                  </div>
-                )
-              ))}
-            </div>
+            {hasFriends ? (
+              <div className="flex -space-x-1">
+                {event.friendsParticipating!.slice(0, 3).map((friend) => (
+                  friend.avatar ? (
+                    <img
+                      key={friend.id}
+                      src={friend.avatar}
+                      alt={friend.name}
+                      className="w-4 h-4 rounded-full object-cover"
+                      style={{ border: `1px solid ${isJournee ? journeeBg : adaptiveBg}` }}
+                    />
+                  ) : (
+                    <div
+                      key={friend.id}
+                      className="w-4 h-4 rounded-full flex items-center justify-center"
+                      style={{ fontSize: '7px', fontWeight: 600, color: ink, background: isJournee ? inkAlpha(0.18) : whiteAlpha(0.18), border: `1px solid ${isJournee ? journeeBg : adaptiveBg}` }}
+                    >
+                      {friend.name.charAt(0).toUpperCase()}
+                    </div>
+                  )
+                ))}
+              </div>
+            ) : (
+              // Pas d'amis : pastille pulsée comme signal social vivant.
+              <span
+                className="w-1.5 h-1.5 rounded-full animate-pulse"
+                style={{ background: isJournee ? journeeAccent : accentBright, flexShrink: 0 }}
+              />
+            )}
             <span style={{ fontSize: '11px', fontWeight: 500, color: inkMuted }} className="truncate">
               {getSocialProofText(event.friendsParticipating, event.totalParticipants || 0)}
             </span>
@@ -800,7 +753,7 @@ const EventCard: React.FC<EventCardProps> = ({
               whileTap={{ scale: 0.9 }}
               onClick={handleLike}
               className="flex items-center justify-center rounded-full"
-              style={{ width: '34px', height: '34px', border: isJournee ? '1px solid rgba(26,18,8,0.22)' : '1px solid rgba(255,255,255,0.22)' }}
+              style={{ width: '34px', height: '34px', border: `1px solid ${isJournee ? inkAlpha(0.22) : whiteAlpha(0.22)}` }}
               aria-label="Enregistrer"
             >
               <Bookmark style={{ width: '15px', height: '15px', color: ink }} />
@@ -809,7 +762,7 @@ const EventCard: React.FC<EventCardProps> = ({
             <motion.button
               whileTap={{ scale: 0.96 }}
               onClick={handleParticipate}
-              style={{ background: isJournee ? '#1A1208' : '#FFFFFF', color: isJournee ? '#F5F0E8' : '#0A0A0A', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.03em', borderRadius: '6px', padding: '9px 16px' }}
+              style={{ background: isJournee ? cardTokens.journee.ink : cardTokens.dark.ink, color: isJournee ? cardTokens.journee.inkInverse : cardTokens.dark.ctaText, fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.03em', borderRadius: '6px', padding: '9px 16px' }}
               aria-label="Participer"
             >
               {ctaLabel}

@@ -26,6 +26,35 @@
     --ring: 271 91% 65%;
     --radius: 0.8rem;
     
+    /* ────────────────────────────────────────────────────────────────
+       Wouli Card Design Tokens (§2 « Fondations » — palette FIXE).
+       Architecture trois couches : primitive (--wc-*) → semantic (--card-*).
+       Source de vérité TS : src/design/cardTokens.ts (consommée par le JS
+       de la carte). Ce miroir CSS sert le reste de l'app.
+       ──────────────────────────────────────────────────────────────── */
+    /* Layer 1 — Primitive : crème → ocre (luminosité croissante de la photo) */
+    --wc-creme-50: #FAF7F0;
+    --wc-creme-100: #F4EDE0;
+    --wc-creme-200: #EDE3CC;
+    --wc-ocre-300: #EFD99A;
+    --wc-ocre-400: #E5C878;
+    --wc-ocre-500: #D4B05A;
+    /* Layer 1 — Primitive : accents sémantiques JOURNÉE par sous-type */
+    --wc-terracotta: #C9683B; /* à-manger */
+    --wc-ambre: #D99A2B;      /* à-boire */
+    --wc-sauge: #7E8C5A;      /* activités */
+    --wc-ocre-soft: #B5853F;  /* fallback */
+    /* Layer 1 — Primitive : encres / neutres */
+    --wc-ink: #1A1208;          /* encre JOURNÉE (texte sur clair) */
+    --wc-creme-inverse: #F5F0E8; /* texte crème sur CTA encre */
+    --wc-dark-fallback: #1C1A1A; /* fond CLUB/SCÈNE sans color_card */
+    /* Layer 2 — Semantic : aliases carte par intention */
+    --card-journee-bg: var(--wc-creme-100);
+    --card-journee-ink: var(--wc-ink);
+    --card-journee-ink-inverse: var(--wc-creme-inverse);
+    --card-journee-accent-fallback: var(--wc-ocre-soft);
+    --card-dark-bg: var(--wc-dark-fallback);
+
     /* Wouli Design Tokens */
     --wouli-gradient: linear-gradient(135deg, hsl(262 100% 70%), hsl(329 86% 70%));
     --urgent: 0 84% 56%;
