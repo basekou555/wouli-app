@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { UnifiedEvent } from '@/types/unified';
-import { X, Share2, Check, Bookmark, Info } from 'lucide-react';
-import { getProxiedImageUrl, handleImageError } from '@/utils/corsProxyHelpers';
-import { getSocialProofText, getPriceInfo } from '@/utils/eventCardHelpers';
+import { X, Share2, Check, Bookmark } from 'lucide-react';
+import { getProxiedImageUrl, getColorProbeUrl, handleImageError } from '@/utils/corsProxyHelpers';
+import { getSocialProofText, getPriceInfo, getUrgencyBadge } from '@/utils/eventCardHelpers';
 import { getFocusClass } from '@/utils/imageHelpers';
 import { normalizeAmbiance } from '@/utils/ambiance';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -55,10 +55,18 @@ function deriveEnergy(event: UnifiedEvent): 'SCENE' | 'CLUB' | 'JOURNEE' {
     // RÈGLE SCÈNE — salle de concert connue
     if (SCENE_VENUES.some((v) => venue.includes(v))) return 'SCENE';
 
-    // RÈGLE SOIRÉE — tardive (>= 22h) = CLUB, plus tôt = SCÈNE (concert/live en salle)
-    if (event.event_type === 'soirees' && !Number.isNaN(hour)) {
-      return hour >= 22 ? 'CLUB' : 'SCENE';
+    // RÈGLE HEURE — généralisée à TOUS les types : un événement qui commence le
+    // soir est une SORTIE (clubbing tardif / concert-soirée), pas une activité de
+    // jour. Évite que des soirées (ex: "Soirée Latina" 21h, NYE 19h30) tombent en
+    // JOURNÉE crème faute de signal explicite.
+    if (!Number.isNaN(hour)) {
+      if (hour >= 22 || (event.event_type === 'soirees' && hour >= 21)) return 'CLUB';
+      if (hour >= 18) return 'SCENE';
+      return 'JOURNEE'; // matin / après-midi = activité de jour
     }
+
+    // Pas d'heure connue : un mot « soirée / party / nuit » suffit à sortir de la JOURNÉE.
+    if (/soir[ée]e|\bparty\b|clubbing|\bnuit\b/.test(haystack)) return 'SCENE';
 
     // Défaut sûr
     return 'JOURNEE';
@@ -151,41 +159,58 @@ function adjustColor(hex: string, lightnessOffset: number, saturationOffset: num
 }
 
 /**
- * Extrait une couleur dominante depuis une image via canvas 10x10 (moyenne des pixels),
- * puis l'assombrit pour servir de fond de zone. Retourne null si CORS bloque getImageData.
+ * Couleur dominante VIVE depuis un buffer RGBA (port partagé avec le serveur).
+ * Au lieu d'une moyenne plate (qui vire au gris/noir boueux sur une affiche
+ * chargée), on pondère chaque pixel par sa saturation² : les pixels vifs (la
+ * couleur accent de l'affiche) dominent. Si l'image est quasi-monochrome
+ * (poids cumulé trop faible), on retombe sur la moyenne simple.
+ * Retourne un hex BRUT (sans assombrissement) ou null.
+ */
+function dominantVividColor(data: Uint8ClampedArray | number[]): string | null {
+  let vr = 0, vg = 0, vb = 0, wsum = 0; // accumulateurs pondérés (vifs)
+  let ar = 0, ag = 0, ab = 0, count = 0; // moyenne simple (fallback)
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i], g = data[i + 1], b = data[i + 2];
+    ar += r; ag += g; ab += b; count++;
+    const mx = Math.max(r, g, b) / 255;
+    const mn = Math.min(r, g, b) / 255;
+    const l = (mx + mn) / 2;
+    if (l > 0.95 || l < 0.05) continue; // blanc/noir pur : pas "la couleur"
+    const s = mx === mn ? 0 : (l > 0.5 ? (mx - mn) / (2 - mx - mn) : (mx - mn) / (mx + mn));
+    const w = s * s; // favorise fortement les pixels saturés
+    vr += r * w; vg += g * w; vb += b * w; wsum += w;
+  }
+  if (count === 0) return null;
+  const toHex = (x: number) => Math.max(0, Math.min(255, Math.round(x))).toString(16).padStart(2, '0');
+  if (wsum < 0.5) {
+    // Image quasi-monochrome → moyenne simple
+    return `#${toHex(ar / count)}${toHex(ag / count)}${toHex(ab / count)}`;
+  }
+  return `#${toHex(vr / wsum)}${toHex(vg / wsum)}${toHex(vb / wsum)}`;
+}
+
+/**
+ * Extrait une couleur dominante depuis une image via canvas 24x24, en favorisant
+ * les pixels vifs, puis l'assombrit légèrement pour servir de fond de zone.
+ * Retourne null si CORS bloque getImageData.
  */
 function extractCardColor(imgEl: HTMLImageElement): string | null {
   try {
     const canvas = document.createElement('canvas');
-    canvas.width = 10;
-    canvas.height = 10;
+    canvas.width = 24;
+    canvas.height = 24;
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
 
-    ctx.drawImage(imgEl, 0, 0, 10, 10);
-    const { data } = ctx.getImageData(0, 0, 10, 10);
+    ctx.drawImage(imgEl, 0, 0, 24, 24);
+    const { data } = ctx.getImageData(0, 0, 24, 24);
 
-    let r = 0;
-    let g = 0;
-    let b = 0;
-    let count = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      r += data[i];
-      g += data[i + 1];
-      b += data[i + 2];
-      count++;
-    }
-    if (count === 0) return null;
+    const vivid = dominantVividColor(data);
+    if (!vivid) return null;
 
-    r = Math.round(r / count);
-    g = Math.round(g / count);
-    b = Math.round(b / count);
-
-    const toHex = (x: number) => x.toString(16).padStart(2, '0');
-    const avgHex = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-
-    // Assombrissement + désaturation pour servir de fond de zone adaptative
-    return adjustColor(avgHex, -25, -20);
+    // Assombrissement modéré + léger boost de saturation : la couleur reste
+    // visible (≠ quasi-noir) tout en gardant du texte blanc lisible dessus.
+    return adjustColor(vivid, -15, 5);
   } catch {
     // CORS (images Instagram) → canvas tainted → échec attendu
     return null;
@@ -372,7 +397,6 @@ const EventCard: React.FC<EventCardProps> = ({
 }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [showImageModal, setShowImageModal] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // --- Design système carte (Phase 1) ---
@@ -382,13 +406,36 @@ const EventCard: React.FC<EventCardProps> = ({
   // Priorité absolue au champ serveur color_card s'il est fourni.
   const [adaptiveBg, setAdaptiveBg] = useState<string>(event.color_card || defaultBg);
 
-  // Extraction couleur depuis l'image chargée (fallback gracieux si CORS bloque).
-  const handleImageLoaded = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    setImageLoaded(true);
-    if (event.color_card) return; // le serveur prime, pas d'extraction
-    const extracted = extractCardColor(e.currentTarget);
-    if (extracted) setAdaptiveBg(extracted);
-  };
+  // L'image VISIBLE n'a pas de crossOrigin → elle s'affiche toujours (même
+  // depuis un hôte sans en-têtes CORS). L'extraction couleur se fait à part,
+  // sur une image hors-DOM avec crossOrigin (best-effort), pour ne JAMAIS
+  // casser l'affichage de la vraie affiche.
+  const handleImageLoaded = () => setImageLoaded(true);
+
+  // Extraction couleur côté client — uniquement si le serveur n'a pas fourni
+  // color_card. Échec silencieux (CORS / image morte) : on garde le défaut.
+  useEffect(() => {
+    if (event.color_card) {
+      setAdaptiveBg(event.color_card);
+      return;
+    }
+    // Image-sonde routée via proxy CORS → canvas lisible quel que soit l'hôte
+    // (larayonne, cloudinary... ne renvoient pas d'en-têtes CORS en direct).
+    const url = getColorProbeUrl(event.image_url);
+    if (!url) return;
+    let cancelled = false;
+    const probe = new Image();
+    probe.crossOrigin = 'anonymous';
+    probe.onload = () => {
+      if (cancelled) return;
+      const extracted = extractCardColor(probe);
+      if (extracted) setAdaptiveBg(extracted);
+    };
+    probe.src = url;
+    return () => {
+      cancelled = true;
+    };
+  }, [event.image_url, event.color_card]);
 
   // --- Design système carte (Phase 2 : 3 énergies) ---
   const POPPINS = "'Poppins', sans-serif";
@@ -399,6 +446,7 @@ const EventCard: React.FC<EventCardProps> = ({
   const price = getPriceInfo(event.price_text);
   const heure = formatHeure(event.time);
   const dateShort = formatDateShort(event.date);
+  const urgency = getUrgencyBadge(event.date, event.time);
   const titleSize = titleFontSize(energy, title, recurring);
   const ambiance = normalizeAmbiance(event.music_style, event.tags, categoryLabel(event));
 
@@ -533,7 +581,7 @@ const EventCard: React.FC<EventCardProps> = ({
       {/* flex-1 : reprend tout l'espace restant (proportions d'origine) */}
       <div
         className="relative flex-1 min-h-0 overflow-hidden cursor-pointer"
-        onClick={() => setShowImageModal(true)}
+        onClick={() => setIsDetailsOpen(true)}
       >
         {!imageLoaded && (
           <div className="absolute inset-0 bg-muted animate-pulse" />
@@ -541,7 +589,6 @@ const EventCard: React.FC<EventCardProps> = ({
         <img
           src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/400/600?random=event"}
           alt={event.title}
-          crossOrigin="anonymous"
           className={cn(
             "w-full h-full object-cover transition-opacity duration-300",
             getFocusClass(event.image_focus_position),
@@ -563,26 +610,25 @@ const EventCard: React.FC<EventCardProps> = ({
           />
         )}
 
-        {/* Détails + badge UNIQUE (haut gauche) */}
-        <div className="absolute left-3 z-10 flex items-center gap-2" style={{ top: 'calc(var(--app-header-h, 0px) + 12px)' }}>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsDetailsOpen(true);
-            }}
-            className="w-8 h-8 rounded-full bg-black/35 backdrop-blur flex items-center justify-center"
-            aria-label="Voir les détails"
-          >
-            <Info className="w-4 h-4 text-white" />
-          </button>
-          {isUnique && (
-            <span
-              style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', borderRadius: '4px', padding: '3px 7px', fontFamily: POPPINS, ...uniqueBadgeStyle }}
-            >
-              Unique
-            </span>
-          )}
-        </div>
+        {/* Badges : urgence + unicité (haut gauche) */}
+        {(urgency || isUnique) && (
+          <div className="absolute left-3 z-10 flex items-center gap-2" style={{ top: 'calc(var(--app-header-h, 0px) + 12px)' }}>
+            {urgency && (
+              <span
+                style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', borderRadius: '999px', padding: '3px 9px', color: '#fff', background: 'rgba(239,68,68,0.92)', backdropFilter: 'blur(4px)' }}
+              >
+                {urgency}
+              </span>
+            )}
+            {isUnique && (
+              <span
+                style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', borderRadius: '4px', padding: '3px 7px', fontFamily: POPPINS, ...uniqueBadgeStyle }}
+              >
+                Unique
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Partager + Passer (haut droite) */}
         <div className="absolute right-3 z-10 flex gap-2" style={{ top: 'calc(var(--app-header-h, 0px) + 12px)' }}>
@@ -939,33 +985,6 @@ const EventCard: React.FC<EventCardProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Modal Fullscreen Image */}
-      <AnimatePresence>
-        {showImageModal && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowImageModal(false)}
-              className="fixed inset-0 bg-black z-50 flex items-center justify-center"
-            >
-              <img
-                src={getProxiedImageUrl(event.image_url) || "https://picsum.photos/400/600?random=event"}
-                alt={event.title}
-                className="max-w-full max-h-full object-contain"
-                onError={handleImageError}
-              />
-              <button
-                onClick={() => setShowImageModal(false)}
-                className="absolute top-4 right-4 p-3 bg-white/20 hover:bg-white/30 backdrop-blur rounded-full transition-colors"
-              >
-                <X className="w-6 h-6 text-white" />
-              </button>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
     </div>
   );
 };

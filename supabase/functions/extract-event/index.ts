@@ -317,26 +317,31 @@ async function computeColorCard(imageUrl: string | null | undefined): Promise<st
     // GIF -> on prend la première frame ; sinon Image directement.
     const image: Image = decoded instanceof Image ? decoded : (decoded as any)[0];
     if (!image) return null;
-    const small = image.resize(10, 10);
+    const small = image.resize(24, 24);
     const bmp = small.bitmap; // RGBA, 8 bits/canal
-    let r = 0;
-    let g = 0;
-    let b = 0;
-    let count = 0;
+    // Couleur dominante VIVE : pondère chaque pixel par sa saturation² pour que
+    // l'accent coloré de l'affiche l'emporte sur le fond sombre (≠ moyenne plate
+    // qui virait au quasi-noir). Port exact de dominantVividColor() côté client.
+    let vr = 0, vg = 0, vb = 0, wsum = 0;
+    let ar = 0, ag = 0, ab = 0, count = 0;
     for (let i = 0; i < bmp.length; i += 4) {
-      r += bmp[i];
-      g += bmp[i + 1];
-      b += bmp[i + 2];
-      count++;
+      const r = bmp[i], g = bmp[i + 1], b = bmp[i + 2];
+      ar += r; ag += g; ab += b; count++;
+      const mx = Math.max(r, g, b) / 255;
+      const mn = Math.min(r, g, b) / 255;
+      const l = (mx + mn) / 2;
+      if (l > 0.95 || l < 0.05) continue;
+      const s = mx === mn ? 0 : (l > 0.5 ? (mx - mn) / (2 - mx - mn) : (mx - mn) / (mx + mn));
+      const w = s * s;
+      vr += r * w; vg += g * w; vb += b * w; wsum += w;
     }
     if (count === 0) return null;
-    r = Math.round(r / count);
-    g = Math.round(g / count);
-    b = Math.round(b / count);
-    const toHex = (x: number) => x.toString(16).padStart(2, "0");
-    const avgHex = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-    // Mêmes offsets que extractCardColor côté client (-25 lum, -20 sat).
-    return adjustColor(avgHex, -25, -20);
+    const toHex = (x: number) => Math.max(0, Math.min(255, Math.round(x))).toString(16).padStart(2, "0");
+    const vividHex = wsum < 0.5
+      ? `#${toHex(ar / count)}${toHex(ag / count)}${toHex(ab / count)}`
+      : `#${toHex(vr / wsum)}${toHex(vg / wsum)}${toHex(vb / wsum)}`;
+    // Assombrissement modéré + léger boost de saturation (sync client EventCard).
+    return adjustColor(vividHex, -15, 5);
   } catch {
     return null;
   }
@@ -347,7 +352,16 @@ async function computeColorCard(imageUrl: string | null | undefined): Promise<st
 // Retourne l'URL Storage publique, ou null si l'image est inaccessible (URL déjà expirée).
 async function persistFlyer(supabase: any, id: string, srcUrl: string): Promise<string | null> {
   try {
-    const res = await fetch(srcUrl);
+    // En-têtes navigateur + Referer Instagram : le CDN Instagram (scontent.cdninstagram.com)
+    // refuse (403) un fetch nu sans User-Agent crédible, même quand l'URL est ENCORE
+    // valide. Sans ça, ce filet de secours (cron) échouait aussi sur les URLs fraîches.
+    const res = await fetch(srcUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+        "Referer": "https://www.instagram.com/",
+      },
+    });
     if (!res.ok) return null;
     const contentType = res.headers.get("content-type")?.split(";")[0] || "image/jpeg";
     const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
